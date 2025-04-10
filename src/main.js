@@ -53,8 +53,8 @@ function checkDOMElements() {
         loginScreen: document.getElementById('loginScreen'),
         mainApp: document.getElementById('mainApp'),
         loginForm: document.getElementById('loginForm'),
-        username: document.getElementById('username'),
-        password: document.getElementById('password'),
+        username: document.getElementById('newUsername'),
+        password: document.getElementById('newPassword'),
         loginError: document.getElementById('loginError')
     }
     
@@ -73,8 +73,8 @@ function checkDOMElements() {
 async function handleLogin(event) {
     event.preventDefault();
     
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+    const username = document.getElementById('newUsername').value;
+    const password = document.getElementById('newPassword').value;
     const errorText = document.getElementById('loginError');
 
     try {
@@ -108,8 +108,12 @@ async function handleLogin(event) {
         
     } catch (error) {
         console.error('Login error:', error);
-        errorText.textContent = 'Invalid credentials';
-        errorText.classList.remove('hidden');
+        if (errorText) {
+            errorText.textContent = 'Invalid credentials';
+            errorText.classList.remove('hidden');
+        } else {
+            alert('Invalid credentials');
+        }
     }
 }
 
@@ -124,6 +128,12 @@ function setupEventListeners() {
         loginForm.addEventListener('submit', handleLogin);
     } else {
         console.log('Login form not found');
+        // Try finding the form by class
+        const loginFormByClass = document.querySelector('form.login-form');
+        if (loginFormByClass) {
+            console.log('Found login form by class, attaching handler');
+            loginFormByClass.addEventListener('submit', handleLogin);
+        }
     }
 
     // Logout button
