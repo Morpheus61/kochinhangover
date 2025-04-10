@@ -22,8 +22,8 @@ const ENTRY_PRICES = {
 async function initializeApp() {
     // Only check auth on main app page
     if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+        if (!currentUser) {
             window.location.href = 'login';
             return;
         }
@@ -69,160 +69,49 @@ function checkDOMElements() {
     return true
 }
 
-// Login form handler
-document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault()
-    
-    if (!checkDOMElements()) {
-        console.error('Cannot process login - missing critical UI elements')
-        return
-    }
-    
-    const username = document.getElementById('username').value
-    const password = document.getElementById('password').value
-    
-    try {
-        console.log('Attempting login with:', username)
-        
-        // For Admin bypass
-        if (username === 'Admin' && password === 'Kochin2025') {
-            console.log('Admin login attempt')
-            currentUser = { 
-                id: 'admin',
-                username: 'Admin',
-                role: 'admin'
-            }
-            await handleLogin(currentUser)
-            return
-        }
-        
-        throw new Error('Invalid credentials')
-    } catch (error) {
-        console.error('Login error:', error)
-        const errorElement = document.getElementById('loginError')
-        if (errorElement) {
-            errorElement.textContent = error.message || 'Invalid username or password'
-            errorElement.classList.remove('hidden')
-        }
-    }
-})
-
 // Handle login
-async function handleLogin(user) {
+async function handleLogin(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const errorText = document.getElementById('loginError');
+
     try {
-        if (!checkDOMElements()) {
-            console.error('Cannot handle login - missing critical UI elements')
-            return
+        // Check credentials against users table
+        const { data: user, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('username', username)
+            .eq('password', password)
+            .single();
+
+        if (error || !user) {
+            throw new Error('Invalid username or password');
         }
 
-        console.log('Login user:', user)
-        
-        if (!user) {
-            throw new Error('No user provided')
-        }
-        
-        currentUser = {
-            ...user,
-            role: 'admin'
-        }
-        
-        console.log('Setting current user:', currentUser)
-        
-        // First hide all content sections
-        const sections = [
-            'registrationContent',
-            'verificationContent',
-            'guestListContent',
-            'statsContent'
-        ]
-        
-        sections.forEach(id => {
-            const element = document.getElementById(id)
-            if (element) {
-                element.classList.add('hidden')
-            }
-        })
-        
-        // Then hide login screen
-        const loginScreen = document.getElementById('loginScreen')
-        if (loginScreen) {
-            loginScreen.classList.add('hidden')
-        }
-        
-        // Show main app
-        const mainApp = document.getElementById('mainApp')
-        if (mainApp) {
-            mainApp.classList.remove('hidden')
-        }
-        
-        // Finally show registration content
-        const registrationContent = document.getElementById('registrationContent')
-        if (registrationContent) {
-            registrationContent.classList.remove('hidden')
-        }
+        // Store user info in session
+        sessionStorage.setItem('currentUser', JSON.stringify(user));
+
+        // Successful login
+        window.location.href = '/';
         
     } catch (error) {
-        console.error('Login handling error:', error)
-        const errorElement = document.getElementById('loginError')
-        if (errorElement) {
-            errorElement.textContent = error.message || 'Failed to log in'
-            errorElement.classList.remove('hidden')
-        }
-        showLoginScreen()
+        console.error('Login error:', error);
+        errorText.textContent = 'Invalid credentials';
+        errorText.classList.remove('hidden');
     }
-}
-
-// Show login screen
-function showLoginScreen() {
-    // First hide all content sections
-    const sections = [
-        'registrationContent',
-        'verificationContent',
-        'guestListContent',
-        'statsContent'
-    ]
-    
-    sections.forEach(id => {
-        const element = document.getElementById(id)
-        if (element) {
-            element.classList.add('hidden')
-        }
-    })
-    
-    // Then show login screen and hide main app
-    const loginScreen = document.getElementById('loginScreen')
-    const mainApp = document.getElementById('mainApp')
-    
-    if (loginScreen) {
-        loginScreen.classList.remove('hidden')
-    }
-    
-    if (mainApp) {
-        mainApp.classList.add('hidden')
-    }
-}
-
-// Show app
-function showApp() {
-    const loginScreen = document.getElementById('loginScreen')
-    const mainApp = document.getElementById('mainApp')
-    
-    if (!loginScreen || !mainApp) {
-        console.error('Cannot show app - missing critical UI elements')
-        return
-    }
-    
-    loginScreen.classList.add('hidden')
-    mainApp.classList.remove('hidden')
 }
 
 // Setup event listeners
 function setupEventListeners() {
+    // Login form
+    document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
+
     // Logout button
     document.getElementById('logoutBtn')?.addEventListener('click', async () => {
-        await supabase.auth.signOut()
-        currentUser = null
-        showLoginScreen()
+        sessionStorage.removeItem('currentUser');
+        window.location.href = 'login';
     })
 
     // Tab buttons
