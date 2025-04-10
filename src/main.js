@@ -35,60 +35,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Setup event listeners
 function setupEventListeners() {
-    // Login form
+    // Login form handler
     document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         e.preventDefault()
-        const username = document.getElementById('username').value
-        const password = document.getElementById('password').value
         
+        const username = e.target.username.value
+        const password = e.target.password.value
+
         try {
-            // First get user data from the users table
-            const { data: userData, error: userError } = await supabase
+            // Check credentials against users table
+            const { data: user, error } = await supabase
                 .from('users')
                 .select('*')
                 .eq('username', username)
+                .eq('password', password)
                 .single()
 
-            if (userError || !userData) {
-                throw new Error('Invalid username or password')
+            if (error || !user) {
+                throw new Error('Invalid credentials')
             }
 
-            // Check if password matches
-            if (userData.password !== password) {
-                throw new Error('Invalid username or password')
-            }
-
-            // Set the user role
             currentUser = {
-                id: username,
-                role: userData.role,
-                username: username
+                username: user.username,
+                role: user.role
             }
 
-            // Update UI based on role
-            document.getElementById('loginScreen')?.classList.add('hidden')
-            document.getElementById('mainApp')?.classList.remove('hidden')
-
-            // Show/hide admin features
-            const isAdmin = userData.role === 'admin'
-            document.querySelectorAll('.admin-only').forEach(el => {
-                if (isAdmin) {
-                    el.classList.remove('hidden')
-                } else {
-                    el.classList.add('hidden')
-                }
-            })
-
-            // Show appropriate tab based on role
-            showTab(isAdmin ? 'registration' : 'beverage')
-
-            // Load initial data
-            await loadGuests()
+            await handleLogin(currentUser)
         } catch (error) {
-            const errorDiv = document.getElementById('loginError')
-            errorDiv.textContent = error.message || 'Failed to login'
-            errorDiv.classList.remove('hidden')
-            setTimeout(() => errorDiv.classList.add('hidden'), 3000)
+            console.error('Login error:', error)
+            alert('Invalid username or password')
         }
     })
 
@@ -348,43 +323,30 @@ window.checkInGuest = async (id) => {
     }
 }
 
-// Handle successful login
+// Handle login
 async function handleLogin(user) {
     try {
-        // Get user profile
-        const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single()
-            
-        if (error) throw error
-
-        currentUser = { ...user, profile }
-        
-        // Update UI
-        document.getElementById('loginScreen')?.classList.add('hidden')
-        document.getElementById('mainApp')?.classList.remove('hidden')
-        
-        // Show/hide admin features
-        const isAdmin = profile?.role === 'admin'
-        document.querySelectorAll('.admin-only').forEach(el => {
-            if (isAdmin) {
-                el.classList.remove('hidden')
-            } else {
-                el.classList.add('hidden')
-            }
-        })
-        
-        // Show appropriate tab based on role
-        showTab(isAdmin ? 'registration' : 'beverage')
+        currentUser = user
         
         // Load initial data
         await loadGuests()
+        
+        showApp()
+        if (user.role === 'admin') {
+            showRegistration()
+        } else {
+            showVerification()
+        }
     } catch (error) {
         console.error('Error handling login:', error)
+        alert('Failed to log in')
         showLoginScreen()
     }
+}
+
+// Check if user is admin
+function isAdmin() {
+    return currentUser?.role === 'admin' || false
 }
 
 // Show verification section
