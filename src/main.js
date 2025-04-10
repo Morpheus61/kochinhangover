@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import QRCode from 'qrcode'
+import Papa from 'papaparse'
 
 // Initialize Supabase client
 const supabaseUrl = 'https://rcedawlruorpkzzrvkqn.supabase.co'
@@ -368,36 +369,66 @@ function setupEventListeners() {
         document.getElementById('stopScan').classList.add('hidden');
         document.getElementById('qr-reader-results').innerHTML = '';
     });
+
+    // Navigation buttons
+    document.getElementById('newRegistrationBtn')?.addEventListener('click', () => showTab('registration'))
+    document.getElementById('entryVerificationBtn')?.addEventListener('click', () => showTab('verification'))
+    document.getElementById('guestListBtn')?.addEventListener('click', () => showTab('guests'))
+    document.getElementById('statsBtn')?.addEventListener('click', () => showTab('stats'))
+    document.getElementById('usersBtn')?.addEventListener('click', () => showTab('users'))
+    document.getElementById('logoutBtn')?.addEventListener('click', handleLogout)
+
+    // WhatsApp share buttons
+    document.querySelectorAll('.whatsapp-share').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const guestId = e.currentTarget.dataset.guestId
+            if (guestId) {
+                shareGuestPass(guestId)
+            }
+        })
+    })
+
+    // Download buttons
+    document.getElementById('downloadGuestsPDF')?.addEventListener('click', downloadGuestsPDF);
+    document.getElementById('downloadGuestsCSV')?.addEventListener('click', downloadGuestsCSV);
+    document.getElementById('downloadStatsPDF')?.addEventListener('click', downloadStatsPDF);
+    document.getElementById('downloadStatsCSV')?.addEventListener('click', downloadStatsCSV);
 }
 
 // Show specific tab
-window.showTab = function(tabName) {
+async function showTab(tabName) {
     // Hide all content sections
-    const sections = ['registration', 'verification', 'guests', 'stats']
+    const sections = ['registration', 'verification', 'guests', 'stats', 'users']
     sections.forEach(section => {
-        document.getElementById(`${section}Content`)?.classList.add('hidden')
-    })
-    
-    // Show selected section
-    document.getElementById(`${tabName}Content`)?.classList.remove('hidden')
-    
-    // Update active tab styling
-    const tabs = document.querySelectorAll('.kochin-tab')
-    tabs.forEach(tab => {
-        if (tab.getAttribute('onclick') === `showTab('${tabName}')`) {
-            tab.classList.add('bg-opacity-100', 'border-primary')
-        } else {
-            tab.classList.remove('bg-opacity-100', 'border-primary')
+        const element = document.getElementById(`${section}Content`)
+        if (element) {
+            element.classList.add('hidden')
         }
     })
     
-    // Initialize specific tab functionality
-    if (tabName === 'verification') {
-        initQRScanner()
-    } else if (tabName === 'guests') {
-        loadGuestList()
-    } else if (tabName === 'stats') {
-        loadStats()
+    // Show selected section
+    const selectedSection = document.getElementById(`${tabName}Content`)
+    if (selectedSection) {
+        selectedSection.classList.remove('hidden')
+        
+        // Initialize specific tab content
+        switch (tabName) {
+            case 'registration':
+                initializeRegistration()
+                break
+            case 'verification':
+                initializeVerification()
+                break
+            case 'guests':
+                await loadGuestList()
+                break
+            case 'stats':
+                await loadStats()
+                break
+            case 'users':
+                await initializeUsers()
+                break
+        }
     }
 }
 
@@ -530,52 +561,48 @@ async function loadGuestList() {
         const { data: guests, error } = await supabase
             .from('guests')
             .select('*')
-            .order('registration_date', { ascending: false })
+            .order('created_at', { ascending: false })
         
         if (error) throw error
         
-        const guestList = document.getElementById('guestList')
-        if (!guestList) return
+        const tbody = document.getElementById('guestListTableBody')
+        if (!tbody) return
         
-        if (guests.length === 0) {
-            guestList.innerHTML = `
-                <tr>
-                    <td colspan="6" class="py-4 px-4 text-center text-gray-400">No guests registered yet</td>
-                </tr>
-            `
-            return
-        }
-        
-        guestList.innerHTML = guests.map(guest => `
-            <tr class="border-t border-gray-700">
-                <td class="py-3 px-4">${guest.guest_name}</td>
-                <td class="py-3 px-4">${guest.club_name}</td>
-                <td class="py-3 px-4">${guest.entry_type}</td>
+        tbody.innerHTML = guests.map(guest => `
+            <tr class="border-b border-gray-700">
+                <td class="py-3 px-4">${guest.guest_name || ''}</td>
+                <td class="py-3 px-4">${guest.club_name || ''}</td>
+                <td class="py-3 px-4">${guest.entry_type || ''}</td>
                 <td class="py-3 px-4">₹${guest.paid_amount} / ₹${guest.total_amount}</td>
                 <td class="py-3 px-4">
-                    <span class="px-2 py-1 rounded text-xs ${getStatusClass(guest.status)}">
-                        ${guest.status}
+                    <span class="px-2 py-1 rounded-full text-xs ${
+                        guest.status === 'verified' ? 'bg-green-500' :
+                        guest.status === 'paid' ? 'bg-blue-500' :
+                        guest.status === 'partially_paid' ? 'bg-yellow-500' :
+                        'bg-red-500'
+                    }">
+                        ${guest.status || 'pending'}
                     </span>
                 </td>
                 <td class="py-3 px-4">
-                    <div class="flex space-x-2">
-                        <button class="text-blue-400 hover:text-blue-300" onclick="editGuest('${guest.id}')" title="Edit">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="text-red-400 hover:text-red-300" onclick="deleteGuest('${guest.id}')" title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                        <button class="text-green-400 hover:text-green-300" onclick="sendWhatsAppPass('${guest.id}')" title="Send Pass">
-                            <i class="fab fa-whatsapp"></i>
-                        </button>
-                    </div>
+                    <button class="text-blue-400 hover:text-blue-600 mr-2" onclick="editGuest('${guest.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="text-red-400 hover:text-red-600 mr-2" onclick="deleteGuest('${guest.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="whatsapp-share text-green-400 hover:text-green-600" data-guest-id="${guest.id}">
+                        <i class="fab fa-whatsapp"></i>
+                    </button>
                 </td>
             </tr>
         `).join('')
+
+        // Re-attach WhatsApp share event listeners
+        setupEventListeners()
         
     } catch (error) {
-        console.error('Error loading guests:', error)
-        alert(error.message || 'Failed to load guest list')
+        console.error('Error loading guest list:', error)
     }
 }
 
@@ -644,7 +671,6 @@ async function loadStats() {
         
     } catch (error) {
         console.error('Error loading stats:', error)
-        alert(error.message || 'Failed to load statistics')
     }
 }
 
@@ -1307,4 +1333,315 @@ window.updateAmount = function() {
     if (paidAmountInput) {
         paidAmountInput.max = totalAmount - 100 // At least ₹100 should be paid at entry
     }
+}
+
+// Download functions
+async function downloadGuestsPDF() {
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Set theme colors
+        const primary = '#e83283';
+        const secondary = '#34dbdb';
+        const dark = '#2a0e3a';
+        
+        // Add header
+        doc.setFillColor(hexToRgb(dark).r, hexToRgb(dark).g, hexToRgb(dark).b);
+        doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F');
+        
+        doc.setTextColor(hexToRgb(primary).r, hexToRgb(primary).g, hexToRgb(primary).b);
+        doc.setFontSize(24);
+        doc.text('Kochin Hangover', 105, 20, { align: 'center' });
+        
+        doc.setTextColor(hexToRgb(secondary).r, hexToRgb(secondary).g, hexToRgb(secondary).b);
+        doc.setFontSize(16);
+        doc.text('Guest List', 105, 30, { align: 'center' });
+        
+        // Add current date
+        doc.setFontSize(12);
+        doc.setTextColor(100);
+        doc.text(new Date().toLocaleDateString(), 195, 20, { align: 'right' });
+        
+        // Get guest data
+        const { data: guests, error } = await supabase
+            .from('guests')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        // Add table headers
+        const headers = ['Name', 'Club', 'Entry Type', 'Amount', 'Status'];
+        let yPos = 50;
+        const cellWidth = 38;
+        
+        doc.setFillColor(hexToRgb(dark).r, hexToRgb(dark).g, hexToRgb(dark).b);
+        doc.rect(10, yPos - 5, doc.internal.pageSize.width - 20, 10, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        headers.forEach((header, i) => {
+            doc.text(header, 15 + (i * cellWidth), yPos);
+        });
+        
+        // Add guest rows
+        yPos += 10;
+        doc.setTextColor(40);
+        
+        guests.forEach((guest, index) => {
+            if (yPos > 270) {
+                doc.addPage();
+                yPos = 20;
+            }
+            
+            const row = [
+                guest.guest_name,
+                guest.club_name,
+                guest.entry_type,
+                `₹${guest.paid_amount} / ₹${guest.total_amount}`,
+                guest.status
+            ];
+            
+            // Alternate row background
+            if (index % 2 === 0) {
+                doc.setFillColor(245, 245, 245);
+                doc.rect(10, yPos - 5, doc.internal.pageSize.width - 20, 10, 'F');
+            }
+            
+            row.forEach((cell, i) => {
+                doc.text(String(cell || ''), 15 + (i * cellWidth), yPos);
+            });
+            
+            yPos += 10;
+        });
+        
+        // Save the PDF
+        doc.save('kochin-hangover-guests.pdf');
+        
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Failed to generate PDF');
+    }
+}
+
+async function downloadGuestsCSV() {
+    try {
+        const { data: guests, error } = await supabase
+            .from('guests')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        const csvData = guests.map(guest => ({
+            Name: guest.guest_name,
+            Club: guest.club_name,
+            'Entry Type': guest.entry_type,
+            'Total Amount': guest.total_amount,
+            'Paid Amount': guest.paid_amount,
+            Status: guest.status,
+            'Registration Date': new Date(guest.created_at).toLocaleString()
+        }));
+        
+        const csv = Papa.unparse(csvData);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'kochin-hangover-guests.csv');
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+    } catch (error) {
+        console.error('Error generating CSV:', error);
+        alert('Failed to generate CSV');
+    }
+}
+
+async function downloadStatsPDF() {
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Set theme colors
+        const primary = '#e83283';
+        const secondary = '#34dbdb';
+        const dark = '#2a0e3a';
+        
+        // Add header
+        doc.setFillColor(hexToRgb(dark).r, hexToRgb(dark).g, hexToRgb(dark).b);
+        doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F');
+        
+        doc.setTextColor(hexToRgb(primary).r, hexToRgb(primary).g, hexToRgb(primary).b);
+        doc.setFontSize(24);
+        doc.text('Kochin Hangover', 105, 20, { align: 'center' });
+        
+        doc.setTextColor(hexToRgb(secondary).r, hexToRgb(secondary).g, hexToRgb(secondary).b);
+        doc.setFontSize(16);
+        doc.text('Event Statistics', 105, 30, { align: 'center' });
+        
+        // Add current date
+        doc.setFontSize(12);
+        doc.setTextColor(100);
+        doc.text(new Date().toLocaleDateString(), 195, 20, { align: 'right' });
+        
+        // Get stats data
+        const { data: guests, error } = await supabase
+            .from('guests')
+            .select('*');
+        
+        if (error) throw error;
+        
+        // Calculate statistics
+        const totalGuests = guests.length;
+        const totalAmount = guests.reduce((sum, guest) => sum + guest.total_amount, 0);
+        const paidAmount = guests.reduce((sum, guest) => sum + guest.paid_amount, 0);
+        
+        // Club-wise statistics
+        const clubStats = {};
+        guests.forEach(guest => {
+            if (!clubStats[guest.club_name]) {
+                clubStats[guest.club_name] = {
+                    guests: 0,
+                    amount: 0
+                };
+            }
+            clubStats[guest.club_name].guests++;
+            clubStats[guest.club_name].amount += guest.total_amount;
+        });
+        
+        // Add summary
+        let yPos = 50;
+        
+        doc.setFontSize(14);
+        doc.setTextColor(hexToRgb(primary).r, hexToRgb(primary).g, hexToRgb(primary).b);
+        doc.text('Summary', 15, yPos);
+        
+        yPos += 10;
+        doc.setFontSize(12);
+        doc.setTextColor(40);
+        doc.text(`Total Registrations: ${totalGuests}`, 20, yPos);
+        yPos += 10;
+        doc.text(`Total Amount: ₹${totalAmount}`, 20, yPos);
+        yPos += 10;
+        doc.text(`Collected Amount: ₹${paidAmount}`, 20, yPos);
+        yPos += 10;
+        doc.text(`Pending Amount: ₹${totalAmount - paidAmount}`, 20, yPos);
+        
+        // Add club statistics
+        yPos += 20;
+        doc.setFontSize(14);
+        doc.setTextColor(hexToRgb(primary).r, hexToRgb(primary).g, hexToRgb(primary).b);
+        doc.text('Club-wise Statistics', 15, yPos);
+        
+        yPos += 10;
+        const headers = ['Club Name', 'Guests', 'Amount'];
+        const cellWidth = 60;
+        
+        doc.setFillColor(hexToRgb(dark).r, hexToRgb(dark).g, hexToRgb(dark).b);
+        doc.rect(10, yPos - 5, doc.internal.pageSize.width - 20, 10, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        headers.forEach((header, i) => {
+            doc.text(header, 15 + (i * cellWidth), yPos);
+        });
+        
+        // Add club rows
+        yPos += 10;
+        doc.setTextColor(40);
+        
+        Object.entries(clubStats).forEach(([club, stats], index) => {
+            if (yPos > 270) {
+                doc.addPage();
+                yPos = 20;
+            }
+            
+            const row = [
+                club,
+                stats.guests.toString(),
+                `₹${stats.amount}`
+            ];
+            
+            // Alternate row background
+            if (index % 2 === 0) {
+                doc.setFillColor(245, 245, 245);
+                doc.rect(10, yPos - 5, doc.internal.pageSize.width - 20, 10, 'F');
+            }
+            
+            row.forEach((cell, i) => {
+                doc.text(String(cell || ''), 15 + (i * cellWidth), yPos);
+            });
+            
+            yPos += 10;
+        });
+        
+        // Save the PDF
+        doc.save('kochin-hangover-stats.pdf');
+        
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Failed to generate PDF');
+    }
+}
+
+async function downloadStatsCSV() {
+    try {
+        const { data: guests, error } = await supabase
+            .from('guests')
+            .select('*');
+        
+        if (error) throw error;
+        
+        // Calculate club statistics
+        const clubStats = {};
+        guests.forEach(guest => {
+            if (!clubStats[guest.club_name]) {
+                clubStats[guest.club_name] = {
+                    guests: 0,
+                    amount: 0
+                };
+            }
+            clubStats[guest.club_name].guests++;
+            clubStats[guest.club_name].amount += guest.total_amount;
+        });
+        
+        const csvData = Object.entries(clubStats).map(([club, stats]) => ({
+            'Club Name': club,
+            'Total Guests': stats.guests,
+            'Total Amount': `₹${stats.amount}`
+        }));
+        
+        const csv = Papa.unparse(csvData);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'kochin-hangover-stats.csv');
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+    } catch (error) {
+        console.error('Error generating CSV:', error);
+        alert('Failed to generate CSV');
+    }
+}
+
+// Helper function to convert hex to RGB
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
 }

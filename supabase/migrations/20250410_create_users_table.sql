@@ -11,6 +11,12 @@ create table if not exists public.users (
 -- Create RLS policies
 alter table public.users enable row level security;
 
+-- Allow anyone to select from users table (needed for login)
+create policy "Allow anyone to select users"
+on users for select
+to anon
+using (true);
+
 -- Insert default admin user
 insert into public.users (username, password, role)
 values ('Admin', 'Kochin2025', 'admin')

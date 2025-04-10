@@ -8,6 +8,8 @@
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         :root {
             --primary: #e83283;
@@ -352,35 +354,34 @@
             <div class="flex justify-between items-center mb-6">
                 <div class="flex items-center">
                     <i class="bottle-icon fas fa-wine-bottle"></i>
-                    <h1 class="text-3xl font-bold kochin-header">Kochin Hangover</h1>
+                    <span class="logo-text">Kochin Hangover</span>
                     <i class="glass-icon fas fa-glass-martini-alt"></i>
                 </div>
-                <div class="flex items-center">
-                    <span id="loggedInUser" class="mr-4 text-gray-300"></span>
-                    <button id="userManagementBtn" class="kochin-button mr-2 admin-only">
-                        <i class="fas fa-users-cog mr-1"></i> Users
+                <div class="flex items-center space-x-4">
+                    <button id="usersBtn" class="kochin-button bg-purple-600">
+                        <i class="fas fa-users mr-2"></i> Users
                     </button>
-                    <button id="logoutBtn" class="kochin-button">
-                        <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                    <button id="logoutBtn" class="kochin-button bg-red-600">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
                     </button>
                 </div>
             </div>
-            
+
             <!-- Navigation -->
-            <nav class="flex space-x-2 mb-6">
-                <button onclick="showTab('registration')" class="kochin-tab px-4 py-2 rounded-t-lg">
+            <div class="flex space-x-4 mb-6">
+                <button id="newRegistrationBtn" class="kochin-button flex-1">
                     <i class="fas fa-user-plus mr-2"></i> New Registration
                 </button>
-                <button onclick="showTab('verification')" class="kochin-tab px-4 py-2 rounded-t-lg">
+                <button id="entryVerificationBtn" class="kochin-button flex-1">
                     <i class="fas fa-qrcode mr-2"></i> Entry Verification
                 </button>
-                <button onclick="showTab('guests')" class="kochin-tab px-4 py-2 rounded-t-lg">
+                <button id="guestListBtn" class="kochin-button flex-1">
                     <i class="fas fa-list mr-2"></i> Registered Guests
                 </button>
-                <button onclick="showTab('stats')" class="kochin-tab px-4 py-2 rounded-t-lg">
+                <button id="statsBtn" class="kochin-button flex-1">
                     <i class="fas fa-chart-bar mr-2"></i> Stats
                 </button>
-            </nav>
+            </div>
 
             <!-- Content Sections -->
             <div id="registrationContent" class="kochin-container p-6 mb-6">
@@ -467,11 +468,21 @@
             </div>
 
             <div id="guestsContent" class="kochin-container p-6 mb-6 hidden">
-                <h2 class="text-xl font-bold mb-4">Registered Guests</h2>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Registered Guests</h2>
+                    <div class="flex space-x-2">
+                        <button id="downloadGuestsPDF" class="kochin-button bg-red-600">
+                            <i class="fas fa-file-pdf mr-2"></i> Download PDF
+                        </button>
+                        <button id="downloadGuestsCSV" class="kochin-button bg-green-600">
+                            <i class="fas fa-file-csv mr-2"></i> Download CSV
+                        </button>
+                    </div>
+                </div>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full bg-gray-800 rounded-lg">
+                    <table class="min-w-full" id="guestsTable">
                         <thead>
-                            <tr>
+                            <tr class="border-b border-gray-700">
                                 <th class="py-3 px-4 text-left">Name</th>
                                 <th class="py-3 px-4 text-left">Club</th>
                                 <th class="py-3 px-4 text-left">Entry Type</th>
@@ -480,25 +491,31 @@
                                 <th class="py-3 px-4 text-left">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="guestList">
-                            <!-- Guest list will be populated here -->
+                        <tbody id="guestListTableBody">
+                            <!-- Guest rows will be dynamically added here -->
                         </tbody>
                     </table>
                 </div>
             </div>
 
             <div id="statsContent" class="kochin-container p-6 mb-6 hidden">
-                <h2 class="text-xl font-bold mb-4">Event Statistics</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div class="bg-gray-800 p-4 rounded-lg">
-                        <h3 class="font-bold text-lg mb-2">Total Registrations</h3>
-                        <p class="text-3xl text-green-400" id="totalRegistrations">0</p>
-                    </div>
-                    <div class="bg-gray-800 p-4 rounded-lg">
-                        <h3 class="font-bold text-lg mb-2">Total Amount</h3>
-                        <p class="text-3xl text-blue-400" id="totalAmount">₹0</p>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Event Statistics</h2>
+                    <div class="flex space-x-2">
+                        <button id="downloadStatsPDF" class="kochin-button bg-red-600">
+                            <i class="fas fa-file-pdf mr-2"></i> Download PDF
+                        </button>
+                        <button id="downloadStatsCSV" class="kochin-button bg-green-600">
+                            <i class="fas fa-file-csv mr-2"></i> Download CSV
+                        </button>
                     </div>
                 </div>
+                
+                <h3 class="font-bold text-lg mb-4">Total Registrations</h3>
+                <p class="text-3xl text-green-400" id="totalRegistrations">0</p>
+                
+                <h3 class="font-bold text-lg mb-4">Total Amount</h3>
+                <p class="text-3xl text-blue-400" id="totalAmount">₹0</p>
                 
                 <h3 class="font-bold text-lg mb-4">Registrations by Club</h3>
                 <div class="bg-gray-800 rounded-lg overflow-hidden">
@@ -517,52 +534,48 @@
                 </div>
             </div>
 
-            <div id="statsContent" class="kochin-container p-6 mb-6 hidden">
-                <h2 class="text-xl font-bold mb-4">Event Statistics</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div class="bg-gray-800 p-4 rounded-lg">
-                        <h3 class="font-bold text-lg mb-2">Total Registrations</h3>
-                        <p class="text-3xl text-green-400" id="totalRegistrations">0</p>
-                    </div>
-                    <div class="bg-gray-800 p-4 rounded-lg">
-                        <h3 class="font-bold text-lg mb-2">Total Amount</h3>
-                        <p class="text-3xl text-blue-400" id="totalAmount">₹0</p>
-                    </div>
-                </div>
+            <div id="usersContent" class="kochin-container p-6 mb-6 hidden">
+                <h2 class="text-xl font-bold mb-4">Users Management</h2>
                 
-                <h3 class="font-bold text-lg mb-4">Registrations by Club</h3>
-                <div class="bg-gray-800 rounded-lg overflow-hidden">
+                <!-- Add User Form -->
+                <form id="addUserForm" class="mb-8">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Username</label>
+                            <input type="text" id="newUsername" class="kochin-input w-full" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Password</label>
+                            <input type="password" id="newPassword" class="kochin-input w-full" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Role</label>
+                            <select id="newRole" class="kochin-input w-full" required>
+                                <option value="admin">Admin</option>
+                                <option value="staff">Staff</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button type="submit" class="kochin-button">
+                            <i class="fas fa-plus mr-2"></i> Add User
+                        </button>
+                    </div>
+                    <div id="addUserError" class="mt-2 text-red-500 hidden"></div>
+                </form>
+                
+                <!-- Users List -->
+                <div class="overflow-x-auto">
                     <table class="min-w-full">
                         <thead>
-                            <tr class="bg-gray-900">
-                                <th class="py-3 px-4 text-left">Club Name</th>
-                                <th class="py-3 px-4 text-left">Total Guests</th>
-                                <th class="py-3 px-4 text-left">Total Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody id="clubStats">
-                            <!-- Club stats will be populated here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="guestsContent" class="kochin-container p-6 mb-6 hidden">
-                <h2 class="text-xl font-bold mb-4">Registered Guests</h2>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full bg-gray-800 rounded-lg">
-                        <thead>
-                            <tr>
-                                <th class="py-3 px-4 text-left">Name</th>
-                                <th class="py-3 px-4 text-left">Club</th>
-                                <th class="py-3 px-4 text-left">Entry Type</th>
-                                <th class="py-3 px-4 text-left">Payment</th>
-                                <th class="py-3 px-4 text-left">Status</th>
+                            <tr class="border-b border-gray-700">
+                                <th class="py-3 px-4 text-left">Username</th>
+                                <th class="py-3 px-4 text-left">Role</th>
                                 <th class="py-3 px-4 text-left">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="guestList">
-                            <!-- Guest list will be populated here -->
+                        <tbody id="usersList">
+                            <!-- User rows will be dynamically added here -->
                         </tbody>
                     </table>
                 </div>
