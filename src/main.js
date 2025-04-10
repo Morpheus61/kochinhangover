@@ -1,21 +1,31 @@
-// Initialize Supabase client
-import { createClient } from '@supabase/supabase-js'
-import { Html5QrcodeScanner } from 'html5-qrcode'
-import QRCode from 'qrcode'
+// Initialize the application
+async function initializeApp() {
+    // Check if we're on the login page
+    if (window.location.pathname.includes('login')) {
+        // Already on login page, no need to check auth
+        return;
+    }
 
-const supabaseUrl = 'https://rcedawlruorpkzzrvkqn.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjZWRhd2xydW9ycGt6enJ2a3FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxOTU4MDQsImV4cCI6MjA1OTc3MTgwNH0.opF31e2g9ZGIJBAR6McDvBEXPtSOhrmW1c_QQh_u1yg'
-const supabase = createClient(supabaseUrl, supabaseKey)
+    // Get user from session
+    const user = JSON.parse(sessionStorage.getItem('currentUser'));
+    if (!user) {
+        // No user in session, redirect to login
+        window.location.href = 'login';
+        return;
+    }
 
-// Initialize app state
-let currentUser = null
-let guests = []
-let users = []
+    // Set current user
+    currentUser = user;
 
-// Constants for entry prices
-const ENTRY_PRICES = {
-    single: 2750,
-    couple: 4750
+    // Show main app
+    const loginScreen = document.getElementById('loginScreen');
+    const mainApp = document.getElementById('mainApp');
+    
+    if (loginScreen) loginScreen.classList.add('hidden');
+    if (mainApp) mainApp.classList.remove('hidden');
+
+    await setupNavigation();
+    await showTab('registration');
 }
 
 // Handle login
@@ -78,29 +88,31 @@ async function handleLogin(event) {
     }
 }
 
-// Initialize the application
-async function initializeApp() {
-    // Only check auth on main app page
-    if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
-        const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
-        if (!currentUser) {
-            window.location.href = 'login';
-            return;
-        }
-
-        await setupNavigation();
-        await showTab('registration');
-    }
+// Handle logout
+async function handleLogout() {
+    sessionStorage.removeItem('currentUser');
+    window.location.href = 'login';
 }
 
-// When the DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    setupEventListeners();
-    initializeApp().catch(error => {
-        console.error('Failed to initialize app:', error);
-        alert('Failed to initialize application');
-    });
-});
+// Initialize Supabase client
+import { createClient } from '@supabase/supabase-js'
+import { Html5QrcodeScanner } from 'html5-qrcode'
+import QRCode from 'qrcode'
+
+const supabaseUrl = 'https://rcedawlruorpkzzrvkqn.supabase.co'
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjZWRhd2xydW9ycGt6enJ2a3FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxOTU4MDQsImV4cCI6MjA1OTc3MTgwNH0.opF31e2g9ZGIJBAR6McDvBEXPtSOhrmW1c_QQh_u1yg'
+const supabase = createClient(supabaseUrl, supabaseKey)
+
+// Initialize app state
+let currentUser = null
+let guests = []
+let users = []
+
+// Constants for entry prices
+const ENTRY_PRICES = {
+    single: 2750,
+    couple: 4750
+}
 
 // Check if user is admin
 function isAdmin() {
@@ -149,10 +161,7 @@ function setupEventListeners() {
     }
 
     // Logout button
-    document.getElementById('logoutBtn')?.addEventListener('click', async () => {
-        sessionStorage.removeItem('currentUser');
-        window.location.href = 'login';
-    })
+    document.getElementById('logoutBtn')?.addEventListener('click', handleLogout)
 
     // Tab buttons
     document.querySelectorAll('[id$="Tab"]').forEach(tab => {
@@ -1608,3 +1617,12 @@ async function refreshGuestList() {
         alert('Failed to load guest list');
     }
 }
+
+// When the DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    setupEventListeners();
+    initializeApp().catch(error => {
+        console.error('Failed to initialize app:', error);
+        alert('Failed to initialize application');
+    });
+});
