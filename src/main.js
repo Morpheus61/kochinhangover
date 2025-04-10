@@ -4,8 +4,8 @@ import QRCode from 'qrcode'
 
 // Initialize Supabase client
 const supabase = createClient(
-    'https://cedawluoprlzzvkqn.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNlZGF3bHVvcHJsenp2a3FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDc5MDU4NzUsImV4cCI6MjAyMzQ4MTg3NX0.GpOw-XvU9ZB_q8gFc5u8Kk8rq9wU1RnXhm5xE4GxVeY'
+    'https://rcedawlruorpkzzrvkqn.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjZWRhd2xydW9ycGt6enJ2a3FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxOTU4MDQsImV4cCI6MjA1OTc3MTgwNH0.opF31e2g9ZGIJBAR6McDvBEXPtSOhrmW1c_QQh_u1yg'
 )
 
 // Initialize app state
