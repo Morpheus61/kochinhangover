@@ -51,12 +51,13 @@ async function initializeApp() {
         return
     }
 
+    // Show login screen by default
+    showLoginScreen()
+
     // Check for existing session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     if (session?.user) {
         await handleLogin(session.user)
-    } else {
-        showLoginScreen()
     }
 }
 
@@ -119,7 +120,12 @@ async function handleLogin(user) {
         
         console.log('Setting current user:', currentUser)
         
-        showApp()
+        // Hide login screen first
+        document.getElementById('loginScreen').classList.add('hidden')
+        // Then show main app
+        document.getElementById('mainApp').classList.remove('hidden')
+        
+        // Finally show registration
         showRegistration()
     } catch (error) {
         console.error('Login handling error:', error)
@@ -275,8 +281,8 @@ function setupEventListeners() {
     let html5QrcodeScanner = null;
 
     document.getElementById('startScan')?.addEventListener('click', () => {
-        document.getElementById('startScan').style.display = 'none';
-        document.getElementById('stopScan').style.display = 'inline-flex';
+        document.getElementById('startScan').classList.add('hidden');
+        document.getElementById('stopScan').classList.remove('hidden');
         
         html5QrcodeScanner = new Html5QrcodeScanner(
             "qr-reader",
@@ -291,8 +297,8 @@ function setupEventListeners() {
             html5QrcodeScanner.clear();
             html5QrcodeScanner = null;
         }
-        document.getElementById('startScan').style.display = 'inline-flex';
-        document.getElementById('stopScan').style.display = 'none';
+        document.getElementById('startScan').classList.remove('hidden');
+        document.getElementById('stopScan').classList.add('hidden');
         document.getElementById('qr-reader-results').innerHTML = '';
     });
 }
@@ -418,15 +424,15 @@ window.checkInGuest = async (id) => {
 
 // Show verification section
 function showVerification() {
-    document.getElementById('registrationSection').style.display = 'none';
-    document.getElementById('verificationSection').style.display = 'block';
+    document.getElementById('registrationSection').classList.add('hidden');
+    document.getElementById('verificationSection').classList.remove('hidden');
     loadVerificationList();
 }
 
 // Show registration section
 function showRegistration() {
-    document.getElementById('registrationSection').style.display = 'block';
-    document.getElementById('verificationSection').style.display = 'none';
+    document.getElementById('registrationSection').classList.remove('hidden');
+    document.getElementById('verificationSection').classList.add('hidden');
 }
 
 // Load verification list with QR codes
