@@ -38,104 +38,51 @@ function showApp() {
     if (mainApp) mainApp.classList.remove('hidden');
 }
 
-// Initialize the application
+let initialized = false;
 async function initializeApp() {
-    console.log('Initializing app...');
+    if (initialized) return;
+    initialized = true;
     
-    // Check if we're on the login page
-    if (window.location.pathname.includes('login.html')) {
-        console.log('On login page, skipping auth check');
+    // Clear existing listeners
+    document.getElementById('loginForm')?.replaceWith(document.getElementById('loginForm').cloneNode(true));
+    
+    // Session check
+    const { data: { session }, error } = await supabase.auth.getSession();
+    console.log("Session check:", { session, error });
+
+    if (session?.user) {
+        console.log("Valid session exists for:", session.user.email);
+        await handleLogin(session.user);
         return;
     }
-
-    // Get user from session
-    const storedUser = sessionStorage.getItem('currentUser');
-    console.log('Stored user:', storedUser);
     
-    if (!storedUser) {
-        console.log('No user in session, showing login');
-        showLoginScreen();
-        return;
-    }
-
-    try {
-        // Parse user data
-        const user = JSON.parse(storedUser);
-        console.log('Parsed user:', user);
-
-        // Set current user
-        currentUser = user;
-
-        // Show main app and initialize components
-        showApp();
-        await setupNavigation();
-        await showTab('registration');
-        
-    } catch (error) {
-        console.error('Error initializing app:', error);
-        sessionStorage.removeItem('currentUser');
-        showLoginScreen();
-    }
+    showLoginScreen();
 }
 
 // Handle login
-async function handleLogin(event) {
-    event.preventDefault();
+let loginAttempts = 0;
+async function handleLogin(user) {
+    loginAttempts++;
+    console.group(`Login Attempt #${loginAttempts}`);
+    console.log("User object:", user);
     
-    // Check if already logged in
-    if (currentUser) {
-        console.warn('Already logged in as:', currentUser);
-        showApp();
-        return;
-    }
-    
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    const errorText = document.getElementById('loginError');
-
     try {
-        console.log('Attempting login with:', username);
-        
-        // Check credentials against users table
-        const { data: users, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('username', username)
-            .eq('password', password);
-
-        console.log('Login response:', { users, error });
-
-        if (error) {
-            console.error('Database error:', error);
-            throw new Error('Login failed');
-        }
-
-        if (!users || users.length === 0) {
-            throw new Error('Invalid username or password');
-        }
-
-        const user = users[0];
-        
-        // Store user info in session
-        sessionStorage.setItem('currentUser', JSON.stringify(user));
-        console.log('User stored in session:', user);
-
-        // Set current user
         currentUser = user;
-
-        // Show main app and initialize components
-        showApp();
-        await setupNavigation();
-        await showTab('registration');
+        console.log("Current user set to:", currentUser);
         
+        const loginScreen = document.getElementById('loginScreen');
+        const mainApp = document.getElementById('mainApp');
+        console.log("UI Elements:", { loginScreen, mainApp });
+        
+        if (!loginScreen || !mainApp) throw new Error("Critical UI elements missing");
+        
+        showApp();
+        console.log("Login flow completed successfully");
     } catch (error) {
-        console.error('Login error:', error);
-        if (errorText) {
-            errorText.textContent = error.message || 'Invalid credentials';
-            errorText.classList.remove('hidden');
-        } else {
-            alert(error.message || 'Invalid credentials');
-        }
+        console.error("Login handling failed:", error);
+        showLoginScreen();
+    } finally {
+        console.groupEnd();
     }
 }
 
@@ -225,12 +172,59 @@ function setupEventListeners() {
     console.log('Setting up event listeners');
     
     // Login form
-    const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-        console.log('Found login form, attaching handler');
-        loginForm.removeEventListener('submit', handleLogin);
-        loginForm.addEventListener('submit', handleLogin);
-    }
+    document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const errorText = document.getElementById('loginError');
+
+        try {
+            console.log('Attempting login with:', username);
+            
+            // Check credentials against users table
+            const { data: users, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('username', username)
+                .eq('password', password);
+
+            console.log('Login response:', { users, error });
+
+            if (error) {
+                console.error('Database error:', error);
+                throw new Error('Login failed');
+            }
+
+            if (!users || users.length === 0) {
+                throw new Error('Invalid username or password');
+            }
+
+            const user = users[0];
+            
+            // Store user info in session
+            sessionStorage.setItem('currentUser', JSON.stringify(user));
+            console.log('User stored in session:', user);
+
+            // Set current user
+            currentUser = user;
+
+            // Show main app and initialize components
+            showApp();
+            await setupNavigation();
+            await showTab('registration');
+            
+        } catch (error) {
+            console.error('Login error:', error);
+            if (errorText) {
+                errorText.textContent = error.message || 'Invalid credentials';
+                errorText.classList.remove('hidden');
+            } else {
+                alert(error.message || 'Invalid credentials');
+            }
+        }
+    });
 
     // User management form
     const userManagementForm = document.getElementById('userManagementForm');
@@ -1723,4 +1717,13 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Failed to initialize app:', error);
         alert('Failed to initialize application');
     });
+});
+
+// Auth state listener
+supabase.auth.onAuthStateChange((event, session) => {
+    console.log(`Auth state changed: ${event}`, session);
+    if (event === 'SIGNED_IN' && session?.user) {
+        currentUser = session.user;
+        showApp();
+    }
 });
