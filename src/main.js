@@ -104,7 +104,7 @@ function setupEventListeners() {
         e.preventDefault()
         const formData = new FormData(e.target)
         try {
-            // Match the exact SQL structure
+            // Match the exact SQL structure and casing
             const guestData = {
                 name: formData.get('name'),           // TEXT NOT NULL
                 club: formData.get('clubName'),       // TEXT
@@ -112,8 +112,7 @@ function setupEventListeners() {
                 entry_type: formData.get('entryType'), // TEXT NOT NULL
                 payment: formData.get('paymentStatus'), // TEXT NOT NULL
                 status: 'pending',                     // TEXT DEFAULT 'pending'
-                club_number: formData.get('clubNumber') // TEXT
-                // created_at and updated_at are handled by Supabase
+                club_number: formData.get('clubNumber') // TEXT - exact casing as in Supabase
             }
 
             // Validate required fields
@@ -126,7 +125,7 @@ function setupEventListeners() {
             const { data, error } = await supabase
                 .from('guests')
                 .insert([guestData])
-                .select() // Get the inserted data back
+                .select()
 
             if (error) {
                 console.error('Insert error:', error)
