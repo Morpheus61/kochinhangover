@@ -40,12 +40,12 @@ async function initializeApp() {
 document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     e.preventDefault()
     
-    const username = e.target.username.value
-    const password = e.target.password.value
+    const username = document.getElementById('username').value
+    const password = document.getElementById('password').value
 
     try {
         if (username === 'Admin' && password === 'Kochin2025') {
-            // First sign in with Supabase auth
+            // Sign in with Supabase for sync
             const { data, error } = await supabase.auth.signInWithPassword({
                 email: 'admin@morpheus61.com',
                 password: 'kochin2025'
@@ -53,9 +53,9 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
 
             if (error) throw error
 
-            // Set the user role
             currentUser = {
-                ...data.user,
+                id: data.user.id,
+                username: 'Admin',
                 role: 'admin'
             }
 
@@ -111,7 +111,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Setup event listeners
 function setupEventListeners() {
     // Logout button
-    document.getElementById('logoutBtn')?.addEventListener('click', () => {
+    document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+        await supabase.auth.signOut()
         currentUser = null
         showLoginScreen()
     })
