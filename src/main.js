@@ -18,72 +18,26 @@ const ENTRY_PRICES = {
     couple: 4750
 }
 
-// Initialize app
+// Initialize the application
 async function initializeApp() {
-    const loginForm = document.getElementById('loginForm')
-    const loginScreen = document.getElementById('loginScreen')
-    const mainApp = document.getElementById('mainApp')
-    
-    // Test database connection
-    try {
-        const { data, error } = await supabase
-            .from('guests')
-            .select('count(*)')
-            .single()
-            
-        if (error) {
-            console.error('Database connection error:', error)
-            throw error
-        }
-        
-        console.log('Database connected successfully')
-    } catch (error) {
-        console.error('Failed to connect to database:', error)
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        window.location.href = '/login.html';
+        return;
     }
-    
-    // Handle login form submission
-    loginForm?.addEventListener('submit', async (e) => {
-        e.preventDefault()
-        
-        const username = document.getElementById('username').value
-        const password = document.getElementById('password').value
-        const loginError = document.getElementById('loginError')
-        
-        try {
-            // Check credentials against users table
-            const { data: user, error } = await supabase
-                .from('users')
-                .select('*')
-                .eq('username', username)
-                .eq('password', password)
-                .single()
-            
-            if (error) throw error
-            
-            if (!user) {
-                throw new Error('Invalid username or password')
-            }
-            
-            // Store user info
-            currentUser = user
-            
-            // Hide login, show main app
-            loginScreen.classList.add('hidden')
-            mainApp.classList.remove('hidden')
-            
-            // Initialize main app components
-            initializeRegistration()
-            initializeVerification()
-            loadGuestList()
-            loadStats()
-            
-        } catch (error) {
-            console.error('Login error:', error)
-            loginError.textContent = 'Invalid username or password'
-            loginError.classList.remove('hidden')
-        }
-    })
+
+    await setupNavigation();
+    await showTab('registration');
 }
+
+// When the DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    setupEventListeners();
+    initializeApp().catch(error => {
+        console.error('Failed to initialize app:', error);
+        alert('Failed to initialize application');
+    });
+});
 
 // Check if user is admin
 function isAdmin() {
@@ -259,14 +213,6 @@ function showApp() {
     mainApp.classList.remove('hidden')
 }
 
-// DOM Ready
-document.addEventListener('DOMContentLoaded', () => {
-    initializeApp()
-    setupEventListeners()
-    initializeUsers()
-    setupNavigation()
-})
-
 // Setup event listeners
 function setupEventListeners() {
     // Logout button
@@ -372,9 +318,9 @@ function setupEventListeners() {
 
     // Navigation buttons
     document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             const tabId = btn.getAttribute('data-tab');
-            showTab(tabId);
+            await showTab(tabId);
         });
     });
 
@@ -413,39 +359,20 @@ function setupEventListeners() {
 }
 
 // Show specific tab
-function showTab(tabName) {
-    // Hide all content sections
-    const sections = ['registration', 'verification', 'guests', 'stats', 'users']
-    sections.forEach(section => {
-        const element = document.getElementById(`${section}Content`)
-        if (element) {
-            element.classList.add('hidden')
-        }
-    })
-    
-    // Show selected section
-    const selectedSection = document.getElementById(`${tabName}Content`)
-    if (selectedSection) {
-        selectedSection.classList.remove('hidden')
-        
-        // Initialize specific tab content
-        switch (tabName) {
-            case 'registration':
-                initializeRegistration()
-                break
-            case 'verification':
-                initializeVerification()
-                break
-            case 'guests':
-                await loadGuestList()
-                break
-            case 'stats':
-                await loadStats()
-                break
-            case 'users':
-                await initializeUsers()
-                break
-        }
+async function showTab(tabId) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+
+    // Show selected tab
+    document.getElementById(tabId)?.classList.remove('hidden');
+    document.querySelector(`[data-tab="${tabId}"]`)?.classList.add('active');
+
+    // Special handling for specific tabs
+    if (tabId === 'guests') {
+        await refreshGuestList();
+    } else if (tabId === 'stats') {
+        await updateStats();
     }
 }
 
