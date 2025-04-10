@@ -673,35 +673,73 @@ window.sendWhatsAppPass = async function(guestId) {
         
         const qrCode = await QRCode.toDataURL(JSON.stringify(qrData))
         
-        // Format the message
-        const message = `🎉 *Kochin Hangover - Guest Pass*\n\n` +
-            `👤 *Name:* ${guest.guest_name}\n` +
-            `🏢 *Club:* ${guest.club_name}\n` +
-            `🎫 *Entry Type:* ${guest.entry_type}\n\n` +
-            `Show this QR code at entry:`
-        
-        // Open WhatsApp with the message
-        const whatsappUrl = `https://wa.me/91${guest.mobile_number}?text=${encodeURIComponent(message)}`
-        window.open(whatsappUrl, '_blank')
-        
-        // Show modal with QR code to manually share if needed
+        // Create a modal to show the pass and QR code
         const modal = document.createElement('div')
         modal.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-50'
         modal.innerHTML = `
-            <div class="bg-gray-800 p-6 rounded-lg text-center">
-                <h3 class="text-lg font-bold mb-4">Guest Pass QR Code</h3>
-                <img src="${qrCode}" alt="Guest QR Code" class="mb-4 mx-auto">
-                <p class="mb-4">WhatsApp has been opened in a new tab.<br>You can also download and share this QR code manually.</p>
-                <button onclick="this.parentElement.parentElement.remove()" class="kochin-button">
-                    Close
-                </button>
+            <div class="bg-gray-800 p-6 rounded-lg text-center max-w-md w-full">
+                <h3 class="text-2xl font-bold mb-6">Kochin Hangover - Guest Pass</h3>
+                
+                <div class="mb-6 text-left space-y-3">
+                    <p><span class="font-bold">Name:</span> ${guest.guest_name}</p>
+                    <p><span class="font-bold">Club:</span> ${guest.club_name}</p>
+                    <p><span class="font-bold">Entry Type:</span> ${guest.entry_type}</p>
+                </div>
+                
+                <div class="bg-white p-4 rounded-lg mb-6">
+                    <img src="${qrCode}" alt="Guest QR Code" class="mx-auto" style="width: 200px; height: 200px;">
+                </div>
+                
+                <div class="flex space-x-4">
+                    <button onclick="downloadGuestPass('${guest.guest_name}', this.parentElement.parentElement)" class="kochin-button flex-1">
+                        <i class="fas fa-download mr-2"></i> Download Pass
+                    </button>
+                    <button onclick="this.closest('.fixed').remove()" class="kochin-button bg-gray-700 flex-1">
+                        Close
+                    </button>
+                </div>
             </div>
         `
         document.body.appendChild(modal)
         
+        // Save the QR code as a file and create a downloadable pass
+        const qrBlob = await (await fetch(qrCode)).blob()
+        const qrFile = new File([qrBlob], 'guest-pass-qr.png', { type: 'image/png' })
+        
+        // Format WhatsApp message with line breaks
+        const message = 
+`🎉 *Kochin Hangover - Guest Pass*
+
+👤 *Guest Details*
+-------------------
+*Name:* ${guest.guest_name}
+*Club:* ${guest.club_name}
+*Entry Type:* ${guest.entry_type}
+
+Your entry QR code will be sent in the next message.`
+
+        // First send the formatted message
+        window.open(`https://wa.me/91${guest.mobile_number}?text=${encodeURIComponent(message)}`, '_blank')
+        
     } catch (error) {
         console.error('Error sending pass:', error)
         alert(error.message || 'Failed to send guest pass')
+    }
+}
+
+// Download guest pass as image
+window.downloadGuestPass = function(guestName, passElement) {
+    try {
+        // Use html2canvas to capture the pass as an image
+        html2canvas(passElement).then(canvas => {
+            const link = document.createElement('a')
+            link.download = `${guestName.replace(/\s+/g, '-').toLowerCase()}-guest-pass.png`
+            link.href = canvas.toDataURL('image/png')
+            link.click()
+        })
+    } catch (error) {
+        console.error('Error downloading pass:', error)
+        alert(error.message || 'Failed to download guest pass')
     }
 }
 
