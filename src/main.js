@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import QRCode from 'qrcode'
-import Papa from 'papaparse'
 
 // Initialize Supabase client
 const supabaseUrl = 'https://rcedawlruorpkzzrvkqn.supabase.co'
