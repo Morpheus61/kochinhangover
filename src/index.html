@@ -62,8 +62,8 @@
                         <button id="registrationTab" class="kochin-tab admin-only" onclick="showTab('registration')">
                             <i class="fas fa-user-plus"></i> Registration
                         </button>
-                        <button id="beverageTab" class="kochin-tab" onclick="showTab('beverage')">
-                            <i class="fas fa-glass-martini"></i> Beverages
+                        <button id="verificationTab" class="kochin-tab" onclick="showTab('verification')">
+                            <i class="fas fa-qrcode"></i> Entry Verification
                         </button>
                         <button id="statsTab" class="kochin-tab admin-only" onclick="showTab('stats')">
                             <i class="fas fa-chart-bar"></i> Stats
@@ -148,36 +148,41 @@
                 </div>
             </div>
 
-            <!-- Beverage Content -->
-            <div id="beverageContent" class="hidden">
-                <div class="kochin-container p-6">
-                    <h2 class="text-xl font-bold text-white mb-4">Beverage Counter</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <form id="beverageForm" class="space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">Guest QR Code</label>
-                                    <input type="text" name="guestCode" class="kochin-input" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">Beverage Type</label>
-                                    <select name="beverageType" class="kochin-input" required>
-                                        <option value="beer">Beer (₹300)</option>
-                                        <option value="cocktail">Cocktail (₹400)</option>
-                                        <option value="shot">Shot (₹200)</option>
-                                    </select>
-                                </div>
-                                <button type="submit" class="kochin-button">
-                                    <i class="fas fa-plus mr-2"></i> Add Beverage
-                                </button>
-                            </form>
+            <!-- Entry Verification Content -->
+            <div id="verificationContent" class="hidden">
+                <div class="kochin-container p-6 mb-6">
+                    <h2 class="text-xl font-bold text-white mb-4">Entry Verification</h2>
+                    
+                    <!-- QR Code Scanner -->
+                    <div class="mb-8">
+                        <div class="flex items-center space-x-4 mb-4">
+                            <button id="startScan" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+                                <i class="fas fa-camera mr-2"></i> Start Scanner
+                            </button>
+                            <button id="stopScan" class="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700" style="display: none;">
+                                <i class="fas fa-stop mr-2"></i> Stop Scanner
+                            </button>
                         </div>
-                        <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">Recent Transactions</h3>
-                            <div id="recentTransactions" class="space-y-2">
-                                <!-- Recent transactions will be added here -->
-                            </div>
-                        </div>
+                        <div id="qr-reader" class="w-full max-w-md mx-auto bg-gray-800 rounded-lg overflow-hidden"></div>
+                        <div id="qr-reader-results" class="mt-4 text-center text-white"></div>
+                    </div>
+
+                    <!-- Guest List with QR Codes -->
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-gray-800 text-white">
+                            <thead>
+                                <tr class="border-b border-gray-700">
+                                    <th class="py-3 px-4 text-left">Name</th>
+                                    <th class="py-3 px-4 text-left">Club</th>
+                                    <th class="py-3 px-4 text-left">Entry Type</th>
+                                    <th class="py-3 px-4 text-left">Payment</th>
+                                    <th class="py-3 px-4 text-left">Status</th>
+                                    <th class="py-3 px-4 text-left">QR Code</th>
+                                    <th class="py-3 px-4 text-left">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="verificationTableBody"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
