@@ -463,13 +463,13 @@ async function loadGuestList() {
                 </td>
                 <td class="py-3 px-4">
                     <div class="flex space-x-2">
-                        <button onclick="editGuest('${guest.id}')" class="text-blue-400 hover:text-blue-300" title="Edit">
+                        <button class="text-blue-400 hover:text-blue-300" onclick="editGuest('${guest.id}')" title="Edit">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button onclick="deleteGuest('${guest.id}')" class="text-red-400 hover:text-red-300" title="Delete">
+                        <button class="text-red-400 hover:text-red-300" onclick="deleteGuest('${guest.id}')" title="Delete">
                             <i class="fas fa-trash"></i>
                         </button>
-                        <button onclick="sendWhatsAppPass('${guest.id}')" class="text-green-400 hover:text-green-300" title="Send Pass">
+                        <button class="text-green-400 hover:text-green-300" onclick="sendWhatsAppPass('${guest.id}')" title="Send Pass">
                             <i class="fab fa-whatsapp"></i>
                         </button>
                     </div>
@@ -673,73 +673,115 @@ window.sendWhatsAppPass = async function(guestId) {
         
         const qrCode = await QRCode.toDataURL(JSON.stringify(qrData))
         
-        // Create a modal to show the pass and QR code
+        // Create a modal with the themed pass
         const modal = document.createElement('div')
         modal.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-50'
         modal.innerHTML = `
-            <div class="bg-gray-800 p-6 rounded-lg text-center max-w-md w-full">
-                <h3 class="text-2xl font-bold mb-6">Kochin Hangover - Guest Pass</h3>
+            <div id="guestPass" class="relative w-[600px] h-[800px] rounded-lg overflow-hidden">
+                <!-- Background with gradient -->
+                <div class="absolute inset-0 bg-[#2a0e3a]" style="
+                    background-image: radial-gradient(circle at 10% 20%, rgba(232, 50, 131, 0.3) 0%, transparent 30%),
+                                    radial-gradient(circle at 90% 30%, rgba(52, 219, 219, 0.3) 0%, transparent 30%),
+                                    radial-gradient(circle at 50% 80%, rgba(247, 208, 70, 0.3) 0%, transparent 30%);
+                "></div>
                 
-                <div class="mb-6 text-left space-y-3">
-                    <p><span class="font-bold">Name:</span> ${guest.guest_name}</p>
-                    <p><span class="font-bold">Club:</span> ${guest.club_name}</p>
-                    <p><span class="font-bold">Entry Type:</span> ${guest.entry_type}</p>
+                <!-- Content -->
+                <div class="relative h-full p-8 flex flex-col items-center">
+                    <!-- Header -->
+                    <div class="text-center mb-8">
+                        <i class="bottle-icon fas fa-wine-bottle text-4xl mb-4" style="color: #f7d046; transform: rotate(15deg);"></i>
+                        <h1 class="text-4xl font-bold mb-2" style="
+                            background: linear-gradient(90deg, #e83283, #34dbdb);
+                            -webkit-background-clip: text;
+                            background-clip: text;
+                            color: transparent;
+                            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+                        ">Kochin Hangover</h1>
+                        <div class="text-xl text-white">Guest Pass</div>
+                    </div>
+                    
+                    <!-- Guest Details -->
+                    <div class="w-full bg-[#2a0e3a] bg-opacity-70 rounded-lg p-6 mb-8 border-2" style="border-color: rgba(232, 50, 131, 0.5);">
+                        <div class="space-y-4 text-white">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-300">Name</span>
+                                <span class="font-bold text-lg">${guest.guest_name}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-300">Club</span>
+                                <span class="font-bold text-lg">${guest.club_name}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-300">Entry Type</span>
+                                <span class="font-bold text-lg">${guest.entry_type}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- QR Code -->
+                    <div class="bg-white p-6 rounded-lg">
+                        <img src="${qrCode}" alt="Entry QR Code" style="width: 200px; height: 200px;">
+                    </div>
+                    
+                    <!-- Footer -->
+                    <div class="mt-auto text-center text-gray-400">
+                        <p>Show this pass at entry</p>
+                        <p class="text-sm">Valid for one-time entry only</p>
+                    </div>
                 </div>
-                
-                <div class="bg-white p-4 rounded-lg mb-6">
-                    <img src="${qrCode}" alt="Guest QR Code" class="mx-auto" style="width: 200px; height: 200px;">
-                </div>
-                
-                <div class="flex space-x-4">
-                    <button onclick="downloadGuestPass('${guest.guest_name}', this.parentElement.parentElement)" class="kochin-button flex-1">
-                        <i class="fas fa-download mr-2"></i> Download Pass
-                    </button>
-                    <button onclick="this.closest('.fixed').remove()" class="kochin-button bg-gray-700 flex-1">
-                        Close
-                    </button>
-                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4">
+                <button onclick="shareGuestPass(this.parentElement.previousElementSibling)" class="kochin-button">
+                    <i class="fab fa-whatsapp mr-2"></i> Share on WhatsApp
+                </button>
+                <button onclick="this.closest('.fixed').remove()" class="kochin-button bg-gray-700">
+                    Close
+                </button>
             </div>
         `
         document.body.appendChild(modal)
         
-        // Save the QR code as a file and create a downloadable pass
-        const qrBlob = await (await fetch(qrCode)).blob()
-        const qrFile = new File([qrBlob], 'guest-pass-qr.png', { type: 'image/png' })
-        
-        // Format WhatsApp message with line breaks
-        const message = 
-`🎉 *Kochin Hangover - Guest Pass*
-
-👤 *Guest Details*
--------------------
-*Name:* ${guest.guest_name}
-*Club:* ${guest.club_name}
-*Entry Type:* ${guest.entry_type}
-
-Your entry QR code will be sent in the next message.`
-
-        // First send the formatted message
-        window.open(`https://wa.me/91${guest.mobile_number}?text=${encodeURIComponent(message)}`, '_blank')
-        
     } catch (error) {
-        console.error('Error sending pass:', error)
-        alert(error.message || 'Failed to send guest pass')
+        console.error('Error creating pass:', error)
+        alert(error.message || 'Failed to create guest pass')
     }
 }
 
-// Download guest pass as image
-window.downloadGuestPass = function(guestName, passElement) {
+// Share guest pass on WhatsApp
+window.shareGuestPass = async function(passElement) {
     try {
-        // Use html2canvas to capture the pass as an image
-        html2canvas(passElement).then(canvas => {
-            const link = document.createElement('a')
-            link.download = `${guestName.replace(/\s+/g, '-').toLowerCase()}-guest-pass.png`
-            link.href = canvas.toDataURL('image/png')
-            link.click()
+        // Convert the pass element to canvas
+        const canvas = await html2canvas(passElement, {
+            backgroundColor: null,
+            scale: 2, // Higher resolution
+            logging: false,
         })
+        
+        // Convert canvas to blob
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
+        
+        // Create a FormData object
+        const formData = new FormData()
+        formData.append('file', blob, 'guest-pass.png')
+        formData.append('title', 'Kochin Hangover Guest Pass')
+        
+        // Upload to a temporary file hosting service (you might want to use your own server)
+        const response = await fetch('https://tmpfiles.org/api/v1/upload', {
+            method: 'POST',
+            body: formData
+        })
+        
+        const data = await response.json()
+        const imageUrl = data.url.replace('https://tmpfiles.org/', 'https://tmpfiles.org/dl/')
+        
+        // Open WhatsApp with the image
+        window.open(`https://wa.me/?text=${encodeURIComponent('Your Kochin Hangover Guest Pass is ready! Download it here: ' + imageUrl)}`, '_blank')
+        
     } catch (error) {
-        console.error('Error downloading pass:', error)
-        alert(error.message || 'Failed to download guest pass')
+        console.error('Error sharing pass:', error)
+        alert(error.message || 'Failed to share guest pass')
     }
 }
 
