@@ -11,7 +11,6 @@ const supabase = createClient(
 
 // Initialize app state
 let guests = []
-let currentGuest = null
 let currentUser = null
 
 // Constants for entry prices
@@ -20,56 +19,99 @@ const ENTRY_PRICES = {
     couple: 4750
 }
 
-// DOM Ready
-document.addEventListener('DOMContentLoaded', async () => {
-    setupEventListeners()
-    
+// Check if user is admin
+function isAdmin() {
+    return currentUser?.role === 'admin' || false
+}
+
+// Initialize app
+async function initializeApp() {
     // Check if user is already logged in
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { session }, error } = await supabase.auth.getSession()
+    
     if (session) {
         await handleLogin(session.user)
     } else {
         showLoginScreen()
     }
+}
+
+// Login form handler
+document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    
+    const username = e.target.username.value
+    const password = e.target.password.value
+
+    try {
+        if (username === 'Admin' && password === 'Kochin2025') {
+            // First sign in with Supabase auth
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: 'admin@morpheus61.com',
+                password: 'kochin2025'
+            })
+
+            if (error) throw error
+
+            // Set the user role
+            currentUser = {
+                ...data.user,
+                role: 'admin'
+            }
+
+            await handleLogin(currentUser)
+        } else {
+            throw new Error('Invalid credentials')
+        }
+    } catch (error) {
+        console.error('Login error:', error)
+        alert('Invalid username or password')
+    }
+})
+
+// Handle login
+async function handleLogin(user) {
+    try {
+        currentUser = {
+            ...user,
+            role: 'admin' // For Admin user
+        }
+        
+        // Load initial data
+        await loadGuests()
+        await loadStats()
+        
+        showApp()
+        showRegistration()
+    } catch (error) {
+        console.error('Error handling login:', error)
+        alert('Failed to log in')
+        showLoginScreen()
+    }
+}
+
+// Show login screen
+function showLoginScreen() {
+    document.getElementById('loginScreen')?.classList.remove('hidden')
+    document.getElementById('app')?.classList.add('hidden')
+}
+
+// Show app
+function showApp() {
+    document.getElementById('loginScreen')?.classList.add('hidden')
+    document.getElementById('app')?.classList.remove('hidden')
+}
+
+// DOM Ready
+document.addEventListener('DOMContentLoaded', async () => {
+    initializeApp()
+    setupEventListeners()
 })
 
 // Setup event listeners
 function setupEventListeners() {
-    // Login form handler
-    document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault()
-        
-        const username = e.target.username.value
-        const password = e.target.password.value
-
-        try {
-            // Check credentials against users table
-            const { data: user, error } = await supabase
-                .from('users')
-                .select('username, role')
-                .eq('username', username)
-                .eq('password', password)
-                .single()
-
-            if (error || !user) {
-                throw new Error('Invalid credentials')
-            }
-
-            currentUser = {
-                username: user.username,
-                role: user.role
-            }
-
-            await handleLogin(currentUser)
-        } catch (error) {
-            console.error('Login error:', error)
-            alert('Invalid username or password')
-        }
-    })
-
     // Logout button
     document.getElementById('logoutBtn')?.addEventListener('click', () => {
-        supabase.auth.signOut()
         currentUser = null
         showLoginScreen()
     })
@@ -196,14 +238,6 @@ function setupEventListeners() {
     });
 }
 
-// Show login screen
-function showLoginScreen() {
-    document.getElementById('loginScreen')?.classList.remove('hidden')
-    document.getElementById('app')?.classList.add('hidden')
-    // Reset forms
-    document.getElementById('loginForm')?.reset()
-}
-
 // Show specific tab
 function showTab(tabName) {
     // Hide all content sections
@@ -321,33 +355,6 @@ window.checkInGuest = async (id) => {
         console.error('Error checking in guest:', error)
         alert('Failed to check in guest')
     }
-}
-
-// Handle login
-async function handleLogin(user) {
-    try {
-        currentUser = user
-        
-        // Load initial data
-        await loadGuests()
-        await loadStats()
-        
-        showApp()
-        if (user.role === 'admin') {
-            showRegistration()
-        } else {
-            showVerification()
-        }
-    } catch (error) {
-        console.error('Error handling login:', error)
-        alert('Failed to log in')
-        showLoginScreen()
-    }
-}
-
-// Check if user is admin
-function isAdmin() {
-    return currentUser?.role === 'admin' || false
 }
 
 // Show verification section
@@ -492,10 +499,4 @@ async function verifyGuest(guestId) {
         console.error('Error verifying guest:', error);
         alert('Failed to verify guest');
     }
-}
-
-// Show app
-function showApp() {
-    document.getElementById('loginScreen')?.classList.add('hidden')
-    document.getElementById('app')?.classList.remove('hidden')
 }
