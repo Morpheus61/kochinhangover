@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-import './styles.css'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import QRCode from 'qrcode'
 
