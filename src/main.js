@@ -10,6 +10,13 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 // Initialize app state
 let currentUser = null
 let guests = []
+let users = []
+
+// Constants for entry prices
+const ENTRY_PRICES = {
+    single: 2750,
+    couple: 4750
+}
 
 // Handle login
 async function handleLogin(event) {
@@ -69,17 +76,6 @@ async function handleLogin(event) {
             alert('Invalid credentials');
         }
     }
-}
-
-// Initialize app state
-let currentUser = null
-let guests = []
-let users = []
-
-// Constants for entry prices
-const ENTRY_PRICES = {
-    stag: 2750,
-    couple: 4750
 }
 
 // Initialize the application
