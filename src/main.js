@@ -71,7 +71,7 @@ async function initializeApp() {
 
     // Initialize forms
     initializeRegistration()
-    initializeVerification()
+    initQRScanner()
 
     // Check for existing session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
@@ -360,7 +360,7 @@ window.showTab = function(tabName) {
     
     // Initialize specific tab functionality
     if (tabName === 'verification') {
-        initializeQRScanner()
+        initQRScanner()
     } else if (tabName === 'guests') {
         loadGuestList()
     } else if (tabName === 'stats') {
@@ -369,62 +369,125 @@ window.showTab = function(tabName) {
 }
 
 // Initialize QR Scanner
-function initializeQRScanner() {
-    const qrReader = document.getElementById('qr-reader')
-    if (!qrReader) return
-    
-    // Clear previous instance if any
-    qrReader.innerHTML = ''
-    
+function initQRScanner() {
     const html5QrcodeScanner = new Html5QrcodeScanner(
-        "qr-reader", { fps: 10, qrbox: 250 }
+        "qr-reader", 
+        {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0,
+            showTorchButtonIfSupported: true,
+            showZoomSliderIfSupported: true,
+            defaultZoomValueIfSupported: 2
+        }
     )
     
-    html5QrcodeScanner.render((decodedText) => {
+    html5QrcodeScanner.render(async (decodedText) => {
         try {
+            // Parse the QR code data
             const guestData = JSON.parse(decodedText)
-            showVerificationResult(guestData)
+            
+            // Get the latest guest data from Supabase
+            const { data: guest, error } = await supabase
+                .from('guests')
+                .select('*')
+                .eq('id', guestData.id)
+                .single()
+            
+            if (error) throw error
+            
+            if (!guest) {
+                throw new Error('Guest not found')
+            }
+            
+            // Show verification result modal
+            const modal = document.createElement('div')
+            modal.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4'
+            modal.innerHTML = `
+                <div class="bg-[#2a0e3a] p-6 rounded-lg max-w-md w-full">
+                    <div class="text-center mb-6">
+                        <i class="fas fa-check-circle text-4xl ${guest.status === 'paid' ? 'text-green-400' : 'text-yellow-400'}"></i>
+                        <h3 class="text-2xl font-bold mt-2">Guest Details</h3>
+                    </div>
+                    
+                    <div class="space-y-4 mb-6">
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Name</span>
+                            <span class="font-bold">${guest.guest_name}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Club</span>
+                            <span class="font-bold">${guest.club_name}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Entry Type</span>
+                            <span class="font-bold">${guest.entry_type}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Status</span>
+                            <span class="font-bold ${guest.status === 'paid' ? 'text-green-400' : 'text-yellow-400'}">
+                                ${guest.status === 'paid' ? 'Paid' : 'Pending'}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-4">
+                        <button onclick="verifyGuest('${guest.id}')" class="kochin-button flex-1">
+                            <i class="fas fa-check mr-2"></i> Verify Entry
+                        </button>
+                        <button onclick="this.closest('.fixed').remove()" class="kochin-button bg-gray-700 flex-1">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `
+            document.body.appendChild(modal)
+            
+            // Stop scanning
+            html5QrcodeScanner.pause()
+            
         } catch (error) {
-            console.error('Invalid QR code:', error)
-            alert('Invalid QR code format')
+            console.error('Error verifying guest:', error)
+            alert(error.message || 'Failed to verify guest')
         }
     })
-}
-
-// Show verification result
-function showVerificationResult(guestData) {
-    const result = document.getElementById('verificationResult')
-    if (!result) return
     
-    document.getElementById('verificationGuestName').textContent = guestData.guest_name
-    document.getElementById('verificationEntryType').textContent = guestData.entry_type
-    document.getElementById('verificationMobile').textContent = guestData.mobile_number
-    document.getElementById('verificationStatus').textContent = guestData.status
-    
-    result.classList.remove('hidden')
+    // Store scanner instance for cleanup
+    window.qrScanner = html5QrcodeScanner
 }
 
 // Verify guest entry
-window.verifyGuest = async function(approved) {
+window.verifyGuest = async function(guestId) {
     try {
-        const guestId = currentGuestData.id
-        const { data, error } = await supabase
+        const { data: guest, error } = await supabase
             .from('guests')
-            .update({ 
-                status: approved ? 'verified' : 'denied',
-                verification_date: new Date().toISOString()
-            })
+            .update({ verified: true, verified_at: new Date().toISOString() })
             .eq('id', guestId)
             .select()
+            .single()
         
         if (error) throw error
         
-        alert(`Guest ${approved ? 'verified' : 'denied'} successfully!`)
-        document.getElementById('verificationResult').classList.add('hidden')
+        // Show success message
+        alert('Guest verified successfully!')
+        
+        // Remove verification modal
+        document.querySelector('.fixed').remove()
+        
+        // Resume scanning
+        window.qrScanner.resume()
         
     } catch (error) {
-        console.error('Verification error:', error)
+        console.error('Error verifying guest:', error)
         alert(error.message || 'Failed to verify guest')
+    }
+}
+
+// Cleanup QR scanner when switching views
+function cleanupQRScanner() {
+    if (window.qrScanner) {
+        window.qrScanner.clear()
+        window.qrScanner = null
     }
 }
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Kochin Hangover - Entry Management</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css" rel="stylesheet">
@@ -202,6 +202,110 @@
         
         ::-webkit-scrollbar-thumb:hover {
             background: var(--secondary);
+        }
+
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+            
+            .nav-buttons {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 0.5rem;
+                width: 100%;
+            }
+            
+            .nav-button {
+                width: 100%;
+                min-height: 80px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                padding: 1rem;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 0.5rem;
+                backdrop-filter: blur(10px);
+            }
+            
+            .form-container {
+                padding: 1rem;
+            }
+            
+            .form-group {
+                margin-bottom: 1rem;
+            }
+            
+            .form-label {
+                font-size: 0.9rem;
+                margin-bottom: 0.25rem;
+            }
+            
+            .form-input {
+                width: 100%;
+                padding: 0.75rem;
+                font-size: 1rem;
+                border-radius: 0.5rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .guest-table {
+                font-size: 0.9rem;
+            }
+            
+            .guest-table th,
+            .guest-table td {
+                padding: 0.5rem;
+            }
+            
+            #qr-reader {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            
+            #qr-reader__scan_region {
+                min-height: 300px !important;
+            }
+            
+            #qr-reader__dashboard {
+                padding: 0.5rem !important;
+            }
+        }
+        
+        /* QR Scanner Styles */
+        #qr-reader {
+            border: none !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-radius: 1rem !important;
+            overflow: hidden !important;
+        }
+        
+        #qr-reader__status_span {
+            background: var(--primary) !important;
+            color: white !important;
+        }
+        
+        #qr-reader__camera_selection {
+            background: var(--dark) !important;
+            color: white !important;
+            border: 1px solid var(--primary) !important;
+            border-radius: 0.5rem !important;
+            padding: 0.5rem !important;
+        }
+        
+        #qr-reader__dashboard button {
+            background: var(--primary) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 0.5rem !important;
+            padding: 0.5rem 1rem !important;
+            margin: 0.5rem !important;
         }
     </style>
 </head>
