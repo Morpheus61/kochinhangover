@@ -80,14 +80,14 @@ async function handleLogin(user) {
 
 // Show login screen
 function showLoginScreen() {
-    document.getElementById('loginScreen')?.classList.remove('hidden')
-    document.getElementById('app')?.classList.add('hidden')
+    document.getElementById('loginScreen').classList.remove('hidden')
+    document.getElementById('mainApp').classList.add('hidden')
 }
 
 // Show app
 function showApp() {
-    document.getElementById('loginScreen')?.classList.add('hidden')
-    document.getElementById('app')?.classList.remove('hidden')
+    document.getElementById('loginScreen').classList.add('hidden')
+    document.getElementById('mainApp').classList.remove('hidden')
 }
 
 // DOM Ready
