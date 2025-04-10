@@ -651,6 +651,54 @@ window.deleteGuest = async function(guestId) {
     }
 }
 
+// Share guest pass on WhatsApp
+window.shareGuestPass = async function(passElement) {
+    try {
+        // Convert the pass element to canvas
+        const canvas = await html2canvas(passElement, {
+            backgroundColor: '#2a0e3a',
+            scale: 2, // Higher resolution
+            logging: false,
+            useCORS: true,
+            allowTaint: true
+        })
+        
+        // Get mobile number from the guest data
+        const guestId = passElement.querySelector('[data-guest-id]')?.dataset.guestId
+        if (!guestId) throw new Error('Guest ID not found')
+        
+        const { data: guest, error } = await supabase
+            .from('guests')
+            .select('mobile_number')
+            .eq('id', guestId)
+            .single()
+            
+        if (error) throw error
+        
+        // Convert canvas to data URL
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
+        
+        // Open WhatsApp with the data URL
+        const message = encodeURIComponent('Your Kochin Hangover Guest Pass')
+        window.open(`https://wa.me/91${guest.mobile_number}?text=${message}`, '_blank')
+        
+        // Create a temporary download link for the image
+        const link = document.createElement('a')
+        link.href = dataUrl
+        link.download = 'kochin-hangover-guest-pass.jpg'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        
+        // Show success message
+        alert('Guest pass opened in WhatsApp. Please attach the downloaded image to your WhatsApp message.')
+        
+    } catch (error) {
+        console.error('Error sharing pass:', error)
+        alert(error.message || 'Failed to share guest pass')
+    }
+}
+
 // Send WhatsApp pass
 window.sendWhatsAppPass = async function(guestId) {
     try {
@@ -677,7 +725,7 @@ window.sendWhatsAppPass = async function(guestId) {
         const modal = document.createElement('div')
         modal.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-50'
         modal.innerHTML = `
-            <div id="guestPass" class="relative w-[600px] h-[800px] rounded-lg overflow-hidden">
+            <div id="guestPass" class="relative w-[600px] h-[800px] rounded-lg overflow-hidden" data-guest-id="${guest.id}">
                 <!-- Background with gradient -->
                 <div class="absolute inset-0 bg-[#2a0e3a]" style="
                     background-image: radial-gradient(circle at 10% 20%, rgba(232, 50, 131, 0.3) 0%, transparent 30%),
@@ -720,7 +768,7 @@ window.sendWhatsAppPass = async function(guestId) {
                     
                     <!-- QR Code -->
                     <div class="bg-white p-6 rounded-lg">
-                        <img src="${qrCode}" alt="Entry QR Code" style="width: 200px; height: 200px;">
+                        <img src="${qrCode}" alt="Entry QR Code" style="width: 200px; height: 200px;" crossorigin="anonymous">
                     </div>
                     
                     <!-- Footer -->
@@ -746,42 +794,6 @@ window.sendWhatsAppPass = async function(guestId) {
     } catch (error) {
         console.error('Error creating pass:', error)
         alert(error.message || 'Failed to create guest pass')
-    }
-}
-
-// Share guest pass on WhatsApp
-window.shareGuestPass = async function(passElement) {
-    try {
-        // Convert the pass element to canvas
-        const canvas = await html2canvas(passElement, {
-            backgroundColor: null,
-            scale: 2, // Higher resolution
-            logging: false,
-        })
-        
-        // Convert canvas to blob
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
-        
-        // Create a FormData object
-        const formData = new FormData()
-        formData.append('file', blob, 'guest-pass.png')
-        formData.append('title', 'Kochin Hangover Guest Pass')
-        
-        // Upload to a temporary file hosting service (you might want to use your own server)
-        const response = await fetch('https://tmpfiles.org/api/v1/upload', {
-            method: 'POST',
-            body: formData
-        })
-        
-        const data = await response.json()
-        const imageUrl = data.url.replace('https://tmpfiles.org/', 'https://tmpfiles.org/dl/')
-        
-        // Open WhatsApp with the image
-        window.open(`https://wa.me/?text=${encodeURIComponent('Your Kochin Hangover Guest Pass is ready! Download it here: ' + imageUrl)}`, '_blank')
-        
-    } catch (error) {
-        console.error('Error sharing pass:', error)
-        alert(error.message || 'Failed to share guest pass')
     }
 }
 
