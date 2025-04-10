@@ -1,8 +1,8 @@
+// Initialize Supabase client
 import { createClient } from '@supabase/supabase-js'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import QRCode from 'qrcode'
 
-// Initialize Supabase client
 const supabaseUrl = 'https://rcedawlruorpkzzrvkqn.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjZWRhd2xydW9ycGt6enJ2a3FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxOTU4MDQsImV4cCI6MjA1OTc3MTgwNH0.opF31e2g9ZGIJBAR6McDvBEXPtSOhrmW1c_QQh_u1yg'
 const supabase = createClient(supabaseUrl, supabaseKey)
@@ -78,6 +78,8 @@ async function handleLogin(event) {
     const errorText = document.getElementById('loginError');
 
     try {
+        console.log('Attempting login with:', username, password);
+        
         // Check credentials against users table
         const { data: user, error } = await supabase
             .from('users')
@@ -86,12 +88,20 @@ async function handleLogin(event) {
             .eq('password', password)
             .single();
 
-        if (error || !user) {
+        console.log('Login response:', { user, error });
+
+        if (error) {
+            console.error('Database error:', error);
+            throw new Error('Login failed');
+        }
+
+        if (!user) {
             throw new Error('Invalid username or password');
         }
 
         // Store user info in session
         sessionStorage.setItem('currentUser', JSON.stringify(user));
+        console.log('User stored in session:', user);
 
         // Successful login
         window.location.href = '/';
@@ -105,8 +115,16 @@ async function handleLogin(event) {
 
 // Setup event listeners
 function setupEventListeners() {
+    console.log('Setting up event listeners');
+    
     // Login form
-    document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        console.log('Found login form, attaching handler');
+        loginForm.addEventListener('submit', handleLogin);
+    } else {
+        console.log('Login form not found');
+    }
 
     // Logout button
     document.getElementById('logoutBtn')?.addEventListener('click', async () => {
