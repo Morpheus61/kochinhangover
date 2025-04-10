@@ -8,13 +8,80 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Initialize app state
-let guests = []
 let currentUser = null
+let guests = []
 
 // Constants for entry prices
 const ENTRY_PRICES = {
     stag: 2750,
     couple: 4750
+}
+
+// Initialize app
+async function initializeApp() {
+    const loginForm = document.getElementById('loginForm')
+    const loginScreen = document.getElementById('loginScreen')
+    const mainApp = document.getElementById('mainApp')
+    
+    // Test database connection
+    try {
+        const { data, error } = await supabase
+            .from('guests')
+            .select('count(*)')
+            .single()
+            
+        if (error) {
+            console.error('Database connection error:', error)
+            throw error
+        }
+        
+        console.log('Database connected successfully')
+    } catch (error) {
+        console.error('Failed to connect to database:', error)
+    }
+    
+    // Handle login form submission
+    loginForm?.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        
+        const username = document.getElementById('username').value
+        const password = document.getElementById('password').value
+        const loginError = document.getElementById('loginError')
+        
+        try {
+            // Check credentials against users table
+            const { data: user, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('username', username)
+                .eq('password', password)
+                .single()
+            
+            if (error) throw error
+            
+            if (!user) {
+                throw new Error('Invalid username or password')
+            }
+            
+            // Store user info
+            currentUser = user
+            
+            // Hide login, show main app
+            loginScreen.classList.add('hidden')
+            mainApp.classList.remove('hidden')
+            
+            // Initialize main app components
+            initializeRegistration()
+            initializeVerification()
+            loadGuestList()
+            loadStats()
+            
+        } catch (error) {
+            console.error('Login error:', error)
+            loginError.textContent = 'Invalid username or password'
+            loginError.classList.remove('hidden')
+        }
+    })
 }
 
 // Check if user is admin
@@ -42,42 +109,6 @@ function checkDOMElements() {
         }
     }
     return true
-}
-
-// Initialize app
-async function initializeApp() {
-    if (!checkDOMElements()) {
-        console.error('Cannot initialize app - missing critical UI elements')
-        return
-    }
-
-    // Initialize all sections as hidden first
-    const sections = [
-        'registrationContent',
-        'verificationContent',
-        'guestListContent',
-        'statsContent'
-    ]
-    
-    sections.forEach(id => {
-        const element = document.getElementById(id)
-        if (element) {
-            element.classList.add('hidden')
-        }
-    })
-
-    // Show login screen by default
-    showLoginScreen()
-
-    // Initialize forms
-    initializeRegistration()
-    initQRScanner()
-
-    // Check for existing session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    if (session?.user) {
-        await handleLogin(session.user)
-    }
 }
 
 // Login form handler
@@ -228,7 +259,7 @@ function showApp() {
 }
 
 // DOM Ready
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
     initializeApp()
     setupEventListeners()
 })
@@ -964,7 +995,6 @@ function initializeVerification() {
                     .single()
                 
                 if (error) throw error
-                if (!guestData) throw new Error('Guest not found')
                 
                 // Update verification result UI
                 document.getElementById('verificationGuestName').textContent = guestData.guest_name
