@@ -46,14 +46,14 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         if (username === 'Admin' && password === 'Kochin2025') {
             // Sign in with Supabase for sync
             const { data, error } = await supabase.auth.signInWithPassword({
-                email: 'admin@morpheus61.com',
-                password: 'kochin2025'
+                email: 'Admin',
+                password: 'Kochin2025'
             })
 
             if (error) throw error
 
             currentUser = {
-                id: data.user.id,
+                id: data?.user?.id || 'admin',
                 username: 'Admin',
                 role: 'admin'
             }
@@ -64,7 +64,8 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         }
     } catch (error) {
         console.error('Login error:', error)
-        alert('Invalid username or password')
+        document.getElementById('loginError').textContent = 'Invalid username or password'
+        document.getElementById('loginError').classList.remove('hidden')
     }
 })
 
