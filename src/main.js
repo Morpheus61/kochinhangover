@@ -462,9 +462,17 @@ async function loadGuestList() {
                     </span>
                 </td>
                 <td class="py-3 px-4">
-                    <button onclick="showGuestQR('${guest.id}')" class="text-blue-400 hover:text-blue-300">
-                        <i class="fas fa-qrcode"></i>
-                    </button>
+                    <div class="flex space-x-2">
+                        <button onclick="editGuest('${guest.id}')" class="text-blue-400 hover:text-blue-300" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deleteGuest('${guest.id}')" class="text-red-400 hover:text-red-300" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button onclick="sendWhatsAppPass('${guest.id}')" class="text-green-400 hover:text-green-300" title="Send Pass">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `).join('')
@@ -500,17 +508,43 @@ async function loadStats() {
         
         if (error) throw error
         
+        // Calculate total stats
         const stats = {
             totalRegistrations: guests.length,
-            totalAmount: guests.reduce((sum, guest) => sum + guest.paid_amount, 0),
-            verifiedEntries: guests.filter(guest => guest.status === 'verified').length,
-            pendingVerifications: guests.filter(guest => guest.status !== 'verified' && guest.status !== 'denied').length
+            totalAmount: guests.reduce((sum, guest) => sum + guest.paid_amount, 0)
         }
         
         document.getElementById('totalRegistrations').textContent = stats.totalRegistrations
         document.getElementById('totalAmount').textContent = `₹${stats.totalAmount}`
-        document.getElementById('verifiedEntries').textContent = stats.verifiedEntries
-        document.getElementById('pendingVerifications').textContent = stats.pendingVerifications
+        
+        // Calculate club-wise stats
+        const clubStats = {}
+        guests.forEach(guest => {
+            if (!clubStats[guest.club_name]) {
+                clubStats[guest.club_name] = {
+                    totalGuests: 0,
+                    totalAmount: 0
+                }
+            }
+            clubStats[guest.club_name].totalGuests++
+            clubStats[guest.club_name].totalAmount += guest.paid_amount
+        })
+        
+        // Sort clubs by total guests
+        const sortedClubs = Object.entries(clubStats)
+            .sort((a, b) => b[1].totalGuests - a[1].totalGuests)
+        
+        // Update club stats table
+        const clubStatsTable = document.getElementById('clubStats')
+        if (clubStatsTable) {
+            clubStatsTable.innerHTML = sortedClubs.map(([club, stats]) => `
+                <tr class="border-t border-gray-700">
+                    <td class="py-3 px-4">${club}</td>
+                    <td class="py-3 px-4">${stats.totalGuests}</td>
+                    <td class="py-3 px-4">₹${stats.totalAmount}</td>
+                </tr>
+            `).join('')
+        }
         
     } catch (error) {
         console.error('Error loading stats:', error)
@@ -518,8 +552,8 @@ async function loadStats() {
     }
 }
 
-// Show guest QR code
-window.showGuestQR = async function(guestId) {
+// Edit guest
+window.editGuest = async function(guestId) {
     try {
         const { data: guest, error } = await supabase
             .from('guests')
@@ -529,6 +563,106 @@ window.showGuestQR = async function(guestId) {
         
         if (error) throw error
         
+        // Show edit modal
+        const modal = document.createElement('div')
+        modal.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-50'
+        modal.innerHTML = `
+            <div class="bg-gray-800 p-6 rounded-lg w-full max-w-md">
+                <h3 class="text-lg font-bold mb-4">Edit Guest</h3>
+                <form id="editGuestForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Name</label>
+                        <input type="text" id="editGuestName" value="${guest.guest_name}" class="kochin-input w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Club Name</label>
+                        <input type="text" id="editClubName" value="${guest.club_name}" class="kochin-input w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Mobile Number</label>
+                        <input type="tel" id="editMobileNumber" value="${guest.mobile_number}" class="kochin-input w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Entry Type</label>
+                        <select id="editEntryType" class="kochin-input w-full">
+                            <option value="stag" ${guest.entry_type === 'stag' ? 'selected' : ''}>Stag (₹2750)</option>
+                            <option value="couple" ${guest.entry_type === 'couple' ? 'selected' : ''}>Couple (₹4750)</option>
+                        </select>
+                    </div>
+                    <div class="flex space-x-4">
+                        <button type="submit" class="kochin-button flex-1">Save Changes</button>
+                        <button type="button" onclick="this.closest('.fixed').remove()" class="kochin-button bg-gray-700 flex-1">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        `
+        document.body.appendChild(modal)
+        
+        // Handle form submission
+        document.getElementById('editGuestForm').addEventListener('submit', async (e) => {
+            e.preventDefault()
+            
+            const updates = {
+                guest_name: document.getElementById('editGuestName').value,
+                club_name: document.getElementById('editClubName').value,
+                mobile_number: document.getElementById('editMobileNumber').value,
+                entry_type: document.getElementById('editEntryType').value,
+                total_amount: document.getElementById('editEntryType').value === 'stag' ? 2750 : 4750
+            }
+            
+            const { error: updateError } = await supabase
+                .from('guests')
+                .update(updates)
+                .eq('id', guestId)
+            
+            if (updateError) throw updateError
+            
+            modal.remove()
+            loadGuestList() // Refresh the list
+            alert('Guest updated successfully!')
+        })
+        
+    } catch (error) {
+        console.error('Error editing guest:', error)
+        alert(error.message || 'Failed to edit guest')
+    }
+}
+
+// Delete guest
+window.deleteGuest = async function(guestId) {
+    if (!confirm('Are you sure you want to delete this guest? This action cannot be undone.')) {
+        return
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('guests')
+            .delete()
+            .eq('id', guestId)
+        
+        if (error) throw error
+        
+        loadGuestList() // Refresh the list
+        alert('Guest deleted successfully!')
+        
+    } catch (error) {
+        console.error('Error deleting guest:', error)
+        alert(error.message || 'Failed to delete guest')
+    }
+}
+
+// Send WhatsApp pass
+window.sendWhatsAppPass = async function(guestId) {
+    try {
+        const { data: guest, error } = await supabase
+            .from('guests')
+            .select('*')
+            .eq('id', guestId)
+            .single()
+        
+        if (error) throw error
+        
+        // Generate QR code
         const qrData = {
             id: guest.id,
             guest_name: guest.guest_name,
@@ -539,14 +673,26 @@ window.showGuestQR = async function(guestId) {
         
         const qrCode = await QRCode.toDataURL(JSON.stringify(qrData))
         
-        // Show QR code in a modal
+        // Format the message
+        const message = `🎉 *Kochin Hangover - Guest Pass*\n\n` +
+            `👤 *Name:* ${guest.guest_name}\n` +
+            `🏢 *Club:* ${guest.club_name}\n` +
+            `🎫 *Entry Type:* ${guest.entry_type}\n\n` +
+            `Show this QR code at entry:`
+        
+        // Open WhatsApp with the message
+        const whatsappUrl = `https://wa.me/91${guest.mobile_number}?text=${encodeURIComponent(message)}`
+        window.open(whatsappUrl, '_blank')
+        
+        // Show modal with QR code to manually share if needed
         const modal = document.createElement('div')
         modal.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-50'
         modal.innerHTML = `
-            <div class="bg-gray-800 p-6 rounded-lg">
-                <h3 class="text-lg font-bold mb-4">Guest QR Code</h3>
-                <img src="${qrCode}" alt="Guest QR Code" class="mb-4">
-                <button onclick="this.parentElement.parentElement.remove()" class="kochin-button w-full">
+            <div class="bg-gray-800 p-6 rounded-lg text-center">
+                <h3 class="text-lg font-bold mb-4">Guest Pass QR Code</h3>
+                <img src="${qrCode}" alt="Guest QR Code" class="mb-4 mx-auto">
+                <p class="mb-4">WhatsApp has been opened in a new tab.<br>You can also download and share this QR code manually.</p>
+                <button onclick="this.parentElement.parentElement.remove()" class="kochin-button">
                     Close
                 </button>
             </div>
@@ -554,8 +700,8 @@ window.showGuestQR = async function(guestId) {
         document.body.appendChild(modal)
         
     } catch (error) {
-        console.error('Error showing QR:', error)
-        alert(error.message || 'Failed to show QR code')
+        console.error('Error sending pass:', error)
+        alert(error.message || 'Failed to send guest pass')
     }
 }
 

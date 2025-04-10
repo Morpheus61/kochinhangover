@@ -384,7 +384,7 @@
 
             <div id="statsContent" class="kochin-container p-6 mb-6 hidden">
                 <h2 class="text-xl font-bold mb-4">Event Statistics</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div class="bg-gray-800 p-4 rounded-lg">
                         <h3 class="font-bold text-lg mb-2">Total Registrations</h3>
                         <p class="text-3xl text-green-400" id="totalRegistrations">0</p>
@@ -393,14 +393,73 @@
                         <h3 class="font-bold text-lg mb-2">Total Amount</h3>
                         <p class="text-3xl text-blue-400" id="totalAmount">₹0</p>
                     </div>
+                </div>
+                
+                <h3 class="font-bold text-lg mb-4">Registrations by Club</h3>
+                <div class="bg-gray-800 rounded-lg overflow-hidden">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="bg-gray-900">
+                                <th class="py-3 px-4 text-left">Club Name</th>
+                                <th class="py-3 px-4 text-left">Total Guests</th>
+                                <th class="py-3 px-4 text-left">Total Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clubStats">
+                            <!-- Club stats will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="statsContent" class="kochin-container p-6 mb-6 hidden">
+                <h2 class="text-xl font-bold mb-4">Event Statistics</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div class="bg-gray-800 p-4 rounded-lg">
-                        <h3 class="font-bold text-lg mb-2">Verified Entries</h3>
-                        <p class="text-3xl text-yellow-400" id="verifiedEntries">0</p>
+                        <h3 class="font-bold text-lg mb-2">Total Registrations</h3>
+                        <p class="text-3xl text-green-400" id="totalRegistrations">0</p>
                     </div>
                     <div class="bg-gray-800 p-4 rounded-lg">
-                        <h3 class="font-bold text-lg mb-2">Pending Verifications</h3>
-                        <p class="text-3xl text-red-400" id="pendingVerifications">0</p>
+                        <h3 class="font-bold text-lg mb-2">Total Amount</h3>
+                        <p class="text-3xl text-blue-400" id="totalAmount">₹0</p>
                     </div>
+                </div>
+                
+                <h3 class="font-bold text-lg mb-4">Registrations by Club</h3>
+                <div class="bg-gray-800 rounded-lg overflow-hidden">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="bg-gray-900">
+                                <th class="py-3 px-4 text-left">Club Name</th>
+                                <th class="py-3 px-4 text-left">Total Guests</th>
+                                <th class="py-3 px-4 text-left">Total Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clubStats">
+                            <!-- Club stats will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="guestsContent" class="kochin-container p-6 mb-6 hidden">
+                <h2 class="text-xl font-bold mb-4">Registered Guests</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-gray-800 rounded-lg">
+                        <thead>
+                            <tr>
+                                <th class="py-3 px-4 text-left">Name</th>
+                                <th class="py-3 px-4 text-left">Club</th>
+                                <th class="py-3 px-4 text-left">Entry Type</th>
+                                <th class="py-3 px-4 text-left">Payment</th>
+                                <th class="py-3 px-4 text-left">Status</th>
+                                <th class="py-3 px-4 text-left">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="guestList">
+                            <!-- Guest list will be populated here -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
