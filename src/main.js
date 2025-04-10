@@ -44,20 +44,11 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
 
     try {
         if (username === 'Admin' && password === 'Kochin2025') {
-            // Sign in with Supabase for sync
-            const { data, error } = await supabase.auth.signIn({
-                login: 'Admin',
-                password: 'Kochin2025'
-            })
-
-            if (error) throw error
-
             currentUser = {
-                id: data?.user?.id || 'admin',
+                id: 'admin',
                 username: 'Admin',
                 role: 'admin'
             }
-
             await handleLogin(currentUser)
         } else {
             throw new Error('Invalid credentials')
