@@ -147,6 +147,79 @@ async function handleLogout() {
     showLoginScreen();
 }
 
+// Handle user management
+async function handleCreateUser(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('mgmtUsername').value;
+    const password = document.getElementById('mgmtPassword').value;
+    const role = document.getElementById('mgmtRole').value;
+
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .insert([{ username, password, role }]);
+
+        if (error) throw error;
+
+        alert('User created successfully');
+        document.getElementById('userManagementForm').reset();
+        
+    } catch (error) {
+        console.error('Error creating user:', error);
+        alert('Failed to create user');
+    }
+}
+
+// Handle counter user creation
+async function handleCreateCounterUser(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('counterUsername').value;
+    const password = document.getElementById('counterPassword').value;
+
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .insert([{ username, password, role: 'staff' }]);
+
+        if (error) throw error;
+
+        alert('Counter user created successfully');
+        document.getElementById('counterUserForm').reset();
+        
+    } catch (error) {
+        console.error('Error creating counter user:', error);
+        alert('Failed to create counter user');
+    }
+}
+
+// Handle edit user
+async function handleEditUser(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('editUsername').value;
+    const password = document.getElementById('editPassword').value;
+    const role = document.getElementById('editRole').value;
+    const userId = event.target.dataset.userId;
+
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .update({ username, password, role })
+            .eq('id', userId);
+
+        if (error) throw error;
+
+        alert('User updated successfully');
+        document.getElementById('editUserForm').reset();
+        
+    } catch (error) {
+        console.error('Error updating user:', error);
+        alert('Failed to update user');
+    }
+}
+
 // Setup event listeners
 function setupEventListeners() {
     console.log('Setting up event listeners');
@@ -155,21 +228,36 @@ function setupEventListeners() {
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
         console.log('Found login form, attaching handler');
-        // Remove any existing handlers
         loginForm.removeEventListener('submit', handleLogin);
-        // Add new handler
         loginForm.addEventListener('submit', handleLogin);
-    } else {
-        console.error('Login form not found!');
+    }
+
+    // User management form
+    const userManagementForm = document.getElementById('userManagementForm');
+    if (userManagementForm) {
+        userManagementForm.removeEventListener('submit', handleCreateUser);
+        userManagementForm.addEventListener('submit', handleCreateUser);
+    }
+
+    // Counter user form
+    const counterUserForm = document.getElementById('counterUserForm');
+    if (counterUserForm) {
+        counterUserForm.removeEventListener('submit', handleCreateCounterUser);
+        counterUserForm.addEventListener('submit', handleCreateCounterUser);
+    }
+
+    // Edit user form
+    const editUserForm = document.getElementById('editUserForm');
+    if (editUserForm) {
+        editUserForm.removeEventListener('submit', handleEditUser);
+        editUserForm.addEventListener('submit', handleEditUser);
     }
 
     // Logout button
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         console.log('Found logout button, attaching handler');
-        // Remove any existing handlers
         logoutBtn.removeEventListener('click', handleLogout);
-        // Add new handler
         logoutBtn.addEventListener('click', handleLogout);
     }
 

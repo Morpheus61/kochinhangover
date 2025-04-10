@@ -683,6 +683,86 @@
         </div>
     </div>
 
+    <!-- User Management Modal -->
+    <div id="userManagementModal" class="modal hidden">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold mb-4">User Management</h3>
+            
+            <!-- Create User Form -->
+            <form id="userManagementForm" class="space-y-4">
+                <div>
+                    <label for="mgmtUsername" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+                    <input type="text" id="mgmtUsername" name="mgmtUsername" required class="kochin-input w-full">
+                </div>
+                
+                <div>
+                    <label for="mgmtPassword" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                    <input type="password" id="mgmtPassword" name="mgmtPassword" required class="kochin-input w-full">
+                </div>
+
+                <div>
+                    <label for="mgmtRole" class="block text-sm font-medium text-gray-300 mb-2">Role</label>
+                    <select id="mgmtRole" name="mgmtRole" class="kochin-input w-full" required>
+                        <option value="staff">Staff</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="kochin-button w-full">Create User</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Counter User Modal -->
+    <div id="createCounterUserModal" class="modal hidden">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold mb-4">Create Counter User</h3>
+            
+            <form id="counterUserForm" class="space-y-4">
+                <div>
+                    <label for="counterUsername" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+                    <input type="text" id="counterUsername" name="counterUsername" required class="kochin-input w-full">
+                </div>
+                
+                <div>
+                    <label for="counterPassword" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                    <input type="password" id="counterPassword" name="counterPassword" required class="kochin-input w-full">
+                </div>
+
+                <button type="submit" class="kochin-button w-full">Create Counter User</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editUserModal" class="modal hidden">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold mb-4">Edit User</h3>
+            
+            <form id="editUserForm" class="space-y-4">
+                <div>
+                    <label for="editUsername" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+                    <input type="text" id="editUsername" name="editUsername" required class="kochin-input w-full">
+                </div>
+                
+                <div>
+                    <label for="editPassword" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                    <input type="password" id="editPassword" name="editPassword" required class="kochin-input w-full">
+                </div>
+
+                <div>
+                    <label for="editRole" class="block text-sm font-medium text-gray-300 mb-2">Role</label>
+                    <select id="editRole" name="editRole" class="kochin-input w-full" required>
+                        <option value="staff">Staff</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="kochin-button w-full">Update User</button>
+            </form>
+        </div>
+    </div>
+
     <!-- Polyfills and dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/es-module-shims@1.7.3/dist/es-module-shims.js"></script>
     <script type="importmap">
