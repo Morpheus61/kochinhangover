@@ -70,18 +70,52 @@ function setupEventListeners() {
     // Login form
     document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         e.preventDefault()
-        const email = document.getElementById('username').value
+        const username = document.getElementById('username').value
         const password = document.getElementById('password').value
         
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email,
-                password
+            // First get user data from the users table
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('username', username)
+                .single()
+
+            if (userError || !userData) {
+                throw new Error('Invalid username or password')
+            }
+
+            // Check if password matches
+            if (userData.password !== password) {
+                throw new Error('Invalid username or password')
+            }
+
+            // Set the user role
+            currentUser = {
+                id: username,
+                role: userData.role,
+                username: username
+            }
+
+            // Update UI based on role
+            document.getElementById('loginScreen')?.classList.add('hidden')
+            document.getElementById('mainApp')?.classList.remove('hidden')
+
+            // Show/hide admin features
+            const isAdmin = userData.role === 'admin'
+            document.querySelectorAll('.admin-only').forEach(el => {
+                if (isAdmin) {
+                    el.classList.remove('hidden')
+                } else {
+                    el.classList.add('hidden')
+                }
             })
-            
-            if (error) throw error
-            
-            await handleLogin(data.user)
+
+            // Show appropriate tab based on role
+            showTab(isAdmin ? 'registration' : 'beverage')
+
+            // Load initial data
+            await loadGuests()
         } catch (error) {
             const errorDiv = document.getElementById('loginError')
             errorDiv.textContent = error.message || 'Failed to login'
