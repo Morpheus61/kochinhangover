@@ -53,8 +53,8 @@ function checkDOMElements() {
         loginScreen: document.getElementById('loginScreen'),
         mainApp: document.getElementById('mainApp'),
         loginForm: document.getElementById('loginForm'),
-        username: document.getElementById('newUsername'),
-        password: document.getElementById('newPassword'),
+        username: document.getElementById('username'),
+        password: document.getElementById('password'),
         loginError: document.getElementById('loginError')
     }
     
@@ -73,8 +73,8 @@ function checkDOMElements() {
 async function handleLogin(event) {
     event.preventDefault();
     
-    const username = document.getElementById('newUsername').value;
-    const password = document.getElementById('newPassword').value;
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
     const errorText = document.getElementById('loginError');
 
     try {
