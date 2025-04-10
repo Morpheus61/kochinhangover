@@ -338,20 +338,225 @@ function setupEventListeners() {
 }
 
 // Show specific tab
-function showTab(tabName) {
+window.showTab = function(tabName) {
     // Hide all content sections
-    document.querySelectorAll('[id$="Content"]').forEach(content => {
-        content.classList.add('hidden')
+    const sections = ['registration', 'verification', 'guests', 'stats']
+    sections.forEach(section => {
+        document.getElementById(`${section}Content`)?.classList.add('hidden')
     })
     
-    // Remove active class from all tabs
-    document.querySelectorAll('[id$="Tab"]').forEach(tab => {
-        tab.classList.remove('active')
-    })
-    
-    // Show selected content and activate tab
+    // Show selected section
     document.getElementById(`${tabName}Content`)?.classList.remove('hidden')
-    document.getElementById(`${tabName}Tab`)?.classList.add('active')
+    
+    // Update active tab styling
+    const tabs = document.querySelectorAll('.kochin-tab')
+    tabs.forEach(tab => {
+        if (tab.getAttribute('onclick') === `showTab('${tabName}')`) {
+            tab.classList.add('bg-opacity-100', 'border-primary')
+        } else {
+            tab.classList.remove('bg-opacity-100', 'border-primary')
+        }
+    })
+    
+    // Initialize specific tab functionality
+    if (tabName === 'verification') {
+        initializeQRScanner()
+    } else if (tabName === 'guests') {
+        loadGuestList()
+    } else if (tabName === 'stats') {
+        loadStats()
+    }
+}
+
+// Initialize QR Scanner
+function initializeQRScanner() {
+    const qrReader = document.getElementById('qr-reader')
+    if (!qrReader) return
+    
+    // Clear previous instance if any
+    qrReader.innerHTML = ''
+    
+    const html5QrcodeScanner = new Html5QrcodeScanner(
+        "qr-reader", { fps: 10, qrbox: 250 }
+    )
+    
+    html5QrcodeScanner.render((decodedText) => {
+        try {
+            const guestData = JSON.parse(decodedText)
+            showVerificationResult(guestData)
+        } catch (error) {
+            console.error('Invalid QR code:', error)
+            alert('Invalid QR code format')
+        }
+    })
+}
+
+// Show verification result
+function showVerificationResult(guestData) {
+    const result = document.getElementById('verificationResult')
+    if (!result) return
+    
+    document.getElementById('verificationGuestName').textContent = guestData.guest_name
+    document.getElementById('verificationEntryType').textContent = guestData.entry_type
+    document.getElementById('verificationMobile').textContent = guestData.mobile_number
+    document.getElementById('verificationStatus').textContent = guestData.status
+    
+    result.classList.remove('hidden')
+}
+
+// Verify guest entry
+window.verifyGuest = async function(approved) {
+    try {
+        const guestId = currentGuestData.id
+        const { data, error } = await supabase
+            .from('guests')
+            .update({ 
+                status: approved ? 'verified' : 'denied',
+                verification_date: new Date().toISOString()
+            })
+            .eq('id', guestId)
+            .select()
+        
+        if (error) throw error
+        
+        alert(`Guest ${approved ? 'verified' : 'denied'} successfully!`)
+        document.getElementById('verificationResult').classList.add('hidden')
+        
+    } catch (error) {
+        console.error('Verification error:', error)
+        alert(error.message || 'Failed to verify guest')
+    }
+}
+
+// Load guest list
+async function loadGuestList() {
+    try {
+        const { data: guests, error } = await supabase
+            .from('guests')
+            .select('*')
+            .order('registration_date', { ascending: false })
+        
+        if (error) throw error
+        
+        const guestList = document.getElementById('guestList')
+        if (!guestList) return
+        
+        if (guests.length === 0) {
+            guestList.innerHTML = `
+                <tr>
+                    <td colspan="6" class="py-4 px-4 text-center text-gray-400">No guests registered yet</td>
+                </tr>
+            `
+            return
+        }
+        
+        guestList.innerHTML = guests.map(guest => `
+            <tr class="border-t border-gray-700">
+                <td class="py-3 px-4">${guest.guest_name}</td>
+                <td class="py-3 px-4">${guest.club_name}</td>
+                <td class="py-3 px-4">${guest.entry_type}</td>
+                <td class="py-3 px-4">₹${guest.paid_amount} / ₹${guest.total_amount}</td>
+                <td class="py-3 px-4">
+                    <span class="px-2 py-1 rounded text-xs ${getStatusClass(guest.status)}">
+                        ${guest.status}
+                    </span>
+                </td>
+                <td class="py-3 px-4">
+                    <button onclick="showGuestQR('${guest.id}')" class="text-blue-400 hover:text-blue-300">
+                        <i class="fas fa-qrcode"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('')
+        
+    } catch (error) {
+        console.error('Error loading guests:', error)
+        alert(error.message || 'Failed to load guest list')
+    }
+}
+
+// Get status class for styling
+function getStatusClass(status) {
+    switch (status) {
+        case 'paid':
+            return 'bg-green-900 text-green-300'
+        case 'partially_paid':
+            return 'bg-yellow-900 text-yellow-300'
+        case 'verified':
+            return 'bg-blue-900 text-blue-300'
+        case 'denied':
+            return 'bg-red-900 text-red-300'
+        default:
+            return 'bg-gray-900 text-gray-300'
+    }
+}
+
+// Load statistics
+async function loadStats() {
+    try {
+        const { data: guests, error } = await supabase
+            .from('guests')
+            .select('*')
+        
+        if (error) throw error
+        
+        const stats = {
+            totalRegistrations: guests.length,
+            totalAmount: guests.reduce((sum, guest) => sum + guest.paid_amount, 0),
+            verifiedEntries: guests.filter(guest => guest.status === 'verified').length,
+            pendingVerifications: guests.filter(guest => guest.status !== 'verified' && guest.status !== 'denied').length
+        }
+        
+        document.getElementById('totalRegistrations').textContent = stats.totalRegistrations
+        document.getElementById('totalAmount').textContent = `₹${stats.totalAmount}`
+        document.getElementById('verifiedEntries').textContent = stats.verifiedEntries
+        document.getElementById('pendingVerifications').textContent = stats.pendingVerifications
+        
+    } catch (error) {
+        console.error('Error loading stats:', error)
+        alert(error.message || 'Failed to load statistics')
+    }
+}
+
+// Show guest QR code
+window.showGuestQR = async function(guestId) {
+    try {
+        const { data: guest, error } = await supabase
+            .from('guests')
+            .select('*')
+            .eq('id', guestId)
+            .single()
+        
+        if (error) throw error
+        
+        const qrData = {
+            id: guest.id,
+            guest_name: guest.guest_name,
+            entry_type: guest.entry_type,
+            mobile_number: guest.mobile_number,
+            status: guest.status
+        }
+        
+        const qrCode = await QRCode.toDataURL(JSON.stringify(qrData))
+        
+        // Show QR code in a modal
+        const modal = document.createElement('div')
+        modal.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-50'
+        modal.innerHTML = `
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <h3 class="text-lg font-bold mb-4">Guest QR Code</h3>
+                <img src="${qrCode}" alt="Guest QR Code" class="mb-4">
+                <button onclick="this.parentElement.parentElement.remove()" class="kochin-button w-full">
+                    Close
+                </button>
+            </div>
+        `
+        document.body.appendChild(modal)
+        
+    } catch (error) {
+        console.error('Error showing QR:', error)
+        alert(error.message || 'Failed to show QR code')
+    }
 }
 
 // Load guests from Supabase
@@ -539,9 +744,9 @@ function initializeRegistration() {
     updateAmount()
     
     // Handle payment mode changes
-    const paymentMode = document.getElementById('payment_mode')
+    const paymentMode = document.getElementById('paymentMode')
     const partialSection = document.getElementById('partialPaymentSection')
-    const paidAmountInput = document.getElementById('paid_amount')
+    const paidAmountInput = document.getElementById('paidAmount')
     
     paymentMode?.addEventListener('change', () => {
         if (paymentMode.value === 'partial') {
@@ -554,20 +759,20 @@ function initializeRegistration() {
     })
     
     // Update amount when entry type changes
-    document.getElementById('entry_type')?.addEventListener('change', updateAmount)
+    document.getElementById('entryType')?.addEventListener('change', updateAmount)
     
     form.addEventListener('submit', async (e) => {
         e.preventDefault()
         
         try {
             // Get form data
-            const entryType = document.getElementById('entry_type').value
-            const paymentMode = document.getElementById('payment_mode').value
+            const entryType = document.getElementById('entryType').value
+            const paymentMode = document.getElementById('paymentMode').value
             const totalAmount = entryType === 'stag' ? 2750 : 4750
             
             let paidAmount = totalAmount // Default to full amount
             if (paymentMode === 'partial') {
-                paidAmount = Number(document.getElementById('paid_amount').value)
+                paidAmount = Number(document.getElementById('paidAmount').value)
                 if (!paidAmount || paidAmount <= 0 || paidAmount >= totalAmount) {
                     alert('Please enter a valid partial payment amount (greater than 0 and less than total amount)')
                     return
@@ -575,9 +780,9 @@ function initializeRegistration() {
             }
             
             const formData = {
-                guest_name: document.getElementById('guest_name').value,
-                club_name: document.getElementById('club_name').value,
-                mobile_number: document.getElementById('mobile_number').value,
+                guest_name: document.getElementById('guestName').value,
+                club_name: document.getElementById('clubName').value,
+                mobile_number: document.getElementById('mobileNumber').value,
                 entry_type: entryType,
                 payment_mode: paymentMode,
                 total_amount: totalAmount,
@@ -641,9 +846,9 @@ function initializeRegistration() {
 
 // Update amount based on entry type
 window.updateAmount = function() {
-    const entryType = document.getElementById('entry_type').value
+    const entryType = document.getElementById('entryType').value
     const totalAmountDisplay = document.getElementById('totalAmountDisplay')
-    const paidAmountInput = document.getElementById('paid_amount')
+    const paidAmountInput = document.getElementById('paidAmount')
     const totalAmount = entryType === 'stag' ? 2750 : 4750
     
     if (totalAmountDisplay) {

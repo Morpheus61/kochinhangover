@@ -262,57 +262,53 @@
             </div>
             
             <!-- Navigation -->
-            <div class="flex space-x-4 mb-6">
-                <button onclick="showRegistration()" class="kochin-nav-button admin-only">
-                    <i class="fas fa-user-plus"></i>
-                    New Registration
+            <nav class="flex space-x-2 mb-6">
+                <button onclick="showTab('registration')" class="kochin-tab px-4 py-2 rounded-t-lg">
+                    <i class="fas fa-user-plus mr-2"></i> New Registration
                 </button>
-                <button onclick="showVerification()" class="kochin-nav-button">
-                    <i class="fas fa-qrcode"></i>
-                    Entry Verification
+                <button onclick="showTab('verification')" class="kochin-tab px-4 py-2 rounded-t-lg">
+                    <i class="fas fa-qrcode mr-2"></i> Entry Verification
                 </button>
-                <button onclick="showGuestList()" class="kochin-nav-button">
-                    <i class="fas fa-list"></i>
-                    Registered Guests
+                <button onclick="showTab('guests')" class="kochin-tab px-4 py-2 rounded-t-lg">
+                    <i class="fas fa-list mr-2"></i> Registered Guests
                 </button>
-                <button onclick="showStats()" class="kochin-nav-button admin-only">
-                    <i class="fas fa-chart-bar"></i>
-                    Stats
+                <button onclick="showTab('stats')" class="kochin-tab px-4 py-2 rounded-t-lg">
+                    <i class="fas fa-chart-bar mr-2"></i> Stats
                 </button>
-            </div>
+            </nav>
 
-            <!-- Registration Content -->
-            <div id="registrationContent" class="kochin-container p-6 mb-6 admin-only">
+            <!-- Content Sections -->
+            <div id="registrationContent" class="kochin-container p-6 mb-6">
                 <h2 class="text-xl font-bold mb-4">New Registration</h2>
                 
                 <form id="registrationForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label for="guest_name" class="block text-sm font-medium text-gray-300 mb-1">Name</label>
-                        <input type="text" id="guest_name" name="guest_name" required class="kochin-input w-full">
+                        <label for="guestName" class="block text-sm font-medium text-gray-300 mb-1">Name</label>
+                        <input type="text" id="guestName" name="guestName" required class="kochin-input w-full">
                     </div>
                     
                     <div>
-                        <label for="club_name" class="block text-sm font-medium text-gray-300 mb-1">Club Name</label>
-                        <input type="text" id="club_name" name="club_name" value="Angels 153" class="kochin-input w-full">
+                        <label for="clubName" class="block text-sm font-medium text-gray-300 mb-1">Club Name</label>
+                        <input type="text" id="clubName" name="clubName" value="Angels 153" class="kochin-input w-full">
                     </div>
                     
                     <div>
-                        <label for="mobile_number" class="block text-sm font-medium text-gray-300 mb-1">Mobile Number</label>
-                        <input type="tel" id="mobile_number" name="mobile_number" required class="kochin-input w-full" pattern="[0-9]{10}" title="Please enter a valid 10-digit mobile number">
+                        <label for="mobileNumber" class="block text-sm font-medium text-gray-300 mb-1">Mobile Number</label>
+                        <input type="tel" id="mobileNumber" name="mobileNumber" required class="kochin-input w-full" pattern="[0-9]{10}" title="Please enter a valid 10-digit mobile number">
                         <p class="text-xs text-gray-400 mt-1">10-digit mobile number (for QR code delivery and verification)</p>
                     </div>
                     
                     <div>
-                        <label for="entry_type" class="block text-sm font-medium text-gray-300 mb-1">Entry Type</label>
-                        <select id="entry_type" name="entry_type" required class="kochin-input w-full" onchange="updateAmount()">
+                        <label for="entryType" class="block text-sm font-medium text-gray-300 mb-1">Entry Type</label>
+                        <select id="entryType" name="entryType" required class="kochin-input w-full" onchange="updateAmount()">
                             <option value="stag">Stag (₹2750)</option>
                             <option value="couple">Couple (₹4750)</option>
                         </select>
                     </div>
                     
                     <div>
-                        <label for="payment_mode" class="block text-sm font-medium text-gray-300 mb-1">Payment Mode</label>
-                        <select id="payment_mode" name="payment_mode" required class="kochin-input w-full">
+                        <label for="paymentMode" class="block text-sm font-medium text-gray-300 mb-1">Payment Mode</label>
+                        <select id="paymentMode" name="paymentMode" required class="kochin-input w-full">
                             <option value="full_cash">Full Payment - Cash</option>
                             <option value="full_upi">Full Payment - UPI</option>
                             <option value="full_card">Full Payment - Card</option>
@@ -321,9 +317,9 @@
                     </div>
 
                     <div id="partialPaymentSection" class="hidden">
-                        <label for="paid_amount" class="block text-sm font-medium text-gray-300 mb-1">Paid Amount (₹)</label>
+                        <label for="paidAmount" class="block text-sm font-medium text-gray-300 mb-1">Paid Amount (₹)</label>
                         <div class="flex items-center space-x-2">
-                            <input type="number" id="paid_amount" name="paid_amount" min="100" class="kochin-input w-full" placeholder="Enter amount paid now">
+                            <input type="number" id="paidAmount" name="paidAmount" min="100" class="kochin-input w-full" placeholder="Enter amount paid now">
                             <span class="text-sm text-gray-400" id="totalAmountDisplay"></span>
                         </div>
                         <p class="text-xs text-gray-400 mt-1">Enter the amount paid now. Full amount will be collected at entry.</p>
@@ -337,146 +333,27 @@
                 </form>
             </div>
 
-            <!-- Guest Pass Content -->
-            <div id="guestPassContent" class="kochin-container p-6 mb-6 hidden admin-only">
-                <h2 class="text-xl font-bold mb-4">Guest Pass</h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
-                        <div id="guestDetails" class="mb-4">
-                            <p class="text-lg">Scan this QR code for entry and transactions</p>
-                            <div class="mt-4 text-center">
-                                <div id="qrcode" class="inline-block"></div>
-                            </div>
-                            <div class="mt-4">
-                                <p class="text-sm text-gray-300">Balance: <span id="guestBalance" class="font-bold">₹0</span></p>
-                                <p class="text-xs text-gray-400 mt-1">Includes entry and food. Beverages are additional.</p>
-                                <div class="mt-4">
-                                    <button id="sendWhatsAppBtn" class="kochin-button py-2 px-4 text-sm">
-                                        <i class="fab fa-whatsapp mr-2"></i> Send to WhatsApp
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <h3 class="text-lg font-semibold mb-2">Transaction History</h3>
-                        <div id="transactionHistory" class="max-h-60 overflow-y-auto bg-opacity-50 bg-black rounded p-2">
-                            <p class="text-gray-400 text-center py-4">No transactions yet</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Transaction Panel -->
-            <div id="transactionContent" class="kochin-container p-6 mb-6 hidden admin-only">
-                <h2 class="text-xl font-bold mb-4">Transaction Panel</h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <p class="mb-2">Current Balance: <span id="currentBalance" class="font-bold">₹0</span></p>
-                        
-                        <form id="transactionForm" class="space-y-4">
-                            <div>
-                                <label for="transactionType" class="block text-sm font-medium text-gray-300 mb-1">Transaction Type</label>
-                                <select id="transactionType" name="transactionType" required class="kochin-input w-full">
-                                    <option value="topup">Top Up</option>
-                                    <option value="purchase">Purchase</option>
-                                    <option value="refund">Refund</option>
-                                </select>
-                            </div>
-                            
-                            <div>
-                                <label for="category" class="block text-sm font-medium text-gray-300 mb-1">Category</label>
-                                <select id="category" name="category" required class="kochin-input w-full">
-                                    <option value="food">Food</option>
-                                    <option value="entry">Entry</option>
-                                    <option value="merchandise">Merchandise</option>
-                                    <option value="other">Other</option>
-                                </select>
-                            </div>
-                            
-                            <div>
-                                <label for="transactionAmount" class="block text-sm font-medium text-gray-300 mb-1">Amount (₹)</label>
-                                <input type="number" id="transactionAmount" name="transactionAmount" required class="kochin-input w-full">
-                            </div>
-                            
-                            <div>
-                                <label for="description" class="block text-sm font-medium text-gray-300 mb-1">Description (Optional)</label>
-                                <textarea id="description" name="description" class="kochin-input w-full" rows="2"></textarea>
-                            </div>
-                            
-                            <button type="submit" class="kochin-button py-2 px-6">
-                                <i class="fas fa-check-circle mr-2"></i> Process Transaction
-                            </button>
-                        </form>
-                    </div>
-                    
-                    <div>
-                        <div id="selectedGuestInfo" class="kochin-card mb-4">
-                            <p class="text-gray-300 text-center py-2">Select a guest to process transactions</p>
-                        </div>
-                        
-                        <div id="recentTransactions" class="kochin-card">
-                            <h3 class="text-lg font-semibold mb-2">Recent Transactions</h3>
-                            <div id="recentTransactionsList" class="max-h-40 overflow-y-auto">
-                                <p class="text-gray-400 text-center py-2">No transactions yet</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Verification Panel -->
             <div id="verificationContent" class="kochin-container p-6 mb-6 hidden">
                 <h2 class="text-xl font-bold mb-4">Entry Verification</h2>
                 
                 <div class="grid grid-cols-1 gap-6">
                     <div class="text-center">
-                        <button id="startVerificationScan" class="kochin-button mb-4">
-                            <i class="fas fa-camera mr-2"></i>
-                            Start QR Scanner
-                        </button>
-                        <button id="stopVerificationScan" class="kochin-button mb-4 hidden">
-                            <i class="fas fa-stop mr-2"></i>
-                            Stop Scanner
-                        </button>
+                        <div id="qr-reader"></div>
+                        <div id="qr-reader-results" class="mt-4"></div>
                     </div>
-
-                    <div id="verification-qr-reader" class="w-full max-w-md mx-auto"></div>
-                    
-                    <!-- Guest Details Card (shown after successful scan) -->
                     <div id="verificationResult" class="hidden">
-                        <div class="bg-gray-800 rounded-lg p-6">
-                            <h3 class="text-lg font-semibold mb-4">Guest Details</h3>
-                            <div class="space-y-3">
-                                <div class="flex justify-between">
-                                    <span class="text-gray-400">Name:</span>
-                                    <span id="verificationGuestName" class="font-medium"></span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-400">Entry Type:</span>
-                                    <span id="verificationEntryType" class="font-medium"></span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-400">Mobile:</span>
-                                    <span id="verificationMobile" class="font-medium"></span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-400">Status:</span>
-                                    <span id="verificationStatus" class="font-medium"></span>
-                                </div>
-                            </div>
-                            
-                            <div class="mt-6 flex justify-end space-x-4">
-                                <button id="verifyEntry" class="kochin-button bg-green-600 hover:bg-green-700">
-                                    <i class="fas fa-check mr-2"></i>
-                                    Verify Entry
+                        <div class="bg-gray-800 p-4 rounded-lg">
+                            <h3 class="font-bold mb-2">Guest Details</h3>
+                            <p>Name: <span id="verificationGuestName"></span></p>
+                            <p>Entry Type: <span id="verificationEntryType"></span></p>
+                            <p>Mobile: <span id="verificationMobile"></span></p>
+                            <p>Status: <span id="verificationStatus"></span></p>
+                            <div class="flex space-x-4 mt-4">
+                                <button onclick="verifyGuest(true)" class="bg-green-600 text-white px-4 py-2 rounded">
+                                    <i class="fas fa-check mr-2"></i> Verify Entry
                                 </button>
-                                <button id="denyEntry" class="kochin-button bg-red-600 hover:bg-red-700">
-                                    <i class="fas fa-times mr-2"></i>
-                                    Deny Entry
+                                <button onclick="verifyGuest(false)" class="bg-red-600 text-white px-4 py-2 rounded">
+                                    <i class="fas fa-times mr-2"></i> Deny Entry
                                 </button>
                             </div>
                         </div>
@@ -484,51 +361,45 @@
                 </div>
             </div>
 
-            <!-- Registered Guests -->
-            <div id="guestListContent" class="kochin-container p-6 mb-6 hidden">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold">Registered Guests</h2>
-                    <div class="relative">
-                        <input type="text" id="guestSearch" placeholder="Search guests..." class="kochin-input pl-8">
-                        <i class="fas fa-search absolute left-3 top-3 text-gray-500"></i>
-                    </div>
-                </div>
-                
-                <div id="guestsList" class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-700">
+            <div id="guestsContent" class="kochin-container p-6 mb-6 hidden">
+                <h2 class="text-xl font-bold mb-4">Registered Guests</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-gray-800 rounded-lg">
                         <thead>
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Name</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Club</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Mobile</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Entry Type</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Balance</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
+                                <th class="py-3 px-4 text-left">Name</th>
+                                <th class="py-3 px-4 text-left">Club</th>
+                                <th class="py-3 px-4 text-left">Entry Type</th>
+                                <th class="py-3 px-4 text-left">Payment</th>
+                                <th class="py-3 px-4 text-left">Status</th>
+                                <th class="py-3 px-4 text-left">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="guestsTableBody" class="divide-y divide-gray-700">
-                            <tr>
-                                <td colspan="6" class="px-6 py-4 text-center text-gray-400">No guests registered yet</td>
-                            </tr>
+                        <tbody id="guestList">
+                            <!-- Guest list will be populated here -->
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- Stats Content -->
-            <div id="statsContent" class="hidden admin-only">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="kochin-container p-6">
-                        <h3 class="text-lg font-semibold text-white mb-3">Entry Stats</h3>
-                        <div id="entryStats" class="space-y-2">
-                            <!-- Entry stats will be added here -->
-                        </div>
+            <div id="statsContent" class="kochin-container p-6 mb-6 hidden">
+                <h2 class="text-xl font-bold mb-4">Event Statistics</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <h3 class="font-bold text-lg mb-2">Total Registrations</h3>
+                        <p class="text-3xl text-green-400" id="totalRegistrations">0</p>
                     </div>
-                    <div class="kochin-container p-6">
-                        <h3 class="text-lg font-semibold text-white mb-3">Revenue Stats</h3>
-                        <div id="revenueStats" class="space-y-2">
-                            <!-- Revenue stats will be added here -->
-                        </div>
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <h3 class="font-bold text-lg mb-2">Total Amount</h3>
+                        <p class="text-3xl text-blue-400" id="totalAmount">₹0</p>
+                    </div>
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <h3 class="font-bold text-lg mb-2">Verified Entries</h3>
+                        <p class="text-3xl text-yellow-400" id="verifiedEntries">0</p>
+                    </div>
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <h3 class="font-bold text-lg mb-2">Pending Verifications</h3>
+                        <p class="text-3xl text-red-400" id="pendingVerifications">0</p>
                     </div>
                 </div>
             </div>
