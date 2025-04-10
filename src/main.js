@@ -104,24 +104,32 @@ function setupEventListeners() {
         e.preventDefault()
         const formData = new FormData(e.target)
         try {
+            // Match the exact SQL structure
             const guestData = {
-                name: formData.get('name'),
-                club: formData.get('clubName'),
-                phone: formData.get('phone'),
-                entry_type: formData.get('entryType'),
-                payment: formData.get('paymentStatus'),
-                status: 'pending'
+                name: formData.get('name'),           // TEXT NOT NULL
+                club: formData.get('clubName'),       // TEXT
+                phone: formData.get('phone'),         // TEXT
+                entry_type: formData.get('entryType'), // TEXT NOT NULL
+                payment: formData.get('paymentStatus'), // TEXT NOT NULL
+                status: 'pending',                     // TEXT DEFAULT 'pending'
+                club_number: formData.get('clubNumber') // TEXT
+                // created_at and updated_at are handled by Supabase
             }
 
-            console.log('Inserting guest:', guestData)
+            // Validate required fields
+            if (!guestData.name || !guestData.entry_type || !guestData.payment) {
+                throw new Error('Please fill in all required fields')
+            }
+
+            console.log('Attempting to insert guest:', guestData)
 
             const { data, error } = await supabase
                 .from('guests')
                 .insert([guestData])
-                .select()
+                .select() // Get the inserted data back
 
             if (error) {
-                console.error('Supabase error:', error)
+                console.error('Insert error:', error)
                 throw error
             }
 
@@ -130,9 +138,12 @@ function setupEventListeners() {
             // Reset form and reload guests
             e.target.reset()
             await loadGuests()
+            
+            // Show success message
+            alert('Guest registered successfully!')
         } catch (error) {
             console.error('Error registering guest:', error)
-            alert('Failed to register guest: ' + error.message)
+            alert('Error: ' + error.message)
         }
     })
 
@@ -222,11 +233,11 @@ function updateGuestList() {
 
     tbody.innerHTML = guests.map(guest => `
         <tr>
-            <td class="py-3 px-4">${guest.name}</td>
-            <td class="py-3 px-4">${guest.club}</td>
-            <td class="py-3 px-4">${guest.phone}</td>
-            <td class="py-3 px-4">${guest.entry_type}</td>
-            <td class="py-3 px-4">${guest.payment}</td>
+            <td class="py-3 px-4">${guest.name || ''}</td>
+            <td class="py-3 px-4">${guest.club || ''}</td>
+            <td class="py-3 px-4">${guest.phone || ''}</td>
+            <td class="py-3 px-4">${guest.entry_type || ''}</td>
+            <td class="py-3 px-4">${guest.payment || ''}</td>
             <td class="py-3 px-4">
                 <span class="px-2 py-1 rounded-full text-xs ${
                     guest.status === 'checked_in' ? 'bg-green-500' : 'bg-yellow-500'
