@@ -25,10 +25,9 @@ function isAdmin() {
 
 // Initialize app
 async function initializeApp() {
-    // Check if user is already logged in
-    const { data: { session }, error } = await supabase.auth.getSession()
-    
-    if (session) {
+    // Check for existing session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (session?.user) {
         await handleLogin(session.user)
     } else {
         showLoginScreen()
@@ -41,21 +40,26 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     
     const username = document.getElementById('username').value
     const password = document.getElementById('password').value
-
+    
     try {
+        console.log('Attempting login with:', username) // Debug log
+        
+        // For Admin bypass
         if (username === 'Admin' && password === 'Kochin2025') {
-            currentUser = {
+            console.log('Admin login attempt') // Debug log
+            currentUser = { 
                 id: 'admin',
                 username: 'Admin',
                 role: 'admin'
             }
             await handleLogin(currentUser)
-        } else {
-            throw new Error('Invalid credentials')
+            return
         }
+        
+        throw new Error('Invalid credentials')
     } catch (error) {
         console.error('Login error:', error)
-        document.getElementById('loginError').textContent = 'Invalid username or password'
+        document.getElementById('loginError').textContent = error.message || 'Invalid username or password'
         document.getElementById('loginError').classList.remove('hidden')
     }
 })
@@ -63,16 +67,24 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
 // Handle login
 async function handleLogin(user) {
     try {
+        console.log('Login user:', user) // Debug log
+        
+        if (!user) {
+            throw new Error('No user provided')
+        }
+        
         currentUser = {
             ...user,
             role: 'admin' // For Admin user
         }
         
+        console.log('Setting current user:', currentUser) // Debug log
+        
         showApp()
         showRegistration()
     } catch (error) {
-        console.error('Error handling login:', error)
-        document.getElementById('loginError').textContent = 'Failed to log in'
+        console.error('Login handling error:', error)
+        document.getElementById('loginError').textContent = error.message || 'Failed to log in'
         document.getElementById('loginError').classList.remove('hidden')
         showLoginScreen()
     }
