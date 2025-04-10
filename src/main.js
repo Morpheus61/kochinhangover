@@ -46,7 +46,7 @@ function setupEventListeners() {
             // Check credentials against users table
             const { data: user, error } = await supabase
                 .from('users')
-                .select('*')
+                .select('username, role')
                 .eq('username', username)
                 .eq('password', password)
                 .single()
@@ -199,7 +199,7 @@ function setupEventListeners() {
 // Show login screen
 function showLoginScreen() {
     document.getElementById('loginScreen')?.classList.remove('hidden')
-    document.getElementById('mainApp')?.classList.add('hidden')
+    document.getElementById('app')?.classList.add('hidden')
     // Reset forms
     document.getElementById('loginForm')?.reset()
 }
@@ -330,6 +330,7 @@ async function handleLogin(user) {
         
         // Load initial data
         await loadGuests()
+        await loadStats()
         
         showApp()
         if (user.role === 'admin') {
@@ -491,4 +492,10 @@ async function verifyGuest(guestId) {
         console.error('Error verifying guest:', error);
         alert('Failed to verify guest');
     }
+}
+
+// Show app
+function showApp() {
+    document.getElementById('loginScreen')?.classList.add('hidden')
+    document.getElementById('app')?.classList.remove('hidden')
 }
