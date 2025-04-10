@@ -355,6 +355,15 @@ function setupTabs() {
     });
 }
 
+// Show login error
+function showLoginError(message) {
+    const loginError = document.getElementById('loginError');
+    if (loginError) {
+        loginError.textContent = message;
+        loginError.classList.remove('hidden');
+    }
+}
+
 // Update data status message
 function updateDataStatus(message) {
     if (dataStatus) {
