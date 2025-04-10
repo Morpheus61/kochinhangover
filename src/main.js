@@ -278,10 +278,7 @@ function setupEventListeners() {
                 .insert([guestData])
                 .select()
 
-            if (error) {
-                console.error('Insert error:', error)
-                throw error
-            }
+            if (error) throw error
 
             console.log('Guest registered:', data)
             
@@ -538,27 +535,45 @@ function initializeRegistration() {
     const form = document.getElementById('registrationForm')
     if (!form) return
     
-    // Set initial amount
+    // Set initial amount display
     updateAmount()
+    
+    // Handle payment mode changes
+    const paymentMode = document.getElementById('paymentMode')
+    const partialSection = document.getElementById('partialPaymentSection')
+    
+    paymentMode?.addEventListener('change', () => {
+        if (paymentMode.value === 'partial') {
+            partialSection?.classList.remove('hidden')
+        } else {
+            partialSection?.classList.add('hidden')
+        }
+    })
     
     form.addEventListener('submit', async (e) => {
         e.preventDefault()
         
         try {
             // Get form data
+            const entryType = document.getElementById('entryType').value
+            const paymentMode = document.getElementById('paymentMode').value
+            const totalAmount = entryType === 'stag' ? 2750 : 4750
+            
             const formData = {
                 guestName: document.getElementById('guestName').value,
                 clubName: document.getElementById('clubName').value,
                 mobileNumber: document.getElementById('mobileNumber').value,
-                entryType: document.getElementById('entryType').value,
-                paymentMode: document.getElementById('paymentMode').value,
-                amount: document.getElementById('amount').value,
+                entryType: entryType,
+                paymentMode: paymentMode,
+                totalAmount: totalAmount,
+                paidAmount: paymentMode === 'partial' ? 
+                    Number(document.getElementById('paidAmount').value) : totalAmount,
                 registrationDate: new Date().toISOString(),
-                status: 'active'
+                status: paymentMode === 'partial' ? 'partially_paid' : 'paid'
             }
             
             // Validate required fields
-            const requiredFields = ['guestName', 'mobileNumber', 'entryType', 'paymentMode', 'amount']
+            const requiredFields = ['guestName', 'mobileNumber', 'entryType', 'paymentMode']
             const missingFields = requiredFields.filter(field => !formData[field])
             
             if (missingFields.length > 0) {
@@ -570,6 +585,15 @@ function initializeRegistration() {
             if (!/^[0-9]{10}$/.test(formData.mobileNumber)) {
                 alert('Please enter a valid 10-digit mobile number')
                 return
+            }
+            
+            // Validate partial payment amount
+            if (paymentMode === 'partial') {
+                const paidAmount = Number(document.getElementById('paidAmount').value)
+                if (!paidAmount || paidAmount <= 0 || paidAmount >= totalAmount) {
+                    alert('Please enter a valid partial payment amount (greater than 0 and less than total amount)')
+                    return
+                }
             }
             
             // Insert into Supabase
@@ -586,7 +610,10 @@ function initializeRegistration() {
                     id: data[0].id,
                     guestName: data[0].guestName,
                     entryType: data[0].entryType,
-                    mobileNumber: data[0].mobileNumber
+                    mobileNumber: data[0].mobileNumber,
+                    status: data[0].status,
+                    paidAmount: data[0].paidAmount,
+                    totalAmount: data[0].totalAmount
                 }
                 
                 const qrCode = await QRCode.toDataURL(JSON.stringify(qrData))
@@ -597,6 +624,7 @@ function initializeRegistration() {
                 // Reset form
                 form.reset()
                 updateAmount()
+                partialSection?.classList.add('hidden')
             }
         } catch (error) {
             console.error('Registration error:', error)
@@ -608,12 +636,11 @@ function initializeRegistration() {
 // Update amount based on entry type
 window.updateAmount = function() {
     const entryType = document.getElementById('entryType').value
-    const amountInput = document.getElementById('amount')
+    const totalAmountDisplay = document.getElementById('totalAmountDisplay')
+    const totalAmount = entryType === 'stag' ? 2750 : 4750
     
-    if (entryType === 'stag') {
-        amountInput.value = 2750
-    } else if (entryType === 'couple') {
-        amountInput.value = 4750
+    if (totalAmountDisplay) {
+        totalAmountDisplay.textContent = `/ ₹${totalAmount} total`
     }
 }
 

@@ -313,11 +313,20 @@
                     <div>
                         <label for="paymentMode" class="block text-sm font-medium text-gray-300 mb-1">Payment Mode</label>
                         <select id="paymentMode" name="paymentMode" required class="kochin-input w-full">
-                            <option value="cash">Cash</option>
-                            <option value="card">Card</option>
-                            <option value="upi">UPI</option>
-                            <option value="other">Other</option>
+                            <option value="full_cash">Full Payment - Cash</option>
+                            <option value="full_upi">Full Payment - UPI</option>
+                            <option value="full_card">Full Payment - Card</option>
+                            <option value="partial">Partial Payment</option>
                         </select>
+                    </div>
+
+                    <div id="partialPaymentSection" class="hidden">
+                        <label for="paidAmount" class="block text-sm font-medium text-gray-300 mb-1">Paid Amount (₹)</label>
+                        <div class="flex items-center space-x-2">
+                            <input type="number" id="paidAmount" name="paidAmount" class="kochin-input w-full">
+                            <span class="text-sm text-gray-400" id="totalAmountDisplay"></span>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">Enter the amount paid now. Full amount will be collected at entry.</p>
                     </div>
                     
                     <div>

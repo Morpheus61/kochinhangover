@@ -1,3 +1,7 @@
+-- Drop existing tables if they exist
+DROP TABLE IF EXISTS guests CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
 -- Create the guests table with the exact structure needed
 CREATE TABLE guests (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -6,7 +10,8 @@ CREATE TABLE guests (
     mobileNumber TEXT NOT NULL,
     entryType TEXT NOT NULL,
     paymentMode TEXT NOT NULL,
-    amount NUMERIC NOT NULL,
+    totalAmount NUMERIC NOT NULL,
+    paidAmount NUMERIC NOT NULL,
     status TEXT DEFAULT 'pending',
     registrationDate TIMESTAMP WITH TIME ZONE,
     verifiedAt TIMESTAMP WITH TIME ZONE,
