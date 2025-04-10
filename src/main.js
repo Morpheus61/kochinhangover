@@ -20,14 +20,17 @@ const ENTRY_PRICES = {
 
 // Initialize the application
 async function initializeApp() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        window.location.href = '/login.html';
-        return;
-    }
+    // Only check auth on main app page
+    if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            window.location.href = 'login';
+            return;
+        }
 
-    await setupNavigation();
-    await showTab('registration');
+        await setupNavigation();
+        await showTab('registration');
+    }
 }
 
 // When the DOM is loaded
