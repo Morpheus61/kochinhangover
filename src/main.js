@@ -111,28 +111,39 @@ function setupEventListeners() {
                 Number(formData.get('amountPaid')) : 
                 (paymentStatus === 'paid' ? totalAmount : 0)
 
+            const guestData = {
+                name: formData.get('name'),
+                phone: formData.get('phone'),
+                club_name: formData.get('clubName'),
+                club_number: formData.get('clubNumber'),
+                entry_type: entryType,
+                payment_status: paymentStatus,
+                amount_paid: amountPaid,
+                total_amount: totalAmount,
+                status: 'pending',
+                created_at: new Date().toISOString()
+            }
+
+            console.log('Inserting guest:', guestData)
+
             const { data, error } = await supabase
                 .from('guests')
-                .insert([{
-                    name: formData.get('name'),
-                    phone: formData.get('phone'),
-                    club_name: formData.get('clubName'),
-                    club_number: formData.get('clubNumber'),
-                    entry_type: entryType,
-                    payment_status: paymentStatus,
-                    amount_paid: amountPaid,
-                    total_amount: totalAmount,
-                    created_by: currentUser.username
-                }])
-            
-            if (error) throw error
+                .insert([guestData])
+                .select()
+
+            if (error) {
+                console.error('Supabase error:', error)
+                throw error
+            }
+
+            console.log('Guest registered:', data)
             
             // Reset form and reload guests
             e.target.reset()
             await loadGuests()
         } catch (error) {
             console.error('Error registering guest:', error)
-            alert('Failed to register guest')
+            alert('Failed to register guest: ' + error.message)
         }
     })
 
