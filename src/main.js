@@ -152,12 +152,6 @@ function setupEventListeners() {
         loginForm.addEventListener('submit', handleLogin);
     } else {
         console.log('Login form not found');
-        // Try finding the form by class
-        const loginFormByClass = document.querySelector('form.login-form');
-        if (loginFormByClass) {
-            console.log('Found login form by class, attaching handler');
-            loginFormByClass.addEventListener('submit', handleLogin);
-        }
     }
 
     // Logout button
