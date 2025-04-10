@@ -93,20 +93,30 @@
                                 <input type="tel" name="phone" class="kochin-input" required>
                             </div>
                             <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Club Name</label>
+                                <input type="text" name="clubName" class="kochin-input" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Club Number</label>
+                                <input type="text" name="clubNumber" class="kochin-input" required>
+                            </div>
+                            <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-2">Entry Type</label>
                                 <select name="entryType" class="kochin-input" required>
-                                    <option value="standard">Standard (₹1000)</option>
-                                    <option value="vip">VIP (₹2000)</option>
-                                    <option value="special">Special Guest</option>
+                                    <option value="stag">Stag (₹2750)</option>
+                                    <option value="couple">Couple (₹4750)</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-2">Payment Status</label>
                                 <select name="paymentStatus" class="kochin-input" required>
                                     <option value="paid">Paid</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="free">Free Entry</option>
+                                    <option value="partial">Partial Payment</option>
                                 </select>
+                            </div>
+                            <div id="partialPaymentField" class="hidden">
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Amount Paid</label>
+                                <input type="number" name="amountPaid" class="kochin-input" min="0" step="100">
                             </div>
                         </div>
                         <button type="submit" class="kochin-button">
@@ -122,6 +132,8 @@
                             <thead>
                                 <tr class="text-gray-300 text-left">
                                     <th class="py-3 px-4">Name</th>
+                                    <th class="py-3 px-4">Club</th>
+                                    <th class="py-3 px-4">Phone</th>
                                     <th class="py-3 px-4">Entry Type</th>
                                     <th class="py-3 px-4">Payment</th>
                                     <th class="py-3 px-4">Status</th>

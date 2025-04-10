@@ -6,6 +6,12 @@ let guests = []
 let currentGuest = null
 let currentUser = null
 
+// Constants for entry prices
+const ENTRY_PRICES = {
+    stag: 2750,
+    couple: 4750
+}
+
 // DOM Ready
 document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners()
@@ -98,13 +104,24 @@ function setupEventListeners() {
         e.preventDefault()
         const formData = new FormData(e.target)
         try {
+            const entryType = formData.get('entryType')
+            const paymentStatus = formData.get('paymentStatus')
+            const totalAmount = ENTRY_PRICES[entryType]
+            const amountPaid = paymentStatus === 'partial' ? 
+                Number(formData.get('amountPaid')) : 
+                (paymentStatus === 'paid' ? totalAmount : 0)
+
             const { data, error } = await supabase
                 .from('guests')
                 .insert([{
                     name: formData.get('name'),
                     phone: formData.get('phone'),
-                    entry_type: formData.get('entryType'),
-                    payment_status: formData.get('paymentStatus'),
+                    club_name: formData.get('clubName'),
+                    club_number: formData.get('clubNumber'),
+                    entry_type: entryType,
+                    payment_status: paymentStatus,
+                    amount_paid: amountPaid,
+                    total_amount: totalAmount,
                     created_by: currentUser.username
                 }])
             
@@ -116,6 +133,18 @@ function setupEventListeners() {
         } catch (error) {
             console.error('Error registering guest:', error)
             alert('Failed to register guest')
+        }
+    })
+
+    // Show/hide partial payment field based on payment status
+    document.querySelector('select[name="paymentStatus"]')?.addEventListener('change', (e) => {
+        const partialPaymentField = document.getElementById('partialPaymentField')
+        if (e.target.value === 'partial') {
+            partialPaymentField?.classList.remove('hidden')
+            partialPaymentField?.querySelector('input')?.setAttribute('required', 'required')
+        } else {
+            partialPaymentField?.classList.add('hidden')
+            partialPaymentField?.querySelector('input')?.removeAttribute('required')
         }
     })
 
@@ -194,8 +223,17 @@ function updateGuestList() {
     tbody.innerHTML = guests.map(guest => `
         <tr>
             <td class="py-3 px-4">${guest.name}</td>
+            <td class="py-3 px-4">${guest.club_name}</td>
+            <td class="py-3 px-4">${guest.phone}</td>
             <td class="py-3 px-4">${guest.entry_type}</td>
-            <td class="py-3 px-4">${guest.payment_status}</td>
+            <td class="py-3 px-4">
+                <div class="flex flex-col">
+                    <span>${guest.payment_status}</span>
+                    ${guest.payment_status === 'partial' ? 
+                        `<span class="text-xs text-gray-400">₹${guest.amount_paid} / ₹${guest.total_amount}</span>` 
+                        : ''}
+                </div>
+            </td>
             <td class="py-3 px-4">
                 <span class="px-2 py-1 rounded-full text-xs ${
                     guest.status === 'checked_in' ? 'bg-green-500' : 'bg-yellow-500'
