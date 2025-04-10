@@ -121,6 +121,9 @@
                 <button id="guestsTab" class="kochin-tab px-4 py-2" data-tab="guests">
                     <i class="fas fa-list mr-2"></i> Guests
                 </button>
+                <button id="usersBtn" data-tab="users" class="kochin-tab px-4 py-2">
+                    <i class="fas fa-users mr-2"></i> Users
+                </button>
             </div>
 
             <!-- Content Sections -->
@@ -190,6 +193,58 @@
                     <button id="exportPDF" class="kochin-button bg-red-600">
                         <i class="fas fa-file-pdf mr-2"></i> Export PDF
                     </button>
+                </div>
+            </div>
+
+            <div id="users" class="kochin-container p-6 mb-6 hidden">
+                <h2 class="text-xl font-bold mb-4">Users Management</h2>
+                
+                <!-- Add User Form -->
+                <div class="mb-8 bg-gray-700 p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold mb-4">Add New User</h3>
+                    <form id="addUserForm" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label for="newUsername" class="block text-sm font-medium mb-1">Username</label>
+                                <input type="text" id="newUsername" class="kochin-input w-full" required>
+                            </div>
+                            <div>
+                                <label for="newPassword" class="block text-sm font-medium mb-1">Password</label>
+                                <input type="password" id="newPassword" class="kochin-input w-full" required>
+                            </div>
+                            <div>
+                                <label for="newRole" class="block text-sm font-medium mb-1">Role</label>
+                                <select id="newRole" class="kochin-input w-full" required>
+                                    <option value="admin">Admin</option>
+                                    <option value="staff">Staff</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                                Add User
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Users List -->
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Users List</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-gray-700 rounded-lg overflow-hidden">
+                            <thead class="bg-gray-600">
+                                <tr>
+                                    <th class="py-3 px-4 text-left">Username</th>
+                                    <th class="py-3 px-4 text-left">Role</th>
+                                    <th class="py-3 px-4 text-left">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersList">
+                                <!-- Users will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
