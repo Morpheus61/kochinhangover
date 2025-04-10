@@ -748,56 +748,9 @@ window.deleteGuest = async function(guestId) {
 }
 
 // Share guest pass on WhatsApp
-window.shareGuestPass = async function(passElement) {
+async function shareGuestPass(guestId) {
     try {
-        // Convert the pass element to canvas
-        const canvas = await html2canvas(passElement, {
-            backgroundColor: '#2a0e3a',
-            scale: 2, // Higher resolution
-            logging: false,
-            useCORS: true,
-            allowTaint: true
-        })
-        
-        // Get mobile number from the guest data
-        const guestId = passElement.querySelector('[data-guest-id]')?.dataset.guestId
-        if (!guestId) throw new Error('Guest ID not found')
-        
-        const { data: guest, error } = await supabase
-            .from('guests')
-            .select('mobile_number')
-            .eq('id', guestId)
-            .single()
-            
-        if (error) throw error
-        
-        // Convert canvas to data URL
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
-        
-        // Open WhatsApp with the data URL
-        const message = encodeURIComponent('Your Kochin Hangover Guest Pass')
-        window.open(`https://wa.me/91${guest.mobile_number}?text=${message}`, '_blank')
-        
-        // Create a temporary download link for the image
-        const link = document.createElement('a')
-        link.href = dataUrl
-        link.download = 'kochin-hangover-guest-pass.jpg'
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        
-        // Show success message
-        alert('Guest pass opened in WhatsApp. Please attach the downloaded image to your WhatsApp message.')
-        
-    } catch (error) {
-        console.error('Error sharing pass:', error)
-        alert(error.message || 'Failed to share guest pass')
-    }
-}
-
-// Send WhatsApp pass
-window.sendWhatsAppPass = async function(guestId) {
-    try {
+        // Get guest details
         const { data: guest, error } = await supabase
             .from('guests')
             .select('*')
@@ -805,6 +758,7 @@ window.sendWhatsAppPass = async function(guestId) {
             .single()
         
         if (error) throw error
+        if (!guest) throw new Error('Guest not found')
         
         // Generate QR code
         const qrData = {
@@ -812,84 +766,28 @@ window.sendWhatsAppPass = async function(guestId) {
             guest_name: guest.guest_name,
             entry_type: guest.entry_type,
             mobile_number: guest.mobile_number,
-            status: guest.status
+            status: guest.status,
+            paid_amount: guest.paid_amount,
+            total_amount: guest.total_amount
         }
         
         const qrCode = await QRCode.toDataURL(JSON.stringify(qrData))
         
-        // Create a modal with the themed pass
-        const modal = document.createElement('div')
-        modal.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-50'
-        modal.innerHTML = `
-            <div id="guestPass" class="relative w-[600px] h-[800px] rounded-lg overflow-hidden" data-guest-id="${guest.id}">
-                <!-- Background with gradient -->
-                <div class="absolute inset-0 bg-[#2a0e3a]" style="
-                    background-image: radial-gradient(circle at 10% 20%, rgba(232, 50, 131, 0.3) 0%, transparent 30%),
-                                    radial-gradient(circle at 90% 30%, rgba(52, 219, 219, 0.3) 0%, transparent 30%),
-                                    radial-gradient(circle at 50% 80%, rgba(247, 208, 70, 0.3) 0%, transparent 30%);
-                "></div>
-                
-                <!-- Content -->
-                <div class="relative h-full p-8 flex flex-col items-center">
-                    <!-- Header -->
-                    <div class="text-center mb-8">
-                        <i class="bottle-icon fas fa-wine-bottle text-4xl mb-4" style="color: #f7d046; transform: rotate(15deg);"></i>
-                        <h1 class="text-4xl font-bold mb-2" style="
-                            background: linear-gradient(90deg, #e83283, #34dbdb);
-                            -webkit-background-clip: text;
-                            background-clip: text;
-                            color: transparent;
-                            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-                        ">Kochin Hangover</h1>
-                        <div class="text-xl text-white">Guest Pass</div>
-                    </div>
-                    
-                    <!-- Guest Details -->
-                    <div class="w-full bg-[#2a0e3a] bg-opacity-70 rounded-lg p-6 mb-8 border-2" style="border-color: rgba(232, 50, 131, 0.5);">
-                        <div class="space-y-4 text-white">
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-300">Name</span>
-                                <span class="font-bold text-lg">${guest.guest_name}</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-300">Club</span>
-                                <span class="font-bold text-lg">${guest.club_name}</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-300">Entry Type</span>
-                                <span class="font-bold text-lg">${guest.entry_type}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- QR Code -->
-                    <div class="bg-white p-6 rounded-lg">
-                        <img src="${qrCode}" alt="Entry QR Code" style="width: 200px; height: 200px;" crossorigin="anonymous">
-                    </div>
-                    
-                    <!-- Footer -->
-                    <div class="mt-auto text-center text-gray-400">
-                        <p>Show this pass at entry</p>
-                        <p class="text-sm">Valid for one-time entry only</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Action Buttons -->
-            <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4">
-                <button onclick="shareGuestPass(this.parentElement.previousElementSibling)" class="kochin-button">
-                    <i class="fab fa-whatsapp mr-2"></i> Share on WhatsApp
-                </button>
-                <button onclick="this.closest('.fixed').remove()" class="kochin-button bg-gray-700">
-                    Close
-                </button>
-            </div>
-        `
-        document.body.appendChild(modal)
+        // Create pass message
+        const message = `🎉 *KOCHIN HANGOVER PASS* 🎉\n\n` +
+            `Name: ${guest.guest_name}\n` +
+            `Entry Type: ${guest.entry_type}\n` +
+            `Amount: ₹${guest.paid_amount} / ₹${guest.total_amount}\n` +
+            `Status: ${guest.status}\n\n` +
+            `Show this QR code at entry:`
+        
+        // Open WhatsApp with message
+        const whatsappUrl = `https://wa.me/${guest.mobile_number}?text=${encodeURIComponent(message)}`
+        window.open(whatsappUrl, '_blank')
         
     } catch (error) {
-        console.error('Error creating pass:', error)
-        alert(error.message || 'Failed to create guest pass')
+        console.error('Share pass error:', error)
+        alert('Failed to share pass: ' + error.message)
     }
 }
 
@@ -1195,6 +1093,105 @@ async function loadVerificationList() {
         });
     } catch (error) {
         console.error('Error loading verification list:', error);
+    }
+}
+
+// Initialize users management
+async function initializeUsers() {
+    const usersList = document.getElementById('usersList')
+    const addUserForm = document.getElementById('addUserForm')
+    const addUserError = document.getElementById('addUserError')
+
+    // Load existing users
+    await loadUsers()
+
+    // Handle add user form submission
+    addUserForm?.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        
+        const username = document.getElementById('newUsername').value
+        const password = document.getElementById('newPassword').value
+        const role = document.getElementById('newRole').value
+        
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .insert([
+                    { username, password, role }
+                ])
+                .select()
+            
+            if (error) throw error
+            
+            // Clear form and reload users
+            addUserForm.reset()
+            await loadUsers()
+            addUserError.textContent = ''
+            addUserError.classList.add('hidden')
+            
+        } catch (error) {
+            console.error('Add user error:', error)
+            addUserError.textContent = error.message
+            addUserError.classList.remove('hidden')
+        }
+    })
+}
+
+// Load users list
+async function loadUsers() {
+    try {
+        const { data: users, error } = await supabase
+            .from('users')
+            .select('*')
+            .order('username')
+        
+        if (error) throw error
+        
+        // Update users list UI
+        const usersList = document.getElementById('usersList')
+        usersList.innerHTML = ''
+        
+        users.forEach(user => {
+            const row = document.createElement('tr')
+            row.innerHTML = `
+                <td class="px-4 py-2">${user.username}</td>
+                <td class="px-4 py-2">${user.role}</td>
+                <td class="px-4 py-2">
+                    <button class="delete-user bg-red-500 text-white px-2 py-1 rounded" data-id="${user.id}">
+                        Delete
+                    </button>
+                </td>
+            `
+            usersList.appendChild(row)
+        })
+        
+        // Add delete event listeners
+        document.querySelectorAll('.delete-user').forEach(button => {
+            button.addEventListener('click', async () => {
+                if (!confirm('Are you sure you want to delete this user?')) return
+                
+                const userId = button.dataset.id
+                
+                try {
+                    const { error } = await supabase
+                        .from('users')
+                        .delete()
+                        .eq('id', userId)
+                    
+                    if (error) throw error
+                    
+                    // Reload users list
+                    await loadUsers()
+                    
+                } catch (error) {
+                    console.error('Delete user error:', error)
+                    alert('Failed to delete user: ' + error.message)
+                }
+            })
+        })
+        
+    } catch (error) {
+        console.error('Load users error:', error)
     }
 }
 
