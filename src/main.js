@@ -1,7 +1,13 @@
-import { supabase } from './config/supabase'
+import { createClient } from '@supabase/supabase-js'
 import './styles.css'
-import Html5QrcodeScanner from './html5-qrcode.min.js'
-import QRCode from 'qrcodejs2'
+import { Html5QrcodeScanner } from 'html5-qrcode'
+import QRCode from 'qrcode'
+
+// Initialize Supabase client
+const supabase = createClient(
+    'https://cedawluoprlzzvkqn.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNlZGF3bHVvcHJsenp2a3FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDc5MDU4NzUsImV4cCI6MjAyMzQ4MTg3NX0.GpOw-XvU9ZB_q8gFc5u8Kk8rq9wU1RnXhm5xE4GxVeY'
+)
 
 // Initialize app state
 let guests = []

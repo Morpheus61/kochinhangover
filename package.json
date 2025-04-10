@@ -10,9 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
+    "@supabase/supabase-js": "^2.49.4",
     "html5-qrcode": "^2.3.8",
-    "qrcode": "^1.5.3",
+    "qrcode": "^1.5.4",
     "qrcodejs2": "^0.0.2"
   },
   "devDependencies": {
