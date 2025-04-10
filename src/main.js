@@ -18,6 +18,26 @@ const ENTRY_PRICES = {
     couple: 4750
 }
 
+// Show login screen
+function showLoginScreen() {
+    console.log('Showing login screen');
+    const loginScreen = document.getElementById('loginScreen');
+    const mainApp = document.getElementById('mainApp');
+    
+    if (loginScreen) loginScreen.classList.remove('hidden');
+    if (mainApp) mainApp.classList.add('hidden');
+}
+
+// Show main app
+function showApp() {
+    console.log('Showing main app');
+    const loginScreen = document.getElementById('loginScreen');
+    const mainApp = document.getElementById('mainApp');
+    
+    if (loginScreen) loginScreen.classList.add('hidden');
+    if (mainApp) mainApp.classList.remove('hidden');
+}
+
 // Initialize the application
 async function initializeApp() {
     console.log('Initializing app...');
@@ -25,7 +45,6 @@ async function initializeApp() {
     // Check if we're on the login page
     if (window.location.pathname.includes('login.html')) {
         console.log('On login page, skipping auth check');
-        // Already on login page, no need to check auth
         return;
     }
 
@@ -34,9 +53,8 @@ async function initializeApp() {
     console.log('Stored user:', storedUser);
     
     if (!storedUser) {
-        console.log('No user in session, redirecting to login');
-        // No user in session, redirect to login
-        window.location.href = 'login.html';
+        console.log('No user in session, showing login');
+        showLoginScreen();
         return;
     }
 
@@ -48,33 +66,28 @@ async function initializeApp() {
         // Set current user
         currentUser = user;
 
-        // Show main app
-        const loginScreen = document.getElementById('loginScreen');
-        const mainApp = document.getElementById('mainApp');
-        
-        if (loginScreen) {
-            console.log('Hiding login screen');
-            loginScreen.classList.add('hidden');
-        }
-        if (mainApp) {
-            console.log('Showing main app');
-            mainApp.classList.remove('hidden');
-        }
-
-        // Initialize app components
+        // Show main app and initialize components
+        showApp();
         await setupNavigation();
         await showTab('registration');
         
     } catch (error) {
         console.error('Error initializing app:', error);
         sessionStorage.removeItem('currentUser');
-        window.location.href = 'login.html';
+        showLoginScreen();
     }
 }
 
 // Handle login
 async function handleLogin(event) {
     event.preventDefault();
+    
+    // Check if already logged in
+    if (currentUser) {
+        console.warn('Already logged in as:', currentUser);
+        showApp();
+        return;
+    }
     
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
@@ -110,20 +123,8 @@ async function handleLogin(event) {
         // Set current user
         currentUser = user;
 
-        // Hide login screen and show main app
-        const loginScreen = document.getElementById('loginScreen');
-        const mainApp = document.getElementById('mainApp');
-        
-        if (loginScreen) {
-            console.log('Hiding login screen');
-            loginScreen.classList.add('hidden');
-        }
-        if (mainApp) {
-            console.log('Showing main app');
-            mainApp.classList.remove('hidden');
-        }
-
-        // Initialize app components
+        // Show main app and initialize components
+        showApp();
         await setupNavigation();
         await showTab('registration');
         
@@ -141,8 +142,9 @@ async function handleLogin(event) {
 // Handle logout
 async function handleLogout() {
     console.log('Logging out...');
+    currentUser = null;
     sessionStorage.removeItem('currentUser');
-    window.location.href = 'login.html';
+    showLoginScreen();
 }
 
 // Setup event listeners
@@ -153,6 +155,9 @@ function setupEventListeners() {
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
         console.log('Found login form, attaching handler');
+        // Remove any existing handlers
+        loginForm.removeEventListener('submit', handleLogin);
+        // Add new handler
         loginForm.addEventListener('submit', handleLogin);
     } else {
         console.error('Login form not found!');
@@ -162,6 +167,9 @@ function setupEventListeners() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         console.log('Found logout button, attaching handler');
+        // Remove any existing handlers
+        logoutBtn.removeEventListener('click', handleLogout);
+        // Add new handler
         logoutBtn.addEventListener('click', handleLogout);
     }
 
