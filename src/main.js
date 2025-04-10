@@ -10,6 +10,70 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 // Initialize app state
 let currentUser = null
 let guests = []
+
+// Handle login
+async function handleLogin(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const errorText = document.getElementById('loginError');
+
+    try {
+        console.log('Attempting login with:', username);
+        
+        // Check credentials against users table
+        const { data: users, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('username', username)
+            .eq('password', password);
+
+        console.log('Login response:', { users, error });
+
+        if (error) {
+            console.error('Database error:', error);
+            throw new Error('Login failed');
+        }
+
+        if (!users || users.length === 0) {
+            throw new Error('Invalid username or password');
+        }
+
+        const user = users[0];
+        
+        // Store user info in session
+        sessionStorage.setItem('currentUser', JSON.stringify(user));
+        console.log('User stored in session:', user);
+
+        // Set current user
+        currentUser = user;
+
+        // Hide login screen and show main app
+        const loginScreen = document.getElementById('loginScreen');
+        const mainApp = document.getElementById('mainApp');
+        
+        if (loginScreen) loginScreen.classList.add('hidden');
+        if (mainApp) mainApp.classList.remove('hidden');
+
+        // Initialize app components
+        await setupNavigation();
+        await showTab('registration');
+        
+    } catch (error) {
+        console.error('Login error:', error);
+        if (errorText) {
+            errorText.textContent = 'Invalid credentials';
+            errorText.classList.remove('hidden');
+        } else {
+            alert('Invalid credentials');
+        }
+    }
+}
+
+// Initialize app state
+let currentUser = null
+let guests = []
 let users = []
 
 // Constants for entry prices
@@ -67,54 +131,6 @@ function checkDOMElements() {
         }
     }
     return true
-}
-
-// Handle login
-async function handleLogin(event) {
-    event.preventDefault();
-    
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    const errorText = document.getElementById('loginError');
-
-    try {
-        console.log('Attempting login with:', username, password);
-        
-        // Check credentials against users table
-        const { data: user, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('username', username)
-            .eq('password', password)
-            .single();
-
-        console.log('Login response:', { user, error });
-
-        if (error) {
-            console.error('Database error:', error);
-            throw new Error('Login failed');
-        }
-
-        if (!user) {
-            throw new Error('Invalid username or password');
-        }
-
-        // Store user info in session
-        sessionStorage.setItem('currentUser', JSON.stringify(user));
-        console.log('User stored in session:', user);
-
-        // Successful login
-        window.location.href = '/';
-        
-    } catch (error) {
-        console.error('Login error:', error);
-        if (errorText) {
-            errorText.textContent = 'Invalid credentials';
-            errorText.classList.remove('hidden');
-        } else {
-            alert('Invalid credentials');
-        }
-    }
 }
 
 // Setup event listeners
@@ -1576,7 +1592,7 @@ async function refreshGuestList() {
                     <button class="text-blue-600 hover:text-blue-900 mr-3" onclick="editGuest('${guest.id}')">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button id="shareWhatsAppBtn-${guest.id}" class="text-green-600 hover:text-green-900" onclick="shareOnWhatsApp('${guest.id}')">
+                    <button class="text-green-600 hover:text-green-900" onclick="shareOnWhatsApp('${guest.id}')">
                         <i class="fab fa-whatsapp"></i>
                     </button>
                 </td>
