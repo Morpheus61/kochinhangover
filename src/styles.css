@@ -27,4 +27,71 @@ body {
     box-shadow: 0 0 20px rgba(52, 219, 219, 0.5);
 }
 
+.kochin-input {
+    background-color: var(--light);
+    border: 2px solid var(--primary);
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    color: var(--dark);
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.kochin-input:focus {
+    border-color: var(--secondary);
+    box-shadow: 0 0 0 3px rgba(52, 219, 219, 0.3);
+    outline: none;
+}
+
+.kochin-input::placeholder {
+    color: #6b7280;
+}
+
+.kochin-button {
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.kochin-button:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.logo-text {
+    font-size: 2.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    padding: 0.5rem;
+    display: inline-block;
+    transform: rotate(-2deg);
+}
+
+.bottle-icon {
+    display: inline-block;
+    transform: rotate(15deg);
+    font-size: 1.5rem;
+    color: var(--accent);
+    margin: 0 0.5rem;
+}
+
+.glass-icon {
+    display: inline-block;
+    font-size: 1.5rem;
+    color: var(--secondary);
+    margin: 0 0.5rem;
+}
+
 /* Add all your existing CSS styles here */
