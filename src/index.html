@@ -261,22 +261,23 @@
                 </div>
             </div>
             
-            <!-- Tab Navigation -->
-            <div class="flex mb-6 border-b border-gray-700">
-                <button id="registrationTab" class="kochin-tab active px-6 py-3 admin-only">
-                    <i class="fas fa-user-plus mr-2"></i> New Registration
+            <!-- Navigation -->
+            <div class="flex space-x-4 mb-6">
+                <button onclick="showRegistration()" class="kochin-nav-button admin-only">
+                    <i class="fas fa-user-plus"></i>
+                    New Registration
                 </button>
-                <button id="guestPassTab" class="kochin-tab px-6 py-3 admin-only">
-                    <i class="fas fa-ticket-alt mr-2"></i> Guest Pass
+                <button onclick="showVerification()" class="kochin-nav-button">
+                    <i class="fas fa-qrcode"></i>
+                    Entry Verification
                 </button>
-                <button id="transactionTab" class="kochin-tab px-6 py-3 admin-only">
-                    <i class="fas fa-exchange-alt mr-2"></i> Transaction Panel
+                <button onclick="showGuestList()" class="kochin-nav-button">
+                    <i class="fas fa-list"></i>
+                    Registered Guests
                 </button>
-                <button id="beverageTab" class="kochin-tab px-6 py-3">
-                    <i class="fas fa-cocktail mr-2"></i> Beverage Counter
-                </button>
-                <button id="guestListTab" class="kochin-tab px-6 py-3">
-                    <i class="fas fa-users mr-2"></i> Registered Guests
+                <button onclick="showStats()" class="kochin-nav-button admin-only">
+                    <i class="fas fa-chart-bar"></i>
+                    Stats
                 </button>
             </div>
 
@@ -303,10 +304,9 @@
                     
                     <div>
                         <label for="entryType" class="block text-sm font-medium text-gray-300 mb-1">Entry Type</label>
-                        <select id="entryType" name="entryType" required class="kochin-input w-full">
-                            <option value="standard">Standard</option>
-                            <option value="vip">VIP</option>
-                            <option value="guest">Special Guest</option>
+                        <select id="entryType" name="entryType" required class="kochin-input w-full" onchange="updateAmount()">
+                            <option value="stag">Stag (₹2750)</option>
+                            <option value="couple">Couple (₹4750)</option>
                         </select>
                     </div>
                     
@@ -322,7 +322,7 @@
                     
                     <div>
                         <label for="amount" class="block text-sm font-medium text-gray-300 mb-1">Amount (₹)</label>
-                        <input type="number" id="amount" name="amount" required class="kochin-input w-full">
+                        <input type="number" id="amount" name="amount" required readonly class="kochin-input w-full bg-gray-700">
                     </div>
                     
                     <div class="col-span-full">
@@ -424,58 +424,62 @@
                 </div>
             </div>
 
-            <!-- Beverage Counter -->
-            <div id="beverageContent" class="kochin-container p-6 mb-6 hidden">
-                <h2 class="text-xl font-bold mb-4">Beverage Counter</h2>
+            <!-- Verification Panel -->
+            <div id="verificationContent" class="kochin-container p-6 mb-6 hidden">
+                <h2 class="text-xl font-bold mb-4">Entry Verification</h2>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <p class="mb-2">Current Balance: <span id="beverageCurrentBalance" class="font-bold">₹0</span></p>
-                        
-                        <form id="beverageTransactionForm" class="space-y-4">
-                            <div>
-                                <label for="beverageType" class="block text-sm font-medium text-gray-300 mb-1">Beverage Type</label>
-                                <select id="beverageType" name="beverageType" required class="kochin-input w-full">
-                                    <option value="beer">Beer</option>
-                                    <option value="wine">Wine</option>
-                                    <option value="whiskey">Whiskey</option>
-                                    <option value="cocktail">Cocktail</option>
-                                    <option value="softdrink">Soft Drink</option>
-                                    <option value="other">Other</option>
-                                </select>
-                            </div>
-                            
-                            <div>
-                                <label for="beverageAmount" class="block text-sm font-medium text-gray-300 mb-1">Amount (₹)</label>
-                                <input type="number" id="beverageAmount" name="beverageAmount" required class="kochin-input w-full">
-                            </div>
-                            
-                            <div>
-                                <label for="beverageDescription" class="block text-sm font-medium text-gray-300 mb-1">Description (Optional)</label>
-                                <textarea id="beverageDescription" name="beverageDescription" class="kochin-input w-full" rows="2"></textarea>
-                            </div>
-                            
-                            <button type="submit" class="kochin-button py-2 px-6">
-                                <i class="fas fa-cocktail mr-2"></i> Process Beverage Transaction
-                            </button>
-                        </form>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="text-center">
+                        <button id="startVerificationScan" class="kochin-button mb-4">
+                            <i class="fas fa-camera mr-2"></i>
+                            Start QR Scanner
+                        </button>
+                        <button id="stopVerificationScan" class="kochin-button mb-4 hidden">
+                            <i class="fas fa-stop mr-2"></i>
+                            Stop Scanner
+                        </button>
                     </div>
+
+                    <div id="verification-qr-reader" class="w-full max-w-md mx-auto"></div>
                     
-                    <div>
-                        <div id="beverageSelectedGuestInfo" class="kochin-card mb-4">
-                            <p class="text-gray-300 text-center py-2">Select a guest to process transactions</p>
-                        </div>
-                        
-                        <div class="kochin-card">
-                            <h3 class="text-lg font-semibold mb-2">Recent Beverage Transactions</h3>
-                            <div id="recentBeverageTransactions" class="max-h-40 overflow-y-auto">
-                                <p class="text-gray-400 text-center py-2">No beverage transactions yet</p>
+                    <!-- Guest Details Card (shown after successful scan) -->
+                    <div id="verificationResult" class="hidden">
+                        <div class="bg-gray-800 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold mb-4">Guest Details</h3>
+                            <div class="space-y-3">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Name:</span>
+                                    <span id="verificationGuestName" class="font-medium"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Entry Type:</span>
+                                    <span id="verificationEntryType" class="font-medium"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Mobile:</span>
+                                    <span id="verificationMobile" class="font-medium"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Status:</span>
+                                    <span id="verificationStatus" class="font-medium"></span>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-6 flex justify-end space-x-4">
+                                <button id="verifyEntry" class="kochin-button bg-green-600 hover:bg-green-700">
+                                    <i class="fas fa-check mr-2"></i>
+                                    Verify Entry
+                                </button>
+                                <button id="denyEntry" class="kochin-button bg-red-600 hover:bg-red-700">
+                                    <i class="fas fa-times mr-2"></i>
+                                    Deny Entry
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            
+
             <!-- Registered Guests -->
             <div id="guestListContent" class="kochin-container p-6 mb-6 hidden">
                 <div class="flex justify-between items-center mb-4">
@@ -507,45 +511,6 @@
                 </div>
             </div>
 
-            <!-- Entry Verification Content -->
-            <div id="verificationContent" class="hidden">
-                <div class="kochin-container p-6 mb-6">
-                    <h2 class="text-xl font-bold text-white mb-4">Entry Verification</h2>
-                    
-                    <!-- QR Code Scanner -->
-                    <div class="mb-8">
-                        <div class="flex items-center space-x-4 mb-4">
-                            <button id="startScan" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
-                                <i class="fas fa-camera mr-2"></i> Start Scanner
-                            </button>
-                            <button id="stopScan" class="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700" style="display: none;">
-                                <i class="fas fa-stop mr-2"></i> Stop Scanner
-                            </button>
-                        </div>
-                        <div id="qr-reader" class="w-full max-w-md mx-auto bg-gray-800 rounded-lg overflow-hidden"></div>
-                        <div id="qr-reader-results" class="mt-4 text-center text-white"></div>
-                    </div>
-
-                    <!-- Guest List with QR Codes -->
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full bg-gray-800 text-white">
-                            <thead>
-                                <tr class="border-b border-gray-700">
-                                    <th class="py-3 px-4 text-left">Name</th>
-                                    <th class="py-3 px-4 text-left">Club</th>
-                                    <th class="py-3 px-4 text-left">Entry Type</th>
-                                    <th class="py-3 px-4 text-left">Payment</th>
-                                    <th class="py-3 px-4 text-left">Status</th>
-                                    <th class="py-3 px-4 text-left">QR Code</th>
-                                    <th class="py-3 px-4 text-left">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="verificationTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
             <!-- Stats Content -->
             <div id="statsContent" class="hidden admin-only">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -553,12 +518,6 @@
                         <h3 class="text-lg font-semibold text-white mb-3">Entry Stats</h3>
                         <div id="entryStats" class="space-y-2">
                             <!-- Entry stats will be added here -->
-                        </div>
-                    </div>
-                    <div class="kochin-container p-6">
-                        <h3 class="text-lg font-semibold text-white mb-3">Beverage Stats</h3>
-                        <div id="beverageStats" class="space-y-2">
-                            <!-- Beverage stats will be added here -->
                         </div>
                     </div>
                     <div class="kochin-container p-6">

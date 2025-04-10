@@ -54,8 +54,7 @@ async function initializeApp() {
     // Initialize all sections as hidden first
     const sections = [
         'registrationContent',
-        'transactionContent',
-        'beverageContent',
+        'verificationContent',
         'guestListContent',
         'statsContent'
     ]
@@ -69,6 +68,10 @@ async function initializeApp() {
 
     // Show login screen by default
     showLoginScreen()
+
+    // Initialize forms
+    initializeRegistration()
+    initializeVerification()
 
     // Check for existing session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
@@ -139,8 +142,7 @@ async function handleLogin(user) {
         // First hide all content sections
         const sections = [
             'registrationContent',
-            'transactionContent',
-            'beverageContent',
+            'verificationContent',
             'guestListContent',
             'statsContent'
         ]
@@ -186,8 +188,7 @@ function showLoginScreen() {
     // First hide all content sections
     const sections = [
         'registrationContent',
-        'transactionContent',
-        'beverageContent',
+        'verificationContent',
         'guestListContent',
         'statsContent'
     ]
@@ -308,30 +309,6 @@ function setupEventListeners() {
         }
     })
 
-    // Beverage form
-    document.getElementById('beverageForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault()
-        const formData = new FormData(e.target)
-        try {
-            const { data, error } = await supabase
-                .from('transactions')
-                .insert([{
-                    guest_code: formData.get('guestCode'),
-                    beverage_type: formData.get('beverageType'),
-                    served_by: currentUser.username
-                }])
-            
-            if (error) throw error
-            
-            // Reset form and update transactions
-            e.target.reset()
-            await loadRecentTransactions()
-        } catch (error) {
-            console.error('Error adding beverage:', error)
-            alert('Failed to add beverage')
-        }
-    })
-
     // Verification section
     document.getElementById('verificationTab')?.addEventListener('click', () => {
         showVerification()
@@ -428,131 +405,215 @@ function updateGuestList() {
     `).join('')
 }
 
-// Load recent transactions
-async function loadRecentTransactions() {
-    try {
-        const { data, error } = await supabase
-            .from('transactions')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(10)
-        
-        if (error) throw error
-        
-        updateTransactionList(data)
-    } catch (error) {
-        console.error('Error loading transactions:', error)
-    }
-}
-
-// Update transaction list in the UI
-function updateTransactionList(transactions) {
-    const container = document.getElementById('recentTransactions')
-    if (!container) return
-
-    container.innerHTML = transactions.map(tx => `
-        <div class="transaction-item">
-            <div class="details">
-                <div class="font-medium">${tx.guest_code}</div>
-                <div class="time">${new Date(tx.created_at).toLocaleString()}</div>
-            </div>
-            <div class="amount">${tx.beverage_type}</div>
-        </div>
-    `).join('')
-}
-
-// Initialize the application
-window.viewGuest = async (id) => {
-    // Implement guest details view
-}
-
-window.checkInGuest = async (id) => {
-    try {
-        const { error } = await supabase
-            .from('guests')
-            .update({ status: 'checked_in' })
-            .eq('id', id)
-        
-        if (error) throw error
-        
-        await loadGuests()
-    } catch (error) {
-        console.error('Error checking in guest:', error)
-        alert('Failed to check in guest')
-    }
-}
-
 // Show verification section
 function showVerification() {
-    document.getElementById('registrationSection').classList.add('hidden');
-    document.getElementById('verificationSection').classList.remove('hidden');
-    loadVerificationList();
+    hideAllSections()
+    const verificationContent = document.getElementById('verificationContent')
+    if (verificationContent) {
+        verificationContent.classList.remove('hidden')
+    }
 }
 
-// Show registration section
-function showRegistration() {
-    document.getElementById('registrationSection').classList.remove('hidden');
-    document.getElementById('verificationSection').classList.add('hidden');
+// Hide all sections
+function hideAllSections() {
+    const sections = [
+        'registrationContent',
+        'verificationContent',
+        'guestListContent',
+        'statsContent'
+    ]
+    
+    sections.forEach(id => {
+        const element = document.getElementById(id)
+        if (element) {
+            element.classList.add('hidden')
+        }
+    })
 }
 
-// Load verification list with QR codes
-async function loadVerificationList() {
-    try {
-        const { data: guests, error } = await supabase
-            .from('guests')
-            .select('*')
-            .order('created_at', { ascending: false });
+// Initialize verification scanner
+function initializeVerification() {
+    let html5QrcodeScanner = null
+    const startButton = document.getElementById('startVerificationScan')
+    const stopButton = document.getElementById('stopVerificationScan')
+    const resultDiv = document.getElementById('verificationResult')
+    
+    startButton?.addEventListener('click', () => {
+        startButton.classList.add('hidden')
+        stopButton.classList.remove('hidden')
+        resultDiv.classList.add('hidden')
+        
+        html5QrcodeScanner = new Html5QrcodeScanner(
+            "verification-qr-reader",
+            { fps: 10, qrbox: {width: 250, height: 250} }
+        )
+        
+        html5QrcodeScanner.render(async (decodedText) => {
+            try {
+                // Parse QR data
+                const qrData = JSON.parse(decodedText)
+                
+                // Fetch guest details from Supabase
+                const { data: guestData, error } = await supabase
+                    .from('guests')
+                    .select('*')
+                    .eq('id', qrData.id)
+                    .single()
+                
+                if (error) throw error
+                if (!guestData) throw new Error('Guest not found')
+                
+                // Update verification result UI
+                document.getElementById('verificationGuestName').textContent = guestData.guestName
+                document.getElementById('verificationEntryType').textContent = guestData.entryType
+                document.getElementById('verificationMobile').textContent = guestData.mobileNumber
+                document.getElementById('verificationStatus').textContent = guestData.status
+                
+                // Show verification result
+                resultDiv.classList.remove('hidden')
+                
+                // Stop scanner
+                if (html5QrcodeScanner) {
+                    html5QrcodeScanner.clear()
+                    html5QrcodeScanner = null
+                }
+                startButton.classList.remove('hidden')
+                stopButton.classList.add('hidden')
+                
+                // Add verify/deny handlers
+                document.getElementById('verifyEntry')?.addEventListener('click', async () => {
+                    try {
+                        const { data, error } = await supabase
+                            .from('guests')
+                            .update({ status: 'verified', verifiedAt: new Date().toISOString() })
+                            .eq('id', qrData.id)
+                        
+                        if (error) throw error
+                        
+                        alert('Guest entry verified successfully!')
+                        resultDiv.classList.add('hidden')
+                    } catch (error) {
+                        console.error('Verification error:', error)
+                        alert('Failed to verify guest entry')
+                    }
+                })
+                
+                document.getElementById('denyEntry')?.addEventListener('click', async () => {
+                    try {
+                        const { data, error } = await supabase
+                            .from('guests')
+                            .update({ status: 'denied', deniedAt: new Date().toISOString() })
+                            .eq('id', qrData.id)
+                        
+                        if (error) throw error
+                        
+                        alert('Guest entry denied')
+                        resultDiv.classList.add('hidden')
+                    } catch (error) {
+                        console.error('Deny error:', error)
+                        alert('Failed to deny guest entry')
+                    }
+                })
+                
+            } catch (error) {
+                console.error('QR code error:', error)
+                alert('Invalid or expired QR code')
+            }
+        })
+    })
+    
+    stopButton?.addEventListener('click', () => {
+        if (html5QrcodeScanner) {
+            html5QrcodeScanner.clear()
+            html5QrcodeScanner = null
+        }
+        startButton.classList.remove('hidden')
+        stopButton.classList.add('hidden')
+        resultDiv.classList.add('hidden')
+    })
+}
 
-        if (error) throw error;
+// Initialize registration form
+function initializeRegistration() {
+    const form = document.getElementById('registrationForm')
+    if (!form) return
+    
+    // Set initial amount
+    updateAmount()
+    
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        
+        try {
+            // Get form data
+            const formData = {
+                guestName: document.getElementById('guestName').value,
+                clubName: document.getElementById('clubName').value,
+                mobileNumber: document.getElementById('mobileNumber').value,
+                entryType: document.getElementById('entryType').value,
+                paymentMode: document.getElementById('paymentMode').value,
+                amount: document.getElementById('amount').value,
+                registrationDate: new Date().toISOString(),
+                status: 'active'
+            }
+            
+            // Validate required fields
+            const requiredFields = ['guestName', 'mobileNumber', 'entryType', 'paymentMode', 'amount']
+            const missingFields = requiredFields.filter(field => !formData[field])
+            
+            if (missingFields.length > 0) {
+                alert('Please fill in all required fields')
+                return
+            }
+            
+            // Validate mobile number
+            if (!/^[0-9]{10}$/.test(formData.mobileNumber)) {
+                alert('Please enter a valid 10-digit mobile number')
+                return
+            }
+            
+            // Insert into Supabase
+            const { data, error } = await supabase
+                .from('guests')
+                .insert([formData])
+                .select()
+            
+            if (error) throw error
+            
+            // Generate QR code
+            if (data?.[0]) {
+                const qrData = {
+                    id: data[0].id,
+                    guestName: data[0].guestName,
+                    entryType: data[0].entryType,
+                    mobileNumber: data[0].mobileNumber
+                }
+                
+                const qrCode = await QRCode.toDataURL(JSON.stringify(qrData))
+                
+                // Show success message with QR code
+                alert('Registration successful! QR code generated.')
+                
+                // Reset form
+                form.reset()
+                updateAmount()
+            }
+        } catch (error) {
+            console.error('Registration error:', error)
+            alert(error.message || 'Failed to register guest')
+        }
+    })
+}
 
-        const tbody = document.getElementById('verificationTableBody');
-        if (!tbody) return;
-
-        tbody.innerHTML = guests.map(guest => {
-            // Generate QR code data
-            const qrData = JSON.stringify({
-                id: guest.id,
-                name: guest.name,
-                entry_type: guest.entry_type,
-                payment: guest.payment
-            });
-
-            return `
-                <tr class="border-b border-gray-700">
-                    <td class="py-3 px-4">${guest.name || ''}</td>
-                    <td class="py-3 px-4">${guest.club || ''}</td>
-                    <td class="py-3 px-4">${guest.entry_type || ''}</td>
-                    <td class="py-3 px-4">${guest.payment || ''}</td>
-                    <td class="py-3 px-4">
-                        <span class="px-2 py-1 rounded-full text-xs ${
-                            guest.status === 'verified' ? 'bg-green-500' : 'bg-yellow-500'
-                        }">
-                            ${guest.status || 'pending'}
-                        </span>
-                    </td>
-                    <td class="py-3 px-4">
-                        <div class="qr-code" data-qr="${encodeURIComponent(qrData)}"></div>
-                    </td>
-                    <td class="py-3 px-4">
-                        <button class="text-blue-400 hover:text-blue-600" onclick="verifyGuest('${guest.id}')">
-                            <i class="fas fa-check-circle"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-
-        // Generate QR codes for each guest
-        document.querySelectorAll('.qr-code').forEach(qrDiv => {
-            const qrData = decodeURIComponent(qrDiv.dataset.qr);
-            new QRCode(qrDiv, {
-                text: qrData,
-                width: 64,
-                height: 64
-            });
-        });
-    } catch (error) {
-        console.error('Error loading verification list:', error);
+// Update amount based on entry type
+window.updateAmount = function() {
+    const entryType = document.getElementById('entryType').value
+    const amountInput = document.getElementById('amount')
+    
+    if (entryType === 'stag') {
+        amountInput.value = 2750
+    } else if (entryType === 'couple') {
+        amountInput.value = 4750
     }
 }
 
@@ -623,5 +684,66 @@ async function verifyGuest(guestId) {
     } catch (error) {
         console.error('Error verifying guest:', error);
         alert('Failed to verify guest');
+    }
+}
+
+// Load verification list with QR codes
+async function loadVerificationList() {
+    try {
+        const { data: guests, error } = await supabase
+            .from('guests')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const tbody = document.getElementById('verificationTableBody');
+        if (!tbody) return;
+
+        tbody.innerHTML = guests.map(guest => {
+            // Generate QR code data
+            const qrData = JSON.stringify({
+                id: guest.id,
+                name: guest.name,
+                entry_type: guest.entry_type,
+                payment: guest.payment
+            });
+
+            return `
+                <tr class="border-b border-gray-700">
+                    <td class="py-3 px-4">${guest.name || ''}</td>
+                    <td class="py-3 px-4">${guest.club || ''}</td>
+                    <td class="py-3 px-4">${guest.entry_type || ''}</td>
+                    <td class="py-3 px-4">${guest.payment || ''}</td>
+                    <td class="py-3 px-4">
+                        <span class="px-2 py-1 rounded-full text-xs ${
+                            guest.status === 'verified' ? 'bg-green-500' : 'bg-yellow-500'
+                        }">
+                            ${guest.status || 'pending'}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="qr-code" data-qr="${encodeURIComponent(qrData)}"></div>
+                    </td>
+                    <td class="py-3 px-4">
+                        <button class="text-blue-400 hover:text-blue-600" onclick="verifyGuest('${guest.id}')">
+                            <i class="fas fa-check-circle"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        // Generate QR codes for each guest
+        document.querySelectorAll('.qr-code').forEach(qrDiv => {
+            const qrData = decodeURIComponent(qrDiv.dataset.qr);
+            new QRCode(qrDiv, {
+                text: qrData,
+                width: 64,
+                height: 64
+            });
+        });
+    } catch (error) {
+        console.error('Error loading verification list:', error);
     }
 }
