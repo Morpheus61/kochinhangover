@@ -1,0 +1,30 @@
+:root {
+    --primary: #e83283;
+    --secondary: #34dbdb;
+    --accent: #f7d046;
+    --dark: #2a0e3a;
+    --light: #f8f0ff;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--dark);
+    color: var(--light);
+    min-height: 100vh;
+}
+
+.kochin-bg {
+    background-color: var(--dark);
+    background-image: radial-gradient(circle at 10% 20%, rgba(232, 50, 131, 0.3) 0%, transparent 30%),
+                      radial-gradient(circle at 90% 30%, rgba(52, 219, 219, 0.3) 0%, transparent 30%),
+                      radial-gradient(circle at 50% 80%, rgba(247, 208, 70, 0.3) 0%, transparent 30%);
+}
+
+.kochin-container {
+    background-color: rgba(42, 14, 58, 0.85);
+    border-radius: 1rem;
+    border: 2px solid rgba(232, 50, 131, 0.5);
+    box-shadow: 0 0 20px rgba(52, 219, 219, 0.5);
+}
+
+/* Add all your existing CSS styles here */
