@@ -52,8 +52,148 @@
     </div>
 
     <!-- Main Application -->
-    <div id="mainApp" class="hidden min-h-screen p-4">
-        <!-- Your existing main app content -->
+    <div id="mainApp" class="hidden min-h-screen">
+        <!-- Navigation -->
+        <nav class="kochin-container p-4 mb-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <span class="text-xl font-bold text-white">Kochin Hangover</span>
+                    <div class="space-x-2">
+                        <button id="registrationTab" class="kochin-tab admin-only" onclick="showTab('registration')">
+                            <i class="fas fa-user-plus"></i> Registration
+                        </button>
+                        <button id="beverageTab" class="kochin-tab" onclick="showTab('beverage')">
+                            <i class="fas fa-glass-martini"></i> Beverages
+                        </button>
+                        <button id="statsTab" class="kochin-tab admin-only" onclick="showTab('stats')">
+                            <i class="fas fa-chart-bar"></i> Stats
+                        </button>
+                    </div>
+                </div>
+                <button id="logoutBtn" class="kochin-button-secondary">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </nav>
+
+        <!-- Content Areas -->
+        <div class="container mx-auto px-4">
+            <!-- Registration Content -->
+            <div id="registrationContent" class="hidden admin-only">
+                <div class="kochin-container p-6 mb-6">
+                    <h2 class="text-xl font-bold text-white mb-4">New Registration</h2>
+                    <form id="registrationForm" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Name</label>
+                                <input type="text" name="name" class="kochin-input" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Phone</label>
+                                <input type="tel" name="phone" class="kochin-input" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Entry Type</label>
+                                <select name="entryType" class="kochin-input" required>
+                                    <option value="standard">Standard (₹1000)</option>
+                                    <option value="vip">VIP (₹2000)</option>
+                                    <option value="special">Special Guest</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Payment Status</label>
+                                <select name="paymentStatus" class="kochin-input" required>
+                                    <option value="paid">Paid</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="free">Free Entry</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="kochin-button">
+                            <i class="fas fa-save mr-2"></i> Register Guest
+                        </button>
+                    </form>
+                </div>
+
+                <div class="kochin-container p-6">
+                    <h2 class="text-xl font-bold text-white mb-4">Guest List</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr class="text-gray-300 text-left">
+                                    <th class="py-3 px-4">Name</th>
+                                    <th class="py-3 px-4">Entry Type</th>
+                                    <th class="py-3 px-4">Payment</th>
+                                    <th class="py-3 px-4">Status</th>
+                                    <th class="py-3 px-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="guestsTableBody">
+                                <!-- Guest rows will be added here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Beverage Content -->
+            <div id="beverageContent" class="hidden">
+                <div class="kochin-container p-6">
+                    <h2 class="text-xl font-bold text-white mb-4">Beverage Counter</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <form id="beverageForm" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Guest QR Code</label>
+                                    <input type="text" name="guestCode" class="kochin-input" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Beverage Type</label>
+                                    <select name="beverageType" class="kochin-input" required>
+                                        <option value="beer">Beer (₹300)</option>
+                                        <option value="cocktail">Cocktail (₹400)</option>
+                                        <option value="shot">Shot (₹200)</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="kochin-button">
+                                    <i class="fas fa-plus mr-2"></i> Add Beverage
+                                </button>
+                            </form>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">Recent Transactions</h3>
+                            <div id="recentTransactions" class="space-y-2">
+                                <!-- Recent transactions will be added here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Content -->
+            <div id="statsContent" class="hidden admin-only">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="kochin-container p-6">
+                        <h3 class="text-lg font-semibold text-white mb-3">Entry Stats</h3>
+                        <div id="entryStats" class="space-y-2">
+                            <!-- Entry stats will be added here -->
+                        </div>
+                    </div>
+                    <div class="kochin-container p-6">
+                        <h3 class="text-lg font-semibold text-white mb-3">Beverage Stats</h3>
+                        <div id="beverageStats" class="space-y-2">
+                            <!-- Beverage stats will be added here -->
+                        </div>
+                    </div>
+                    <div class="kochin-container p-6">
+                        <h3 class="text-lg font-semibold text-white mb-3">Revenue Stats</h3>
+                        <div id="revenueStats" class="space-y-2">
+                            <!-- Revenue stats will be added here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="./main.js"></script>

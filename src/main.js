@@ -8,6 +8,8 @@ let currentUser = null
 
 // DOM Ready
 document.addEventListener('DOMContentLoaded', async () => {
+    setupEventListeners()
+    
     // Check if user is already logged in
     const { data: { session } } = await supabase.auth.getSession()
     if (session) {
@@ -15,55 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
         showLoginScreen()
     }
-
-    // Setup event listeners
-    setupEventListeners()
 })
-
-// Show login screen
-function showLoginScreen() {
-    document.getElementById('loginScreen')?.classList.remove('hidden')
-    document.getElementById('mainApp')?.classList.add('hidden')
-}
-
-// Handle successful login
-async function handleLogin(user) {
-    try {
-        // Get user profile
-        const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single()
-            
-        if (error) throw error
-
-        currentUser = { ...user, profile }
-        
-        // Update UI
-        document.getElementById('loginScreen')?.classList.add('hidden')
-        document.getElementById('mainApp')?.classList.remove('hidden')
-        
-        // Show/hide admin features
-        const isAdmin = profile?.role === 'admin'
-        document.querySelectorAll('.admin-only').forEach(el => {
-            if (isAdmin) {
-                el.classList.remove('hidden')
-            } else {
-                el.classList.add('hidden')
-            }
-        })
-        
-        // Show appropriate tab based on role
-        showTab(isAdmin ? 'registration' : 'beverage')
-        
-        // Load initial data
-        await loadGuests()
-    } catch (error) {
-        console.error('Error handling login:', error)
-        showLoginScreen()
-    }
-}
 
 // Setup event listeners
 function setupEventListeners() {
@@ -123,26 +77,96 @@ function setupEventListeners() {
             setTimeout(() => errorDiv.classList.add('hidden'), 3000)
         }
     })
-    
-    // Other event listeners will be added here
+
+    // Logout button
+    document.getElementById('logoutBtn')?.addEventListener('click', () => {
+        supabase.auth.signOut()
+        currentUser = null
+        showLoginScreen()
+    })
+
+    // Tab buttons
+    document.querySelectorAll('[id$="Tab"]').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            const tabName = e.target.id.replace('Tab', '')
+            showTab(tabName)
+        })
+    })
+
+    // Registration form
+    document.getElementById('registrationForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        const formData = new FormData(e.target)
+        try {
+            const { data, error } = await supabase
+                .from('guests')
+                .insert([{
+                    name: formData.get('name'),
+                    phone: formData.get('phone'),
+                    entry_type: formData.get('entryType'),
+                    payment_status: formData.get('paymentStatus'),
+                    created_by: currentUser.username
+                }])
+            
+            if (error) throw error
+            
+            // Reset form and reload guests
+            e.target.reset()
+            await loadGuests()
+        } catch (error) {
+            console.error('Error registering guest:', error)
+            alert('Failed to register guest')
+        }
+    })
+
+    // Beverage form
+    document.getElementById('beverageForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        const formData = new FormData(e.target)
+        try {
+            const { data, error } = await supabase
+                .from('transactions')
+                .insert([{
+                    guest_code: formData.get('guestCode'),
+                    beverage_type: formData.get('beverageType'),
+                    served_by: currentUser.username
+                }])
+            
+            if (error) throw error
+            
+            // Reset form and update transactions
+            e.target.reset()
+            await loadRecentTransactions()
+        } catch (error) {
+            console.error('Error adding beverage:', error)
+            alert('Failed to add beverage')
+        }
+    })
+}
+
+// Show login screen
+function showLoginScreen() {
+    document.getElementById('loginScreen')?.classList.remove('hidden')
+    document.getElementById('mainApp')?.classList.add('hidden')
+    // Reset forms
+    document.getElementById('loginForm')?.reset()
 }
 
 // Show specific tab
 function showTab(tabName) {
-    // Hide all content
-    document.querySelectorAll('[id$="Content"]').forEach(el => el.classList.add('hidden'))
+    // Hide all content sections
+    document.querySelectorAll('[id$="Content"]').forEach(content => {
+        content.classList.add('hidden')
+    })
     
-    // Deactivate all tabs
-    document.querySelectorAll('[id$="Tab"]').forEach(el => el.classList.remove('active'))
+    // Remove active class from all tabs
+    document.querySelectorAll('[id$="Tab"]').forEach(tab => {
+        tab.classList.remove('active')
+    })
     
     // Show selected content and activate tab
     document.getElementById(`${tabName}Content`)?.classList.remove('hidden')
     document.getElementById(`${tabName}Tab`)?.classList.add('active')
-    
-    // Special actions for specific tabs
-    if (tabName === 'guestList') {
-        populateGuestList()
-    }
 }
 
 // Load guests from Supabase
@@ -156,34 +180,130 @@ async function loadGuests() {
         if (error) throw error
         
         guests = data
-        populateGuestList()
+        updateGuestList()
     } catch (error) {
         console.error('Error loading guests:', error)
     }
 }
 
-// Populate guest list
-function populateGuestList() {
+// Update guest list in the UI
+function updateGuestList() {
     const tbody = document.getElementById('guestsTableBody')
     if (!tbody) return
-    
-    tbody.innerHTML = guests.length ? '' : '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-400">No guests registered yet</td></tr>'
-    
-    guests.forEach(guest => {
-        const row = document.createElement('tr')
-        row.className = 'guest-row'
-        row.innerHTML = `
-            <td class="px-6 py-4 whitespace-nowrap">${guest.name}</td>
-            <td class="px-6 py-4 whitespace-nowrap">${guest.club_name || '-'}</td>
-            <td class="px-6 py-4 whitespace-nowrap">${guest.mobile_number}</td>
-            <td class="px-6 py-4 whitespace-nowrap">${guest.entry_type}</td>
-            <td class="px-6 py-4 whitespace-nowrap">₹${guest.balance.toFixed(2)}</td>
-            <td class="px-6 py-4 whitespace-nowrap">
-                <button class="text-blue-500 hover:text-blue-700 mr-2" onclick="selectGuest('${guest.id}')">
+
+    tbody.innerHTML = guests.map(guest => `
+        <tr>
+            <td class="py-3 px-4">${guest.name}</td>
+            <td class="py-3 px-4">${guest.entry_type}</td>
+            <td class="py-3 px-4">${guest.payment_status}</td>
+            <td class="py-3 px-4">
+                <span class="px-2 py-1 rounded-full text-xs ${
+                    guest.status === 'checked_in' ? 'bg-green-500' : 'bg-yellow-500'
+                }">
+                    ${guest.status || 'pending'}
+                </span>
+            </td>
+            <td class="py-3 px-4">
+                <button class="text-blue-400 hover:text-blue-600 mr-2" onclick="viewGuest('${guest.id}')">
                     <i class="fas fa-eye"></i>
                 </button>
+                <button class="text-green-400 hover:text-green-600" onclick="checkInGuest('${guest.id}')">
+                    <i class="fas fa-check-circle"></i>
+                </button>
             </td>
-        `
-        tbody.appendChild(row)
-    })
+        </tr>
+    `).join('')
+}
+
+// Load recent transactions
+async function loadRecentTransactions() {
+    try {
+        const { data, error } = await supabase
+            .from('transactions')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(10)
+        
+        if (error) throw error
+        
+        updateTransactionList(data)
+    } catch (error) {
+        console.error('Error loading transactions:', error)
+    }
+}
+
+// Update transaction list in the UI
+function updateTransactionList(transactions) {
+    const container = document.getElementById('recentTransactions')
+    if (!container) return
+
+    container.innerHTML = transactions.map(tx => `
+        <div class="transaction-item">
+            <div class="details">
+                <div class="font-medium">${tx.guest_code}</div>
+                <div class="time">${new Date(tx.created_at).toLocaleString()}</div>
+            </div>
+            <div class="amount">${tx.beverage_type}</div>
+        </div>
+    `).join('')
+}
+
+// Initialize the application
+window.viewGuest = async (id) => {
+    // Implement guest details view
+}
+
+window.checkInGuest = async (id) => {
+    try {
+        const { error } = await supabase
+            .from('guests')
+            .update({ status: 'checked_in' })
+            .eq('id', id)
+        
+        if (error) throw error
+        
+        await loadGuests()
+    } catch (error) {
+        console.error('Error checking in guest:', error)
+        alert('Failed to check in guest')
+    }
+}
+
+// Handle successful login
+async function handleLogin(user) {
+    try {
+        // Get user profile
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single()
+            
+        if (error) throw error
+
+        currentUser = { ...user, profile }
+        
+        // Update UI
+        document.getElementById('loginScreen')?.classList.add('hidden')
+        document.getElementById('mainApp')?.classList.remove('hidden')
+        
+        // Show/hide admin features
+        const isAdmin = profile?.role === 'admin'
+        document.querySelectorAll('.admin-only').forEach(el => {
+            if (isAdmin) {
+                el.classList.remove('hidden')
+            } else {
+                el.classList.add('hidden')
+            }
+        })
+        
+        // Show appropriate tab based on role
+        showTab(isAdmin ? 'registration' : 'beverage')
+        
+        // Load initial data
+        await loadGuests()
+    } catch (error) {
+        console.error('Error handling login:', error)
+        showLoginScreen()
+    }
 }
