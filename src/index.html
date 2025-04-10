@@ -369,16 +369,16 @@
 
             <!-- Navigation -->
             <div class="flex space-x-4 mb-6">
-                <button id="newRegistrationBtn" class="kochin-button flex-1">
+                <button id="newRegistrationBtn" class="kochin-button flex-1" data-tab="registration">
                     <i class="fas fa-user-plus mr-2"></i> New Registration
                 </button>
-                <button id="entryVerificationBtn" class="kochin-button flex-1">
+                <button id="entryVerificationBtn" class="kochin-button flex-1" data-tab="verification">
                     <i class="fas fa-qrcode mr-2"></i> Entry Verification
                 </button>
-                <button id="guestListBtn" class="kochin-button flex-1">
+                <button id="guestListBtn" class="kochin-button flex-1" data-tab="guests">
                     <i class="fas fa-list mr-2"></i> Registered Guests
                 </button>
-                <button id="statsBtn" class="kochin-button flex-1">
+                <button id="statsBtn" class="kochin-button flex-1" data-tab="stats">
                     <i class="fas fa-chart-bar mr-2"></i> Stats
                 </button>
             </div>
@@ -471,10 +471,10 @@
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-bold">Registered Guests</h2>
                     <div class="flex space-x-2">
-                        <button id="downloadGuestsPDF" class="kochin-button bg-red-600">
+                        <button id="downloadGuestsPDFBtn" class="kochin-button bg-red-600">
                             <i class="fas fa-file-pdf mr-2"></i> Download PDF
                         </button>
-                        <button id="downloadGuestsCSV" class="kochin-button bg-green-600">
+                        <button id="downloadGuestsCSVBtn" class="kochin-button bg-green-600">
                             <i class="fas fa-file-csv mr-2"></i> Download CSV
                         </button>
                     </div>
@@ -502,10 +502,10 @@
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-bold">Event Statistics</h2>
                     <div class="flex space-x-2">
-                        <button id="downloadStatsPDF" class="kochin-button bg-red-600">
+                        <button id="downloadStatsPDFBtn" class="kochin-button bg-red-600">
                             <i class="fas fa-file-pdf mr-2"></i> Download PDF
                         </button>
-                        <button id="downloadStatsCSV" class="kochin-button bg-green-600">
+                        <button id="downloadStatsCSVBtn" class="kochin-button bg-green-600">
                             <i class="fas fa-file-csv mr-2"></i> Download CSV
                         </button>
                     </div>

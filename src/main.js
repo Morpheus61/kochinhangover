@@ -264,6 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeApp()
     setupEventListeners()
     initializeUsers()
+    setupNavigation()
 })
 
 // Setup event listeners
@@ -370,12 +371,29 @@ function setupEventListeners() {
     });
 
     // Navigation buttons
-    document.getElementById('newRegistrationBtn')?.addEventListener('click', () => showTab('registration'))
-    document.getElementById('entryVerificationBtn')?.addEventListener('click', () => showTab('verification'))
-    document.getElementById('guestListBtn')?.addEventListener('click', () => showTab('guests'))
-    document.getElementById('statsBtn')?.addEventListener('click', () => showTab('stats'))
-    document.getElementById('usersBtn')?.addEventListener('click', () => showTab('users'))
-    document.getElementById('logoutBtn')?.addEventListener('click', handleLogout)
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabId = btn.getAttribute('data-tab');
+            showTab(tabId);
+        });
+    });
+
+    // Download buttons
+    document.getElementById('downloadGuestsPDFBtn')?.addEventListener('click', downloadGuestsPDF);
+    document.getElementById('downloadGuestsCSVBtn')?.addEventListener('click', downloadGuestsCSV);
+    document.getElementById('downloadStatsPDFBtn')?.addEventListener('click', downloadStatsPDF);
+    document.getElementById('downloadStatsCSVBtn')?.addEventListener('click', downloadStatsCSV);
+
+    // WhatsApp share button
+    document.getElementById('shareWhatsAppBtn')?.addEventListener('click', () => {
+        const selectedGuest = document.querySelector('tr.selected-guest');
+        if (selectedGuest) {
+            const guestId = selectedGuest.getAttribute('data-guest-id');
+            shareOnWhatsApp(guestId);
+        } else {
+            alert('Please select a guest first');
+        }
+    });
 
     // WhatsApp share buttons
     document.querySelectorAll('.whatsapp-share').forEach(button => {
@@ -395,7 +413,7 @@ function setupEventListeners() {
 }
 
 // Show specific tab
-async function showTab(tabName) {
+function showTab(tabName) {
     // Hide all content sections
     const sections = ['registration', 'verification', 'guests', 'stats', 'users']
     sections.forEach(section => {
@@ -1643,4 +1661,91 @@ function hexToRgb(hex) {
         g: parseInt(result[2], 16),
         b: parseInt(result[3], 16)
     } : null;
+}
+
+// Setup navigation based on user role
+async function setupNavigation() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        window.location.href = '/login.html';
+        return;
+    }
+
+    const { data: userRole } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+    const isStaff = userRole?.role === 'staff';
+    const isAdmin = userRole?.role === 'admin';
+
+    // Show/hide navigation buttons based on role
+    document.getElementById('registrationBtn')?.classList.toggle('hidden', isStaff);
+    document.getElementById('scannerBtn')?.classList.toggle('hidden', isStaff);
+    document.getElementById('usersBtn')?.classList.toggle('hidden', !isAdmin);
+
+    // Set initial tab based on role
+    if (isStaff) {
+        showTab('guests');
+        // Remove registration and scanner tabs for staff
+        document.getElementById('registration')?.remove();
+        document.getElementById('scanner')?.remove();
+        document.getElementById('users')?.remove();
+    } else {
+        showTab('registration');
+    }
+}
+
+// Function to update the guest list
+async function refreshGuestList() {
+    const guestList = document.getElementById('guestList');
+    if (!guestList) return;
+
+    try {
+        const { data: guests, error } = await supabase
+            .from('guests')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        guestList.innerHTML = guests.map(guest => `
+            <tr class="hover:bg-gray-100 cursor-pointer" data-guest-id="${guest.id}">
+                <td class="px-6 py-4 whitespace-nowrap">${guest.guest_name}</td>
+                <td class="px-6 py-4 whitespace-nowrap">${guest.club_name}</td>
+                <td class="px-6 py-4 whitespace-nowrap">${guest.entry_type}</td>
+                <td class="px-6 py-4 whitespace-nowrap">₹${guest.paid_amount} / ₹${guest.total_amount}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        guest.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                        guest.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                        'bg-red-100 text-red-800'
+                    }">
+                        ${guest.status}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button class="text-blue-600 hover:text-blue-900 mr-3" onclick="editGuest('${guest.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button id="shareWhatsAppBtn-${guest.id}" class="text-green-600 hover:text-green-900" onclick="shareOnWhatsApp('${guest.id}')">
+                        <i class="fab fa-whatsapp"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+        // Add click event to select guest
+        document.querySelectorAll('#guestList tr').forEach(row => {
+            row.addEventListener('click', () => {
+                document.querySelectorAll('#guestList tr').forEach(r => r.classList.remove('selected-guest', 'bg-blue-50'));
+                row.classList.add('selected-guest', 'bg-blue-50');
+            });
+        });
+
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to load guest list');
+    }
 }
