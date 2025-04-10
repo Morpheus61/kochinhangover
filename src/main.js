@@ -9,9 +9,9 @@ let currentUser = null
 // DOM Ready
 document.addEventListener('DOMContentLoaded', async () => {
     // Check if user is already logged in
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-        await handleLogin(user)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) {
+        await handleLogin(session.user)
     } else {
         showLoginScreen()
     }
@@ -28,28 +28,41 @@ function showLoginScreen() {
 
 // Handle successful login
 async function handleLogin(user) {
-    currentUser = user
-    document.getElementById('loginScreen')?.classList.add('hidden')
-    document.getElementById('mainApp')?.classList.remove('hidden')
-    
-    // Get user profile
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-    
-    // Update UI based on user role
-    if (profile?.role === 'admin') {
-        document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'))
-        showTab('registration')
-    } else {
-        document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'))
-        showTab('beverage')
+    try {
+        // Get user profile
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single()
+            
+        if (error) throw error
+
+        currentUser = { ...user, profile }
+        
+        // Update UI
+        document.getElementById('loginScreen')?.classList.add('hidden')
+        document.getElementById('mainApp')?.classList.remove('hidden')
+        
+        // Show/hide admin features
+        const isAdmin = profile?.role === 'admin'
+        document.querySelectorAll('.admin-only').forEach(el => {
+            if (isAdmin) {
+                el.classList.remove('hidden')
+            } else {
+                el.classList.add('hidden')
+            }
+        })
+        
+        // Show appropriate tab based on role
+        showTab(isAdmin ? 'registration' : 'beverage')
+        
+        // Load initial data
+        await loadGuests()
+    } catch (error) {
+        console.error('Error handling login:', error)
+        showLoginScreen()
     }
-    
-    // Load guests
-    await loadGuests()
 }
 
 // Setup event listeners
@@ -60,39 +73,24 @@ function setupEventListeners() {
         const email = document.getElementById('username').value
         const password = document.getElementById('password').value
         
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password
-        })
-        
-        if (error) {
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            })
+            
+            if (error) throw error
+            
+            await handleLogin(data.user)
+        } catch (error) {
             const errorDiv = document.getElementById('loginError')
-            errorDiv.textContent = error.message
+            errorDiv.textContent = error.message || 'Failed to login'
             errorDiv.classList.remove('hidden')
             setTimeout(() => errorDiv.classList.add('hidden'), 3000)
-            return
         }
-        
-        await handleLogin(data.user)
     })
     
     // Other event listeners will be added here
-}
-
-// Load guests from Supabase
-async function loadGuests() {
-    const { data, error } = await supabase
-        .from('guests')
-        .select('*')
-        .order('created_at', { ascending: false })
-    
-    if (error) {
-        console.error('Error loading guests:', error)
-        return
-    }
-    
-    guests = data
-    populateGuestList()
 }
 
 // Show specific tab
@@ -110,6 +108,23 @@ function showTab(tabName) {
     // Special actions for specific tabs
     if (tabName === 'guestList') {
         populateGuestList()
+    }
+}
+
+// Load guests from Supabase
+async function loadGuests() {
+    try {
+        const { data, error } = await supabase
+            .from('guests')
+            .select('*')
+            .order('created_at', { ascending: false })
+        
+        if (error) throw error
+        
+        guests = data
+        populateGuestList()
+    } catch (error) {
+        console.error('Error loading guests:', error)
     }
 }
 
