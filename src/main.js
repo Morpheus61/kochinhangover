@@ -10,6 +10,7 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 // Initialize app state
 let currentUser = null
 let guests = []
+let users = []
 
 // Constants for entry prices
 const ENTRY_PRICES = {
@@ -262,6 +263,7 @@ function showApp() {
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp()
     setupEventListeners()
+    initializeUsers()
 })
 
 // Setup event listeners
@@ -1065,131 +1067,6 @@ function initializeVerification() {
     })
 }
 
-// Initialize registration form
-function initializeRegistration() {
-    const form = document.getElementById('registrationForm')
-    if (!form) return
-    
-    // Set initial amount display
-    updateAmount()
-    
-    // Handle payment mode changes
-    const paymentMode = document.getElementById('paymentMode')
-    const partialSection = document.getElementById('partialPaymentSection')
-    const paidAmountInput = document.getElementById('paidAmount')
-    
-    paymentMode?.addEventListener('change', () => {
-        if (paymentMode.value === 'partial') {
-            partialSection?.classList.remove('hidden')
-            paidAmountInput?.setAttribute('required', 'required')
-        } else {
-            partialSection?.classList.add('hidden')
-            paidAmountInput?.removeAttribute('required')
-        }
-    })
-    
-    // Update amount when entry type changes
-    document.getElementById('entryType')?.addEventListener('change', updateAmount)
-    
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault()
-        
-        try {
-            // Get form data
-            const entryType = document.getElementById('entryType').value
-            const paymentMode = document.getElementById('paymentMode').value
-            const totalAmount = entryType === 'stag' ? 2750 : 4750
-            
-            let paidAmount = totalAmount // Default to full amount
-            if (paymentMode === 'partial') {
-                paidAmount = Number(document.getElementById('paidAmount').value)
-                if (!paidAmount || paidAmount <= 0 || paidAmount >= totalAmount) {
-                    alert('Please enter a valid partial payment amount (greater than 0 and less than total amount)')
-                    return
-                }
-            }
-            
-            const formData = {
-                guest_name: document.getElementById('guestName').value,
-                club_name: document.getElementById('clubName').value,
-                mobile_number: document.getElementById('mobileNumber').value,
-                entry_type: entryType,
-                payment_mode: paymentMode,
-                total_amount: totalAmount,
-                paid_amount: paidAmount,
-                registration_date: new Date().toISOString(),
-                status: paymentMode === 'partial' ? 'partially_paid' : 'paid'
-            }
-            
-            // Validate required fields
-            const requiredFields = ['guest_name', 'mobile_number', 'entry_type', 'payment_mode']
-            const missingFields = requiredFields.filter(field => !formData[field])
-            
-            if (missingFields.length > 0) {
-                alert('Please fill in all required fields')
-                return
-            }
-            
-            // Validate mobile number
-            if (!/^[0-9]{10}$/.test(formData.mobile_number)) {
-                alert('Please enter a valid 10-digit mobile number')
-                return
-            }
-            
-            // Insert into Supabase
-            const { data, error } = await supabase
-                .from('guests')
-                .insert([formData])
-                .select()
-            
-            if (error) throw error
-            
-            // Generate QR code
-            if (data?.[0]) {
-                const qrData = {
-                    id: data[0].id,
-                    guest_name: data[0].guest_name,
-                    entry_type: data[0].entry_type,
-                    mobile_number: data[0].mobile_number,
-                    status: data[0].status,
-                    paid_amount: data[0].paid_amount,
-                    total_amount: data[0].total_amount
-                }
-                
-                const qrCode = await QRCode.toDataURL(JSON.stringify(qrData))
-                
-                // Show success message with QR code
-                alert('Registration successful! QR code generated.')
-                
-                // Reset form
-                form.reset()
-                updateAmount()
-                partialSection?.classList.add('hidden')
-                paidAmountInput?.removeAttribute('required')
-            }
-        } catch (error) {
-            console.error('Registration error:', error)
-            alert(error.message || 'Failed to register guest')
-        }
-    })
-}
-
-// Update amount based on entry type
-window.updateAmount = function() {
-    const entryType = document.getElementById('entryType').value
-    const totalAmountDisplay = document.getElementById('totalAmountDisplay')
-    const paidAmountInput = document.getElementById('paidAmount')
-    const totalAmount = entryType === 'stag' ? 2750 : 4750
-    
-    if (totalAmountDisplay) {
-        totalAmountDisplay.textContent = `/ ₹${totalAmount} total`
-    }
-    
-    if (paidAmountInput) {
-        paidAmountInput.max = totalAmount - 100 // At least ₹100 should be paid at entry
-    }
-}
-
 // Handle successful QR code scan
 async function onScanSuccess(decodedText) {
     try {
@@ -1318,5 +1195,119 @@ async function loadVerificationList() {
         });
     } catch (error) {
         console.error('Error loading verification list:', error);
+    }
+}
+
+// Initialize registration form
+function initializeRegistration() {
+    const form = document.getElementById('registrationForm')
+    if (!form) return
+    
+    // Set initial amount display
+    updateAmount()
+    
+    // Handle payment mode changes
+    const paymentMode = document.getElementById('paymentMode')
+    const partialSection = document.getElementById('partialPaymentSection')
+    const paidAmountInput = document.getElementById('paidAmount')
+    
+    paymentMode?.addEventListener('change', () => {
+        if (paymentMode.value === 'partial') {
+            partialSection?.classList.remove('hidden')
+            paidAmountInput?.setAttribute('required', 'required')
+        } else {
+            partialSection?.classList.add('hidden')
+            paidAmountInput?.removeAttribute('required')
+        }
+    })
+    
+    // Update amount when entry type changes
+    document.getElementById('entryType')?.addEventListener('change', updateAmount)
+    
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        
+        try {
+            // Get form data
+            const entryType = document.getElementById('entryType').value
+            const paymentMode = document.getElementById('paymentMode').value
+            const totalAmount = entryType === 'stag' ? 2750 : 4750
+            
+            let paidAmount = totalAmount // Default to full amount
+            if (paymentMode === 'partial') {
+                paidAmount = Number(document.getElementById('paidAmount').value)
+                if (!paidAmount || paidAmount <= 0 || paidAmount >= totalAmount) {
+                    alert('Please enter a valid partial payment amount (greater than 0 and less than total amount)')
+                    return
+                }
+            }
+            
+            const formData = {
+                guest_name: document.getElementById('guestName').value,
+                club_name: document.getElementById('clubName').value,
+                mobile_number: document.getElementById('mobileNumber').value,
+                entry_type: entryType,
+                payment_mode: paymentMode,
+                total_amount: totalAmount,
+                paid_amount: paidAmount,
+                registration_date: new Date().toISOString(),
+                status: paymentMode === 'partial' ? 'partially_paid' : 'paid'
+            }
+            
+            // Validate required fields
+            const requiredFields = ['guest_name', 'mobile_number', 'entry_type', 'payment_mode']
+            const missingFields = requiredFields.filter(field => !formData[field])
+            
+            if (missingFields.length > 0) {
+                alert('Please fill in all required fields')
+                return
+            }
+            
+            // Validate mobile number
+            if (!/^[0-9]{10}$/.test(formData.mobile_number)) {
+                alert('Please enter a valid 10-digit mobile number')
+                return
+            }
+            
+            // Insert into Supabase
+            const { data, error } = await supabase
+                .from('guests')
+                .insert([formData])
+                .select()
+
+            if (error) throw error
+
+            console.log('Guest registered:', data)
+            
+            // Reset form
+            form.reset()
+            updateAmount()
+            partialSection?.classList.add('hidden')
+            paidAmountInput?.removeAttribute('required')
+            
+            // Refresh guest list immediately
+            await loadGuestList()
+            await loadStats()
+            
+        } catch (error) {
+            console.error('Registration error:', error)
+            alert(error.message || 'Failed to register guest')
+        }
+    })
+}
+
+// Update amount based on entry type
+window.updateAmount = function() {
+    const entryType = document.getElementById('entryType').value
+    const totalAmountDisplay = document.getElementById('totalAmountDisplay')
+    const paidAmountInput = document.getElementById('paidAmount')
+    const totalAmount = entryType === 'stag' ? 2750 : 4750
+    
+    if (totalAmountDisplay) {
+        totalAmountDisplay.textContent = `/ ₹${totalAmount} total`
+    }
+    
+    if (paidAmountInput) {
+        paidAmountInput.max = totalAmount - 100 // At least ₹100 should be paid at entry
     }
 }
