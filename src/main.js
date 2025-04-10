@@ -51,6 +51,22 @@ async function initializeApp() {
         return
     }
 
+    // Initialize all sections as hidden first
+    const sections = [
+        'registrationContent',
+        'transactionContent',
+        'beverageContent',
+        'guestListContent',
+        'statsContent'
+    ]
+    
+    sections.forEach(id => {
+        const element = document.getElementById(id)
+        if (element) {
+            element.classList.add('hidden')
+        }
+    })
+
     // Show login screen by default
     showLoginScreen()
 
@@ -120,13 +136,40 @@ async function handleLogin(user) {
         
         console.log('Setting current user:', currentUser)
         
-        // Hide login screen first
-        document.getElementById('loginScreen').classList.add('hidden')
-        // Then show main app
-        document.getElementById('mainApp').classList.remove('hidden')
+        // First hide all content sections
+        const sections = [
+            'registrationContent',
+            'transactionContent',
+            'beverageContent',
+            'guestListContent',
+            'statsContent'
+        ]
         
-        // Finally show registration
-        showRegistration()
+        sections.forEach(id => {
+            const element = document.getElementById(id)
+            if (element) {
+                element.classList.add('hidden')
+            }
+        })
+        
+        // Then hide login screen
+        const loginScreen = document.getElementById('loginScreen')
+        if (loginScreen) {
+            loginScreen.classList.add('hidden')
+        }
+        
+        // Show main app
+        const mainApp = document.getElementById('mainApp')
+        if (mainApp) {
+            mainApp.classList.remove('hidden')
+        }
+        
+        // Finally show registration content
+        const registrationContent = document.getElementById('registrationContent')
+        if (registrationContent) {
+            registrationContent.classList.remove('hidden')
+        }
+        
     } catch (error) {
         console.error('Login handling error:', error)
         const errorElement = document.getElementById('loginError')
@@ -140,16 +183,33 @@ async function handleLogin(user) {
 
 // Show login screen
 function showLoginScreen() {
+    // First hide all content sections
+    const sections = [
+        'registrationContent',
+        'transactionContent',
+        'beverageContent',
+        'guestListContent',
+        'statsContent'
+    ]
+    
+    sections.forEach(id => {
+        const element = document.getElementById(id)
+        if (element) {
+            element.classList.add('hidden')
+        }
+    })
+    
+    // Then show login screen and hide main app
     const loginScreen = document.getElementById('loginScreen')
     const mainApp = document.getElementById('mainApp')
     
-    if (!loginScreen || !mainApp) {
-        console.error('Cannot show login screen - missing critical UI elements')
-        return
+    if (loginScreen) {
+        loginScreen.classList.remove('hidden')
     }
     
-    loginScreen.classList.remove('hidden')
-    mainApp.classList.add('hidden')
+    if (mainApp) {
+        mainApp.classList.add('hidden')
+    }
 }
 
 // Show app
