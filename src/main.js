@@ -113,13 +113,13 @@ function setupEventListeners() {
 
             const guestData = {
                 name: formData.get('name'),
-                phone: formData.get('phone'),
+                phone_number: formData.get('phone'),
                 club_name: formData.get('clubName'),
                 club_number: formData.get('clubNumber'),
                 entry_type: entryType,
                 payment_status: paymentStatus,
-                amount_paid: amountPaid,
-                total_amount: totalAmount,
+                balance: paymentStatus === 'paid' ? 0 : (totalAmount - amountPaid),
+                total_paid: amountPaid,
                 status: 'pending',
                 created_at: new Date().toISOString()
             }
@@ -235,13 +235,13 @@ function updateGuestList() {
         <tr>
             <td class="py-3 px-4">${guest.name}</td>
             <td class="py-3 px-4">${guest.club_name}</td>
-            <td class="py-3 px-4">${guest.phone}</td>
+            <td class="py-3 px-4">${guest.phone_number}</td>
             <td class="py-3 px-4">${guest.entry_type}</td>
             <td class="py-3 px-4">
                 <div class="flex flex-col">
                     <span>${guest.payment_status}</span>
                     ${guest.payment_status === 'partial' ? 
-                        `<span class="text-xs text-gray-400">₹${guest.amount_paid} / ₹${guest.total_amount}</span>` 
+                        `<span class="text-xs text-gray-400">₹${guest.total_paid} / ₹${guest.total_paid + guest.balance}</span>` 
                         : ''}
                 </div>
             </td>
