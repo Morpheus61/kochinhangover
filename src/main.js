@@ -1,31 +1,75 @@
+// Initialize Supabase client
+import { createClient } from '@supabase/supabase-js'
+import { Html5QrcodeScanner } from 'html5-qrcode'
+import QRCode from 'qrcode'
+
+const supabaseUrl = 'https://rcedawlruorpkzzrvkqn.supabase.co'
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjZWRhd2xydW9ycGt6enJ2a3FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxOTU4MDQsImV4cCI6MjA1OTc3MTgwNH0.opF31e2g9ZGIJBAR6McDvBEXPtSOhrmW1c_QQh_u1yg'
+const supabase = createClient(supabaseUrl, supabaseKey)
+
+// Initialize app state
+let currentUser = null
+let guests = []
+let users = []
+
+// Constants for entry prices
+const ENTRY_PRICES = {
+    single: 2750,
+    couple: 4750
+}
+
 // Initialize the application
 async function initializeApp() {
+    console.log('Initializing app...');
+    
     // Check if we're on the login page
-    if (window.location.pathname.includes('login')) {
+    if (window.location.pathname.includes('login.html')) {
+        console.log('On login page, skipping auth check');
         // Already on login page, no need to check auth
         return;
     }
 
     // Get user from session
-    const user = JSON.parse(sessionStorage.getItem('currentUser'));
-    if (!user) {
+    const storedUser = sessionStorage.getItem('currentUser');
+    console.log('Stored user:', storedUser);
+    
+    if (!storedUser) {
+        console.log('No user in session, redirecting to login');
         // No user in session, redirect to login
-        window.location.href = 'login';
+        window.location.href = 'login.html';
         return;
     }
 
-    // Set current user
-    currentUser = user;
+    try {
+        // Parse user data
+        const user = JSON.parse(storedUser);
+        console.log('Parsed user:', user);
 
-    // Show main app
-    const loginScreen = document.getElementById('loginScreen');
-    const mainApp = document.getElementById('mainApp');
-    
-    if (loginScreen) loginScreen.classList.add('hidden');
-    if (mainApp) mainApp.classList.remove('hidden');
+        // Set current user
+        currentUser = user;
 
-    await setupNavigation();
-    await showTab('registration');
+        // Show main app
+        const loginScreen = document.getElementById('loginScreen');
+        const mainApp = document.getElementById('mainApp');
+        
+        if (loginScreen) {
+            console.log('Hiding login screen');
+            loginScreen.classList.add('hidden');
+        }
+        if (mainApp) {
+            console.log('Showing main app');
+            mainApp.classList.remove('hidden');
+        }
+
+        // Initialize app components
+        await setupNavigation();
+        await showTab('registration');
+        
+    } catch (error) {
+        console.error('Error initializing app:', error);
+        sessionStorage.removeItem('currentUser');
+        window.location.href = 'login.html';
+    }
 }
 
 // Handle login
@@ -70,8 +114,14 @@ async function handleLogin(event) {
         const loginScreen = document.getElementById('loginScreen');
         const mainApp = document.getElementById('mainApp');
         
-        if (loginScreen) loginScreen.classList.add('hidden');
-        if (mainApp) mainApp.classList.remove('hidden');
+        if (loginScreen) {
+            console.log('Hiding login screen');
+            loginScreen.classList.add('hidden');
+        }
+        if (mainApp) {
+            console.log('Showing main app');
+            mainApp.classList.remove('hidden');
+        }
 
         // Initialize app components
         await setupNavigation();
@@ -80,65 +130,19 @@ async function handleLogin(event) {
     } catch (error) {
         console.error('Login error:', error);
         if (errorText) {
-            errorText.textContent = 'Invalid credentials';
+            errorText.textContent = error.message || 'Invalid credentials';
             errorText.classList.remove('hidden');
         } else {
-            alert('Invalid credentials');
+            alert(error.message || 'Invalid credentials');
         }
     }
 }
 
 // Handle logout
 async function handleLogout() {
+    console.log('Logging out...');
     sessionStorage.removeItem('currentUser');
-    window.location.href = 'login';
-}
-
-// Initialize Supabase client
-import { createClient } from '@supabase/supabase-js'
-import { Html5QrcodeScanner } from 'html5-qrcode'
-import QRCode from 'qrcode'
-
-const supabaseUrl = 'https://rcedawlruorpkzzrvkqn.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjZWRhd2xydW9ycGt6enJ2a3FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxOTU4MDQsImV4cCI6MjA1OTc3MTgwNH0.opF31e2g9ZGIJBAR6McDvBEXPtSOhrmW1c_QQh_u1yg'
-const supabase = createClient(supabaseUrl, supabaseKey)
-
-// Initialize app state
-let currentUser = null
-let guests = []
-let users = []
-
-// Constants for entry prices
-const ENTRY_PRICES = {
-    single: 2750,
-    couple: 4750
-}
-
-// Check if user is admin
-function isAdmin() {
-    return currentUser?.role === 'admin' || false
-}
-
-// DOM element checks
-function checkDOMElements() {
-    const elements = {
-        loginScreen: document.getElementById('loginScreen'),
-        mainApp: document.getElementById('mainApp'),
-        loginForm: document.getElementById('loginForm'),
-        username: document.getElementById('username'),
-        password: document.getElementById('password'),
-        loginError: document.getElementById('loginError')
-    }
-    
-    console.log('DOM elements check:', elements)
-    
-    for (const [name, element] of Object.entries(elements)) {
-        if (!element) {
-            console.error(`Critical UI element missing: ${name}`)
-            return false
-        }
-    }
-    return true
+    window.location.href = 'login.html';
 }
 
 // Setup event listeners
@@ -151,11 +155,15 @@ function setupEventListeners() {
         console.log('Found login form, attaching handler');
         loginForm.addEventListener('submit', handleLogin);
     } else {
-        console.log('Login form not found');
+        console.error('Login form not found!');
     }
 
     // Logout button
-    document.getElementById('logoutBtn')?.addEventListener('click', handleLogout)
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        console.log('Found logout button, attaching handler');
+        logoutBtn.addEventListener('click', handleLogout);
+    }
 
     // Tab buttons
     document.querySelectorAll('[id$="Tab"]').forEach(tab => {
