@@ -23,8 +23,35 @@ function isAdmin() {
     return currentUser?.role === 'admin' || false
 }
 
+// DOM element checks
+function checkDOMElements() {
+    const elements = {
+        loginScreen: document.getElementById('loginScreen'),
+        mainApp: document.getElementById('mainApp'),
+        loginForm: document.getElementById('loginForm'),
+        username: document.getElementById('username'),
+        password: document.getElementById('password'),
+        loginError: document.getElementById('loginError')
+    }
+    
+    console.log('DOM elements check:', elements)
+    
+    for (const [name, element] of Object.entries(elements)) {
+        if (!element) {
+            console.error(`Critical UI element missing: ${name}`)
+            return false
+        }
+    }
+    return true
+}
+
 // Initialize app
 async function initializeApp() {
+    if (!checkDOMElements()) {
+        console.error('Cannot initialize app - missing critical UI elements')
+        return
+    }
+
     // Check for existing session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     if (session?.user) {
@@ -38,15 +65,20 @@ async function initializeApp() {
 document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     e.preventDefault()
     
+    if (!checkDOMElements()) {
+        console.error('Cannot process login - missing critical UI elements')
+        return
+    }
+    
     const username = document.getElementById('username').value
     const password = document.getElementById('password').value
     
     try {
-        console.log('Attempting login with:', username) // Debug log
+        console.log('Attempting login with:', username)
         
         // For Admin bypass
         if (username === 'Admin' && password === 'Kochin2025') {
-            console.log('Admin login attempt') // Debug log
+            console.log('Admin login attempt')
             currentUser = { 
                 id: 'admin',
                 username: 'Admin',
@@ -59,15 +91,23 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         throw new Error('Invalid credentials')
     } catch (error) {
         console.error('Login error:', error)
-        document.getElementById('loginError').textContent = error.message || 'Invalid username or password'
-        document.getElementById('loginError').classList.remove('hidden')
+        const errorElement = document.getElementById('loginError')
+        if (errorElement) {
+            errorElement.textContent = error.message || 'Invalid username or password'
+            errorElement.classList.remove('hidden')
+        }
     }
 })
 
 // Handle login
 async function handleLogin(user) {
     try {
-        console.log('Login user:', user) // Debug log
+        if (!checkDOMElements()) {
+            console.error('Cannot handle login - missing critical UI elements')
+            return
+        }
+
+        console.log('Login user:', user)
         
         if (!user) {
             throw new Error('No user provided')
@@ -75,31 +115,50 @@ async function handleLogin(user) {
         
         currentUser = {
             ...user,
-            role: 'admin' // For Admin user
+            role: 'admin'
         }
         
-        console.log('Setting current user:', currentUser) // Debug log
+        console.log('Setting current user:', currentUser)
         
         showApp()
         showRegistration()
     } catch (error) {
         console.error('Login handling error:', error)
-        document.getElementById('loginError').textContent = error.message || 'Failed to log in'
-        document.getElementById('loginError').classList.remove('hidden')
+        const errorElement = document.getElementById('loginError')
+        if (errorElement) {
+            errorElement.textContent = error.message || 'Failed to log in'
+            errorElement.classList.remove('hidden')
+        }
         showLoginScreen()
     }
 }
 
 // Show login screen
 function showLoginScreen() {
-    document.getElementById('loginScreen').classList.remove('hidden')
-    document.getElementById('mainApp').classList.add('hidden')
+    const loginScreen = document.getElementById('loginScreen')
+    const mainApp = document.getElementById('mainApp')
+    
+    if (!loginScreen || !mainApp) {
+        console.error('Cannot show login screen - missing critical UI elements')
+        return
+    }
+    
+    loginScreen.classList.remove('hidden')
+    mainApp.classList.add('hidden')
 }
 
 // Show app
 function showApp() {
-    document.getElementById('loginScreen').classList.add('hidden')
-    document.getElementById('mainApp').classList.remove('hidden')
+    const loginScreen = document.getElementById('loginScreen')
+    const mainApp = document.getElementById('mainApp')
+    
+    if (!loginScreen || !mainApp) {
+        console.error('Cannot show app - missing critical UI elements')
+        return
+    }
+    
+    loginScreen.classList.add('hidden')
+    mainApp.classList.remove('hidden')
 }
 
 // DOM Ready
