@@ -258,12 +258,12 @@ function setupEventListeners() {
             // Match the exact SQL structure and casing
             const guestData = {
                 name: formData.get('name'),           // TEXT NOT NULL
-                club: formData.get('clubName'),       // TEXT
-                phone: formData.get('phone'),         // TEXT
-                entry_type: formData.get('entryType'), // TEXT NOT NULL
-                payment: formData.get('paymentStatus'), // TEXT NOT NULL
+                club: formData.get('club_name'),       // TEXT
+                phone: formData.get('mobile_number'),         // TEXT
+                entry_type: formData.get('entry_type'), // TEXT NOT NULL
+                payment: formData.get('payment_mode'), // TEXT NOT NULL
                 status: 'pending',                     // TEXT DEFAULT 'pending'
-                club_number: formData.get('clubNumber') // TEXT - exact casing as in Supabase
+                club_number: formData.get('club_number') // TEXT - exact casing as in Supabase
             }
 
             // Validate required fields
@@ -295,7 +295,7 @@ function setupEventListeners() {
     })
 
     // Show/hide partial payment field based on payment status
-    document.querySelector('select[name="paymentStatus"]')?.addEventListener('change', (e) => {
+    document.querySelector('select[name="payment_mode"]')?.addEventListener('change', (e) => {
         const partialPaymentField = document.getElementById('partialPaymentField')
         if (e.target.value === 'partial') {
             partialPaymentField?.classList.remove('hidden')
@@ -461,9 +461,9 @@ function initializeVerification() {
                 if (!guestData) throw new Error('Guest not found')
                 
                 // Update verification result UI
-                document.getElementById('verificationGuestName').textContent = guestData.guestName
-                document.getElementById('verificationEntryType').textContent = guestData.entryType
-                document.getElementById('verificationMobile').textContent = guestData.mobileNumber
+                document.getElementById('verificationGuestName').textContent = guestData.guest_name
+                document.getElementById('verificationEntryType').textContent = guestData.entry_type
+                document.getElementById('verificationMobile').textContent = guestData.mobile_number
                 document.getElementById('verificationStatus').textContent = guestData.status
                 
                 // Show verification result
@@ -482,7 +482,7 @@ function initializeVerification() {
                     try {
                         const { data, error } = await supabase
                             .from('guests')
-                            .update({ status: 'verified', verifiedAt: new Date().toISOString() })
+                            .update({ status: 'verified', verified_at: new Date().toISOString() })
                             .eq('id', qrData.id)
                         
                         if (error) throw error
@@ -499,7 +499,7 @@ function initializeVerification() {
                     try {
                         const { data, error } = await supabase
                             .from('guests')
-                            .update({ status: 'denied', deniedAt: new Date().toISOString() })
+                            .update({ status: 'denied', denied_at: new Date().toISOString() })
                             .eq('id', qrData.id)
                         
                         if (error) throw error
@@ -539,41 +539,55 @@ function initializeRegistration() {
     updateAmount()
     
     // Handle payment mode changes
-    const paymentMode = document.getElementById('paymentMode')
+    const paymentMode = document.getElementById('payment_mode')
     const partialSection = document.getElementById('partialPaymentSection')
+    const paidAmountInput = document.getElementById('paid_amount')
     
     paymentMode?.addEventListener('change', () => {
         if (paymentMode.value === 'partial') {
             partialSection?.classList.remove('hidden')
+            paidAmountInput?.setAttribute('required', 'required')
         } else {
             partialSection?.classList.add('hidden')
+            paidAmountInput?.removeAttribute('required')
         }
     })
+    
+    // Update amount when entry type changes
+    document.getElementById('entry_type')?.addEventListener('change', updateAmount)
     
     form.addEventListener('submit', async (e) => {
         e.preventDefault()
         
         try {
             // Get form data
-            const entryType = document.getElementById('entryType').value
-            const paymentMode = document.getElementById('paymentMode').value
+            const entryType = document.getElementById('entry_type').value
+            const paymentMode = document.getElementById('payment_mode').value
             const totalAmount = entryType === 'stag' ? 2750 : 4750
             
+            let paidAmount = totalAmount // Default to full amount
+            if (paymentMode === 'partial') {
+                paidAmount = Number(document.getElementById('paid_amount').value)
+                if (!paidAmount || paidAmount <= 0 || paidAmount >= totalAmount) {
+                    alert('Please enter a valid partial payment amount (greater than 0 and less than total amount)')
+                    return
+                }
+            }
+            
             const formData = {
-                guestName: document.getElementById('guestName').value,
-                clubName: document.getElementById('clubName').value,
-                mobileNumber: document.getElementById('mobileNumber').value,
-                entryType: entryType,
-                paymentMode: paymentMode,
-                totalAmount: totalAmount,
-                paidAmount: paymentMode === 'partial' ? 
-                    Number(document.getElementById('paidAmount').value) : totalAmount,
-                registrationDate: new Date().toISOString(),
+                guest_name: document.getElementById('guest_name').value,
+                club_name: document.getElementById('club_name').value,
+                mobile_number: document.getElementById('mobile_number').value,
+                entry_type: entryType,
+                payment_mode: paymentMode,
+                total_amount: totalAmount,
+                paid_amount: paidAmount,
+                registration_date: new Date().toISOString(),
                 status: paymentMode === 'partial' ? 'partially_paid' : 'paid'
             }
             
             // Validate required fields
-            const requiredFields = ['guestName', 'mobileNumber', 'entryType', 'paymentMode']
+            const requiredFields = ['guest_name', 'mobile_number', 'entry_type', 'payment_mode']
             const missingFields = requiredFields.filter(field => !formData[field])
             
             if (missingFields.length > 0) {
@@ -582,18 +596,9 @@ function initializeRegistration() {
             }
             
             // Validate mobile number
-            if (!/^[0-9]{10}$/.test(formData.mobileNumber)) {
+            if (!/^[0-9]{10}$/.test(formData.mobile_number)) {
                 alert('Please enter a valid 10-digit mobile number')
                 return
-            }
-            
-            // Validate partial payment amount
-            if (paymentMode === 'partial') {
-                const paidAmount = Number(document.getElementById('paidAmount').value)
-                if (!paidAmount || paidAmount <= 0 || paidAmount >= totalAmount) {
-                    alert('Please enter a valid partial payment amount (greater than 0 and less than total amount)')
-                    return
-                }
             }
             
             // Insert into Supabase
@@ -608,12 +613,12 @@ function initializeRegistration() {
             if (data?.[0]) {
                 const qrData = {
                     id: data[0].id,
-                    guestName: data[0].guestName,
-                    entryType: data[0].entryType,
-                    mobileNumber: data[0].mobileNumber,
+                    guest_name: data[0].guest_name,
+                    entry_type: data[0].entry_type,
+                    mobile_number: data[0].mobile_number,
                     status: data[0].status,
-                    paidAmount: data[0].paidAmount,
-                    totalAmount: data[0].totalAmount
+                    paid_amount: data[0].paid_amount,
+                    total_amount: data[0].total_amount
                 }
                 
                 const qrCode = await QRCode.toDataURL(JSON.stringify(qrData))
@@ -625,6 +630,7 @@ function initializeRegistration() {
                 form.reset()
                 updateAmount()
                 partialSection?.classList.add('hidden')
+                paidAmountInput?.removeAttribute('required')
             }
         } catch (error) {
             console.error('Registration error:', error)
@@ -635,12 +641,17 @@ function initializeRegistration() {
 
 // Update amount based on entry type
 window.updateAmount = function() {
-    const entryType = document.getElementById('entryType').value
+    const entryType = document.getElementById('entry_type').value
     const totalAmountDisplay = document.getElementById('totalAmountDisplay')
+    const paidAmountInput = document.getElementById('paid_amount')
     const totalAmount = entryType === 'stag' ? 2750 : 4750
     
     if (totalAmountDisplay) {
         totalAmountDisplay.textContent = `/ ₹${totalAmount} total`
+    }
+    
+    if (paidAmountInput) {
+        paidAmountInput.max = totalAmount - 100 // At least ₹100 should be paid at entry
     }
 }
 
@@ -664,7 +675,7 @@ async function onScanSuccess(decodedText) {
             resultsDiv.innerHTML = `
                 <div class="bg-green-600 text-white p-4 rounded">
                     <h3 class="font-bold">✓ VERIFIED</h3>
-                    <p>Name: ${guest.name}</p>
+                    <p>Name: ${guest.guest_name}</p>
                     <p>Entry Type: ${guest.entry_type}</p>
                 </div>
             `;
@@ -675,7 +686,7 @@ async function onScanSuccess(decodedText) {
             resultsDiv.innerHTML = `
                 <div class="bg-red-600 text-white p-4 rounded">
                     <h3 class="font-bold">✗ NOT PAID</h3>
-                    <p>Name: ${guest.name}</p>
+                    <p>Name: ${guest.guest_name}</p>
                     <p>Payment Status: ${guest.payment}</p>
                 </div>
             `;
@@ -731,15 +742,15 @@ async function loadVerificationList() {
             // Generate QR code data
             const qrData = JSON.stringify({
                 id: guest.id,
-                name: guest.name,
+                guest_name: guest.guest_name,
                 entry_type: guest.entry_type,
-                payment: guest.payment
+                mobile_number: guest.mobile_number
             });
 
             return `
                 <tr class="border-b border-gray-700">
-                    <td class="py-3 px-4">${guest.name || ''}</td>
-                    <td class="py-3 px-4">${guest.club || ''}</td>
+                    <td class="py-3 px-4">${guest.guest_name || ''}</td>
+                    <td class="py-3 px-4">${guest.club_name || ''}</td>
                     <td class="py-3 px-4">${guest.entry_type || ''}</td>
                     <td class="py-3 px-4">${guest.payment || ''}</td>
                     <td class="py-3 px-4">

@@ -287,32 +287,32 @@
                 
                 <form id="registrationForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label for="guestName" class="block text-sm font-medium text-gray-300 mb-1">Name</label>
-                        <input type="text" id="guestName" name="guestName" required class="kochin-input w-full">
+                        <label for="guest_name" class="block text-sm font-medium text-gray-300 mb-1">Name</label>
+                        <input type="text" id="guest_name" name="guest_name" required class="kochin-input w-full">
                     </div>
                     
                     <div>
-                        <label for="clubName" class="block text-sm font-medium text-gray-300 mb-1">Club Name</label>
-                        <input type="text" id="clubName" name="clubName" class="kochin-input w-full">
+                        <label for="club_name" class="block text-sm font-medium text-gray-300 mb-1">Club Name</label>
+                        <input type="text" id="club_name" name="club_name" value="Angels 153" class="kochin-input w-full">
                     </div>
                     
                     <div>
-                        <label for="mobileNumber" class="block text-sm font-medium text-gray-300 mb-1">Mobile Number</label>
-                        <input type="tel" id="mobileNumber" name="mobileNumber" required class="kochin-input w-full" pattern="[0-9]{10}">
+                        <label for="mobile_number" class="block text-sm font-medium text-gray-300 mb-1">Mobile Number</label>
+                        <input type="tel" id="mobile_number" name="mobile_number" required class="kochin-input w-full" pattern="[0-9]{10}" title="Please enter a valid 10-digit mobile number">
                         <p class="text-xs text-gray-400 mt-1">10-digit mobile number (for QR code delivery and verification)</p>
                     </div>
                     
                     <div>
-                        <label for="entryType" class="block text-sm font-medium text-gray-300 mb-1">Entry Type</label>
-                        <select id="entryType" name="entryType" required class="kochin-input w-full" onchange="updateAmount()">
+                        <label for="entry_type" class="block text-sm font-medium text-gray-300 mb-1">Entry Type</label>
+                        <select id="entry_type" name="entry_type" required class="kochin-input w-full" onchange="updateAmount()">
                             <option value="stag">Stag (₹2750)</option>
                             <option value="couple">Couple (₹4750)</option>
                         </select>
                     </div>
                     
                     <div>
-                        <label for="paymentMode" class="block text-sm font-medium text-gray-300 mb-1">Payment Mode</label>
-                        <select id="paymentMode" name="paymentMode" required class="kochin-input w-full">
+                        <label for="payment_mode" class="block text-sm font-medium text-gray-300 mb-1">Payment Mode</label>
+                        <select id="payment_mode" name="payment_mode" required class="kochin-input w-full">
                             <option value="full_cash">Full Payment - Cash</option>
                             <option value="full_upi">Full Payment - UPI</option>
                             <option value="full_card">Full Payment - Card</option>
@@ -321,21 +321,16 @@
                     </div>
 
                     <div id="partialPaymentSection" class="hidden">
-                        <label for="paidAmount" class="block text-sm font-medium text-gray-300 mb-1">Paid Amount (₹)</label>
+                        <label for="paid_amount" class="block text-sm font-medium text-gray-300 mb-1">Paid Amount (₹)</label>
                         <div class="flex items-center space-x-2">
-                            <input type="number" id="paidAmount" name="paidAmount" class="kochin-input w-full">
+                            <input type="number" id="paid_amount" name="paid_amount" min="100" class="kochin-input w-full" placeholder="Enter amount paid now">
                             <span class="text-sm text-gray-400" id="totalAmountDisplay"></span>
                         </div>
                         <p class="text-xs text-gray-400 mt-1">Enter the amount paid now. Full amount will be collected at entry.</p>
                     </div>
-                    
-                    <div>
-                        <label for="amount" class="block text-sm font-medium text-gray-300 mb-1">Amount (₹)</label>
-                        <input type="number" id="amount" name="amount" required readonly class="kochin-input w-full bg-gray-700">
-                    </div>
-                    
-                    <div class="col-span-full">
-                        <button type="submit" class="kochin-button py-2 px-6 mt-2">
+
+                    <div class="col-span-2">
+                        <button type="submit" class="kochin-button w-full">
                             <i class="fas fa-user-plus mr-2"></i> Register Guest
                         </button>
                     </div>

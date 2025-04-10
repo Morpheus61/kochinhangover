@@ -5,17 +5,17 @@ DROP TABLE IF EXISTS users CASCADE;
 -- Create the guests table with the exact structure needed
 CREATE TABLE guests (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    guestName TEXT NOT NULL,
-    clubName TEXT,
-    mobileNumber TEXT NOT NULL,
-    entryType TEXT NOT NULL,
-    paymentMode TEXT NOT NULL,
-    totalAmount NUMERIC NOT NULL,
-    paidAmount NUMERIC NOT NULL,
+    guest_name TEXT NOT NULL,
+    club_name TEXT,
+    mobile_number TEXT NOT NULL,
+    entry_type TEXT NOT NULL,
+    payment_mode TEXT NOT NULL,
+    total_amount NUMERIC NOT NULL,
+    paid_amount NUMERIC NOT NULL,
     status TEXT DEFAULT 'pending',
-    registrationDate TIMESTAMP WITH TIME ZONE,
-    verifiedAt TIMESTAMP WITH TIME ZONE,
-    deniedAt TIMESTAMP WITH TIME ZONE,
+    registration_date TIMESTAMP WITH TIME ZONE,
+    verified_at TIMESTAMP WITH TIME ZONE,
+    denied_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
