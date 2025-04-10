@@ -68,15 +68,12 @@ async function handleLogin(user) {
             role: 'admin' // For Admin user
         }
         
-        // Load initial data
-        await loadGuests()
-        await loadStats()
-        
         showApp()
         showRegistration()
     } catch (error) {
         console.error('Error handling login:', error)
-        alert('Failed to log in')
+        document.getElementById('loginError').textContent = 'Failed to log in'
+        document.getElementById('loginError').classList.remove('hidden')
         showLoginScreen()
     }
 }
