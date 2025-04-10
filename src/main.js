@@ -106,9 +106,11 @@ function setupEventListeners() {
         try {
             const guestData = {
                 name: formData.get('name'),
-                phone_number: formData.get('phone'),
+                club: formData.get('clubName'),
+                phone: formData.get('phone'),
                 entry_type: formData.get('entryType'),
-                payment_status: formData.get('paymentStatus')
+                payment: formData.get('paymentStatus'),
+                status: 'pending'
             }
 
             console.log('Inserting guest:', guestData)
@@ -221,13 +223,15 @@ function updateGuestList() {
     tbody.innerHTML = guests.map(guest => `
         <tr>
             <td class="py-3 px-4">${guest.name}</td>
-            <td class="py-3 px-4">-</td>
-            <td class="py-3 px-4">${guest.phone_number}</td>
+            <td class="py-3 px-4">${guest.club}</td>
+            <td class="py-3 px-4">${guest.phone}</td>
             <td class="py-3 px-4">${guest.entry_type}</td>
-            <td class="py-3 px-4">${guest.payment_status}</td>
+            <td class="py-3 px-4">${guest.payment}</td>
             <td class="py-3 px-4">
-                <span class="px-2 py-1 rounded-full text-xs bg-yellow-500">
-                    pending
+                <span class="px-2 py-1 rounded-full text-xs ${
+                    guest.status === 'checked_in' ? 'bg-green-500' : 'bg-yellow-500'
+                }">
+                    ${guest.status || 'pending'}
                 </span>
             </td>
             <td class="py-3 px-4">
