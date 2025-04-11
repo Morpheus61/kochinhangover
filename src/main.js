@@ -481,9 +481,9 @@ async function editGuest(guestId) {
         
         // Create edit form modal
         const modal = document.createElement('div');
-        modal.className = 'modal flex items-center justify-center';
+        modal.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75';
         modal.innerHTML = `
-            <div class="modal-content">
+            <div class="kochin-container p-6 max-w-md mx-auto">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-xl font-bold kochin-header">Edit Guest</h3>
                     <button class="text-gray-300 hover:text-white close-modal-btn">
@@ -1474,24 +1474,42 @@ async function downloadGuestsPDF() {
         doc.setFillColor(darkColor);
         doc.rect(0, 0, 210, 40, 'F');
         
-        // Add logo
-        const logoImg = document.createElement('img');
-        logoImg.src = 'assets/kochin-logo.png';
-        logoImg.onload = function() {
-            // Once the image is loaded, add it to the PDF
-            const canvas = document.createElement('canvas');
-            canvas.width = logoImg.width;
-            canvas.height = logoImg.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(logoImg, 0, 0, logoImg.width, logoImg.height);
-            const logoDataUrl = canvas.toDataURL('image/png');
+        // Add decorative elements
+        doc.setFillColor(primaryColor);
+        doc.setGlobalAlpha(0.2);
+        doc.circle(0, 0, 30, 'F');
+        doc.circle(210, 40, 30, 'F');
+        doc.setGlobalAlpha(1);
+        
+        // Try to use the PWA icon as the logo
+        try {
+            const logoImg = new Image();
+            logoImg.src = '/icons/icon-192x192.png';
             
-            // Add the logo to the PDF
-            doc.addImage(logoDataUrl, 'PNG', 10, 5, 30, 30);
+            logoImg.onload = function() {
+                // Once the image is loaded, add it to the PDF
+                const canvas = document.createElement('canvas');
+                canvas.width = logoImg.width;
+                canvas.height = logoImg.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(logoImg, 0, 0, logoImg.width, logoImg.height);
+                const logoDataUrl = canvas.toDataURL('image/png');
+                
+                // Add the logo to the PDF
+                doc.addImage(logoDataUrl, 'PNG', 10, 5, 30, 30);
+                
+                // Continue with the rest of the PDF generation
+                finalizePDF();
+            };
             
-            // Continue with the rest of the PDF generation
+            logoImg.onerror = function() {
+                console.error('Error loading logo image, continuing without logo');
+                finalizePDF();
+            };
+        } catch (e) {
+            console.error('Error setting up logo image:', e);
             finalizePDF();
-        };
+        }
         
         // Function to finalize the PDF after logo is added
         function finalizePDF() {
@@ -1500,37 +1518,41 @@ async function downloadGuestsPDF() {
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(24);
             doc.text('KOCHIN HANGOVER', 105, 20, { align: 'center' });
+            
             doc.setFontSize(16);
             doc.text('Guest List', 105, 30, { align: 'center' });
             
-            // Add date
-            doc.setFontSize(10);
-            const currentDate = new Date().toLocaleString('en-US', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: true
-            });
-            doc.text(`Generated: ${currentDate}`, 105, 37, { align: 'center' });
+            // Add generation date
+            const now = new Date();
+            const formattedDate = now.toLocaleDateString('en-US', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: '2-digit', 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                hour12: true 
+            }).replace(',', '');
             
-            // Table header
+            doc.setFontSize(10);
+            doc.text(`Generated: ${formattedDate}`, 105, 37, { align: 'center' });
+            
+            // Add table headers
             const startY = 50;
-            const colWidths = [10, 50, 30, 30, 40, 40];
+            const colWidths = [10, 40, 40, 30, 30, 30];
             const headers = ['#', 'Guest Name', 'Club', 'Entry Type', 'Amount', 'Status'];
             
-            // Draw table header
-            doc.setFillColor(darkColor);
-            doc.rect(10, startY, 190, 10, 'F');
+            // Add table header background
+            doc.setFillColor(primaryColor);
+            doc.rect(10, startY - 6, 190, 10, 'F');
+            
+            // Add header text
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(12);
             
             let xPos = 10;
             headers.forEach((header, i) => {
-                doc.text(header, xPos + 2, startY + 7);
+                doc.text(header, xPos + 2, startY);
                 xPos += colWidths[i];
             });
             
@@ -1540,89 +1562,67 @@ async function downloadGuestsPDF() {
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(10);
             
+            // Add alternating row colors
             guests.forEach((guest, index) => {
-                // Add new page if needed
-                if (yPos > 270) {
-                    doc.addPage();
-                    yPos = 20;
-                    
-                    // Add mini header on new pages
-                    doc.setFillColor(darkColor);
-                    doc.rect(10, yPos - 10, 190, 10, 'F');
-                    doc.setTextColor(255, 255, 255);
-                    doc.setFont('helvetica', 'bold');
-                    doc.setFontSize(12);
-                    
-                    xPos = 10;
-                    headers.forEach((header, i) => {
-                        doc.text(header, xPos + 2, yPos - 3);
-                        xPos += colWidths[i];
-                    });
-                    
-                    doc.setTextColor(darkColor);
-                    doc.setFont('helvetica', 'normal');
-                    doc.setFontSize(10);
-                }
-                
-                // Alternating row colors
+                // Add row background
                 if (index % 2 === 0) {
-                    doc.setFillColor(245, 245, 255);
-                    doc.rect(10, yPos, 190, 10, 'F');
+                    doc.setFillColor(245, 245, 245);
+                } else {
+                    doc.setFillColor(235, 235, 235);
                 }
+                doc.rect(10, yPos - 5, 190, 10, 'F');
                 
-                // Row data
+                // Add row data
+                doc.setTextColor(darkColor);
                 xPos = 10;
                 
                 // Row number
-                doc.text((index + 1).toString(), xPos + 2, yPos + 7);
+                doc.text(`${index + 1}`, xPos + 2, yPos);
                 xPos += colWidths[0];
                 
                 // Guest name
-                doc.text(guest.guest_name || '', xPos + 2, yPos + 7);
+                doc.text(guest.guest_name || '', xPos + 2, yPos);
                 xPos += colWidths[1];
                 
-                // Club
-                doc.text(guest.club_name || 'N/A', xPos + 2, yPos + 7);
+                // Club name
+                doc.text(guest.club_name || '', xPos + 2, yPos);
                 xPos += colWidths[2];
                 
                 // Entry type
-                const entryTypeDisplay = guest.entry_type === 'stag' ? 'Stag' : 
-                                        guest.entry_type === 'couple' ? 'Couple' : 
-                                        guest.entry_type || '';
-                doc.text(entryTypeDisplay, xPos + 2, yPos + 7);
+                const entryType = guest.entry_type === 'stag' ? 'Stag' : 'Couple';
+                doc.text(entryType, xPos + 2, yPos);
                 xPos += colWidths[3];
                 
-                // Amount - Simplified to avoid overlap
-                let amountText = '';
-                if (guest.paid_amount === guest.total_amount) {
-                    amountText = `₹${guest.total_amount}`;
-                } else {
-                    amountText = `₹${guest.paid_amount}`;
-                }
-                doc.text(amountText, xPos + 2, yPos + 7);
+                // Amount
+                doc.text(`₹${guest.paid_amount} / ₹${guest.total_amount}`, xPos + 2, yPos);
                 xPos += colWidths[4];
                 
-                // Status
-                let statusText = '';
-                let statusColor = [];
+                // Status with colored background
+                let statusColor;
+                let statusText;
                 
                 if (guest.status === 'verified') {
+                    statusColor = '#4ade80'; // green
                     statusText = 'VERIFIED';
-                    statusColor = [0, 150, 0]; // Green
-                } else if (guest.status === 'paid' || (guest.paid_amount === guest.total_amount)) {
+                } else if (guest.status === 'paid') {
+                    statusColor = '#3b82f6'; // blue
                     statusText = 'PAID';
-                    statusColor = [0, 100, 200]; // Blue
-                } else if (guest.status === 'partially_paid' || (guest.paid_amount > 0 && guest.paid_amount < guest.total_amount)) {
+                } else if (guest.status === 'partially_paid') {
+                    statusColor = '#f59e0b'; // yellow
                     statusText = 'PARTIAL';
-                    statusColor = [232, 50, 131]; // Primary color
                 } else {
+                    statusColor = '#ef4444'; // red
                     statusText = 'PENDING';
-                    statusColor = [200, 0, 0]; // Red
                 }
                 
-                doc.setTextColor(...statusColor);
+                // Add status background
+                doc.setFillColor(statusColor);
+                doc.roundedRect(xPos, yPos - 4, 25, 8, 2, 2, 'F');
+                
+                // Add status text
+                doc.setTextColor(255, 255, 255);
                 doc.setFont('helvetica', 'bold');
-                doc.text(statusText, xPos + 2, yPos + 7);
+                doc.text(statusText, xPos + 2, yPos);
                 doc.setFont('helvetica', 'normal');
                 doc.setTextColor(darkColor);
                 
@@ -1630,37 +1630,22 @@ async function downloadGuestsPDF() {
             });
             
             // Add footer
-            const pageCount = doc.getNumberOfPages();
-            for (let i = 1; i <= pageCount; i++) {
-                doc.setPage(i);
-                
-                // Footer rectangle
-                doc.setFillColor(darkColor);
-                doc.rect(0, 287, 210, 10, 'F');
-                
-                // Page number
-                doc.setTextColor(255, 255, 255);
-                doc.setFontSize(10);
-                doc.text(`Page ${i} of ${pageCount}`, 105, 293, { align: 'center' });
-                
-                // Kochin Hangover text
-                doc.setFontSize(8);
-                doc.text('Kochin Hangover - Entry Management System', 10, 293);
-            }
+            const footerY = 280;
+            doc.setDrawColor(primaryColor);
+            doc.setLineWidth(0.5);
+            doc.line(10, footerY, 200, footerY);
+            
+            doc.setFontSize(8);
+            doc.setTextColor(darkColor);
+            doc.text('Kochin Hangover - May 3rd, 2025 - Casino Hotel, Wellington Island, Kochi', 105, footerY + 5, { align: 'center' });
             
             // Save the PDF
             doc.save('kochin-hangover-guest-list.pdf');
-        };
-        
-        // Handle case where logo fails to load
-        logoImg.onerror = function() {
-            console.error('Failed to load logo image');
-            finalizePDF();
-        };
+        }
         
     } catch (error) {
         console.error('Error generating PDF:', error);
-        alert('Failed to generate PDF. Please try again.');
+        alert('Failed to generate PDF');
     }
 }
 
@@ -1705,7 +1690,7 @@ async function downloadGuestsCSV() {
         
     } catch (error) {
         console.error('Error generating CSV:', error);
-        alert('Failed to generate CSV. Please try again.');
+        alert('Failed to generate CSV');
     }
 }
 
@@ -1763,24 +1748,42 @@ async function downloadStatsPDF() {
         doc.setFillColor(darkColor);
         doc.rect(0, 0, 210, 40, 'F');
         
-        // Add logo
-        const logoImg = document.createElement('img');
-        logoImg.src = 'assets/kochin-logo.png';
-        logoImg.onload = function() {
-            // Once the image is loaded, add it to the PDF
-            const canvas = document.createElement('canvas');
-            canvas.width = logoImg.width;
-            canvas.height = logoImg.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(logoImg, 0, 0, logoImg.width, logoImg.height);
-            const logoDataUrl = canvas.toDataURL('image/png');
+        // Add decorative elements
+        doc.setFillColor(primaryColor);
+        doc.setGlobalAlpha(0.2);
+        doc.circle(0, 0, 30, 'F');
+        doc.circle(210, 40, 30, 'F');
+        doc.setGlobalAlpha(1);
+        
+        // Try to use the PWA icon as the logo
+        try {
+            const logoImg = new Image();
+            logoImg.src = '/icons/icon-192x192.png';
             
-            // Add the logo to the PDF
-            doc.addImage(logoDataUrl, 'PNG', 10, 5, 30, 30);
+            logoImg.onload = function() {
+                // Once the image is loaded, add it to the PDF
+                const canvas = document.createElement('canvas');
+                canvas.width = logoImg.width;
+                canvas.height = logoImg.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(logoImg, 0, 0, logoImg.width, logoImg.height);
+                const logoDataUrl = canvas.toDataURL('image/png');
+                
+                // Add the logo to the PDF
+                doc.addImage(logoDataUrl, 'PNG', 10, 5, 30, 30);
+                
+                // Continue with the rest of the PDF generation
+                finalizePDF();
+            };
             
-            // Continue with the rest of the PDF generation
+            logoImg.onerror = function() {
+                console.error('Error loading logo image, continuing without logo');
+                finalizePDF();
+            };
+        } catch (e) {
+            console.error('Error setting up logo image:', e);
             finalizePDF();
-        };
+        }
         
         // Function to finalize the PDF after logo is added
         function finalizePDF() {
@@ -1789,15 +1792,25 @@ async function downloadStatsPDF() {
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(24);
             doc.text('KOCHIN HANGOVER', 105, 20, { align: 'center' });
+            
             doc.setFontSize(16);
             doc.text('Event Statistics', 105, 30, { align: 'center' });
             
-            // Add date
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(10);
-            doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 37, { align: 'center' });
+            // Add generation date
+            const now = new Date();
+            const formattedDate = now.toLocaleDateString('en-US', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: '2-digit', 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                hour12: true 
+            }).replace(',', '');
             
-            // Overall stats section
+            doc.setFontSize(10);
+            doc.text(`Generated: ${formattedDate}`, 105, 37, { align: 'center' });
+            
+            // Add overall stats section
             let yPos = 50;
             doc.setTextColor(darkColor);
             doc.setFont('helvetica', 'bold');
@@ -1989,7 +2002,7 @@ async function downloadStatsPDF() {
                 // Alternating row colors
                 if (index % 2 === 0) {
                     doc.setFillColor(240, 240, 250);
-                    doc.rect(margin, yPos, chartWidth, 10, 'F');
+                    doc.rect(margin, yPos - 5, chartWidth, 10, 'F');
                 }
                 
                 // Row data
@@ -2036,9 +2049,10 @@ async function downloadStatsPDF() {
             // Save the PDF
             doc.save('kochin-hangover-statistics.pdf');
         }
+        
     } catch (error) {
         console.error('Error generating PDF:', error);
-        alert('Failed to generate PDF. Please try again.');
+        alert('Failed to generate PDF');
     }
 }
 
@@ -2102,7 +2116,7 @@ async function downloadStatsCSV() {
         
     } catch (error) {
         console.error('Error generating CSV:', error);
-        alert('Failed to generate CSV. Please try again.');
+        alert('Failed to generate CSV');
     }
 }
 
