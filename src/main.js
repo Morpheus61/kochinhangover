@@ -488,6 +488,23 @@ function setupEventListeners() {
                 
                 if (error) throw error;
                 
+                // Format the mobile number for WhatsApp
+                let mobileNumber = guest.mobile_number;
+                
+                // Remove any spaces, dashes, or parentheses
+                mobileNumber = mobileNumber.replace(/[\s\-()]/g, '');
+                
+                // If the number doesn't start with '+', add the India country code
+                if (!mobileNumber.startsWith('+')) {
+                    // If it starts with 0, replace the 0 with +91
+                    if (mobileNumber.startsWith('0')) {
+                        mobileNumber = '+91' + mobileNumber.substring(1);
+                    } else {
+                        // Otherwise, just add +91
+                        mobileNumber = '+91' + mobileNumber;
+                    }
+                }
+                
                 // Create guest pass data for QR code
                 const qrData = JSON.stringify({
                     id: guest.id,
@@ -577,22 +594,13 @@ function setupEventListeners() {
                 // Create a File object from the blob
                 const file = new File([blob], 'guest-pass.png', { type: 'image/png' });
                 
-                // Create a share object
-                if (navigator.share && navigator.canShare({ files: [file] })) {
-                    try {
-                        await navigator.share({
-                            title: 'Kochin Hangover Guest Pass',
-                            text: message,
-                            files: [file]
-                        });
-                    } catch (error) {
-                        // Fallback for devices that don't support file sharing
-                        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-                    }
-                } else {
-                    // Fallback for browsers without Web Share API
-                    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-                }
+                // Open WhatsApp chat directly with the guest
+                // Remove the + sign if present for the WhatsApp API
+                const whatsappNumber = mobileNumber.replace('+', '');
+                const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+                
+                // Open WhatsApp in a new tab
+                window.open(whatsappUrl, '_blank');
                 
             } catch (error) {
                 console.error('Error sharing guest pass:', error);
