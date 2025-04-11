@@ -1015,7 +1015,20 @@ function setupEventListeners() {
                 // Add event listeners to the modal buttons
                 document.getElementById('continueToWhatsApp').addEventListener('click', () => {
                     // Remove the modal
-                    document.body.removeChild(modal);
+                    try {
+                        if (modal && modal.parentNode) {
+                            modal.parentNode.removeChild(modal);
+                        } else {
+                            document.body.removeChild(modal);
+                        }
+                    } catch (error) {
+                        console.error('Error closing modal:', error);
+                        // Fallback method to remove modal
+                        const modalElement = document.querySelector('.fixed.inset-0.flex.items-center.justify-center.z-50');
+                        if (modalElement && modalElement.parentNode) {
+                            modalElement.parentNode.removeChild(modalElement);
+                        }
+                    }
                     
                     // Open WhatsApp chat directly with the guest
                     // Remove the + sign if present for the WhatsApp API
@@ -1028,7 +1041,20 @@ function setupEventListeners() {
                 
                 document.getElementById('closeShareModal').addEventListener('click', () => {
                     // Remove the modal
-                    document.body.removeChild(modal);
+                    try {
+                        if (modal && modal.parentNode) {
+                            modal.parentNode.removeChild(modal);
+                        } else {
+                            document.body.removeChild(modal);
+                        }
+                    } catch (error) {
+                        console.error('Error closing modal:', error);
+                        // Fallback method to remove modal
+                        const modalElement = document.querySelector('.fixed.inset-0.flex.items-center.justify-center.z-50');
+                        if (modalElement && modalElement.parentNode) {
+                            modalElement.parentNode.removeChild(modalElement);
+                        }
+                    }
                 });
                 
             } catch (error) {
