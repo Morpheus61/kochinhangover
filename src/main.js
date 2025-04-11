@@ -1447,6 +1447,7 @@ async function loadStats() {
 // Download functions
 async function downloadGuestsPDF() {
     try {
+        // Fetch all guests
         const { data: guests, error } = await supabase
             .from('guests')
             .select('*');
@@ -1905,37 +1906,39 @@ async function downloadStatsPDF() {
             const margin = 10;
             
             // First row of cards
-            doc.setFillColor(232, 50, 131, 0.1);
+            doc.setFillColor(245, 245, 245);
             doc.roundedRect(margin, yPos, cardWidth, cardHeight, 3, 3, 'F');
-            doc.setFillColor(52, 219, 219, 0.1);
+            doc.setFillColor(245, 245, 245);
             doc.roundedRect(margin + cardWidth + margin, yPos, cardWidth, cardHeight, 3, 3, 'F');
             
             // Card content
-            doc.setTextColor(darkColor);
+            doc.setTextColor(primaryColor);
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(12);
             doc.text('Total Registrations', margin + cardWidth/2, yPos + 10, { align: 'center' });
             doc.text('Total Revenue', margin + cardWidth + margin + cardWidth/2, yPos + 10, { align: 'center' });
             
             doc.setFontSize(16);
+            doc.setTextColor(darkColor);
             doc.text(totalGuests.toString(), margin + cardWidth/2, yPos + 20, { align: 'center' });
             doc.text(`₹${totalRevenue.toLocaleString()}`, margin + cardWidth + margin + cardWidth/2, yPos + 20, { align: 'center' });
             
             // Second row of cards
             yPos += cardHeight + margin;
-            doc.setFillColor(247, 208, 70, 0.1);
+            doc.setFillColor(245, 245, 245);
             doc.roundedRect(margin, yPos, cardWidth, cardHeight, 3, 3, 'F');
-            doc.setFillColor(232, 50, 131, 0.1);
+            doc.setFillColor(245, 245, 245);
             doc.roundedRect(margin + cardWidth + margin, yPos, cardWidth, cardHeight, 3, 3, 'F');
             
             // Card content
-            doc.setTextColor(darkColor);
+            doc.setTextColor(primaryColor);
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(12);
             doc.text('Verified Entries', margin + cardWidth/2, yPos + 10, { align: 'center' });
             doc.text('Pending Entries', margin + cardWidth + margin + cardWidth/2, yPos + 10, { align: 'center' });
             
             doc.setFontSize(16);
+            doc.setTextColor(darkColor);
             doc.text(verifiedEntries.toString(), margin + cardWidth/2, yPos + 20, { align: 'center' });
             doc.text(pendingEntries.toString(), margin + cardWidth + margin + cardWidth/2, yPos + 20, { align: 'center' });
             
@@ -1949,23 +1952,152 @@ async function downloadStatsPDF() {
             // Draw simple bar chart
             yPos += 10;
             const barWidth = 40;
-            const barHeight = 100;
+            const barHeight = 80;
             const maxEntries = Math.max(stagEntries, coupleEntries);
             
             if (maxEntries > 0) {
                 // Draw stag bar
                 const stagHeight = (stagEntries / maxEntries) * barHeight;
-                doc.setFillColor(232, 50, 131); // Pink
+                doc.setFillColor(primaryColor);
                 doc.rect(70, yPos + (barHeight - stagHeight), barWidth, stagHeight, 'F');
+                doc.setTextColor(darkColor);
                 doc.text('Stag', 70 + barWidth/2, yPos + barHeight + 10, { align: 'center' });
-                doc.text(stagEntries.toString(), 70 + barWidth/2, yPos + (barHeight - stagHeight) - 5, { align: 'center' });
+                doc.setTextColor(255, 255, 255);
+                if (stagHeight > 15) {
+                    // If bar is tall enough, put text inside
+                    doc.text(stagEntries.toString(), 70 + barWidth/2, yPos + barHeight - stagHeight/2, { align: 'center' });
+                } else {
+                    // Otherwise put text above
+                    doc.setTextColor(darkColor);
+                    doc.text(stagEntries.toString(), 70 + barWidth/2, yPos + (barHeight - stagHeight) - 5, { align: 'center' });
+                }
                 
                 // Draw couple bar
                 const coupleHeight = (coupleEntries / maxEntries) * barHeight;
-                doc.setFillColor(52, 219, 219); // Teal
+                doc.setFillColor(secondaryColor);
                 doc.rect(130, yPos + (barHeight - coupleHeight), barWidth, coupleHeight, 'F');
+                doc.setTextColor(darkColor);
                 doc.text('Couple', 130 + barWidth/2, yPos + barHeight + 10, { align: 'center' });
-                doc.text(coupleEntries.toString(), 130 + barWidth/2, yPos + (barHeight - coupleHeight) - 5, { align: 'center' });
+                doc.setTextColor(255, 255, 255);
+                if (coupleHeight > 15) {
+                    // If bar is tall enough, put text inside
+                    doc.text(coupleEntries.toString(), 130 + barWidth/2, yPos + barHeight - coupleHeight/2, { align: 'center' });
+                } else {
+                    // Otherwise put text above
+                    doc.setTextColor(darkColor);
+                    doc.text(coupleEntries.toString(), 130 + barWidth/2, yPos + (barHeight - coupleHeight) - 5, { align: 'center' });
+                }
+            }
+            
+            // Add club-wise statistics
+            yPos += barHeight + 20;
+            doc.setTextColor(darkColor);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.text('Club-wise Statistics', 105, yPos, { align: 'center' });
+            yPos += 10;
+            
+            // Create a table for club statistics
+            const clubStats = {};
+            guests.forEach(guest => {
+                const clubName = guest.club_name || 'No Club';
+                if (!clubStats[clubName]) {
+                    clubStats[clubName] = {
+                        totalGuests: 0,
+                        totalAmount: 0,
+                        paidAmount: 0,
+                        stag: 0,
+                        couple: 0
+                    };
+                }
+                clubStats[clubName].totalGuests++;
+                clubStats[clubName].totalAmount += Number(guest.total_amount || 0);
+                clubStats[clubName].paidAmount += Number(guest.paid_amount || 0);
+                
+                if (guest.entry_type === 'stag') {
+                    clubStats[clubName].stag++;
+                } else if (guest.entry_type === 'couple') {
+                    clubStats[clubName].couple++;
+                }
+            });
+            
+            // Table headers
+            const clubHeaders = ['Club', 'Guests', 'Stag', 'Couple', 'Amount (₹)'];
+            const clubColWidths = [80, 25, 25, 25, 35];
+            
+            // Add table header background
+            doc.setFillColor(primaryColor);
+            doc.rect(10, yPos - 6, 190, 10, 'F');
+            
+            // Add header text
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            
+            let xPos = 10;
+            clubHeaders.forEach((header, i) => {
+                doc.text(header, xPos + 2, yPos);
+                xPos += clubColWidths[i];
+            });
+            
+            // Draw table rows
+            yPos += 10;
+            doc.setTextColor(darkColor);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            
+            let rowIndex = 0;
+            for (const [club, stats] of Object.entries(clubStats)) {
+                // Add row background
+                if (rowIndex % 2 === 0) {
+                    doc.setFillColor(245, 245, 245);
+                } else {
+                    doc.setFillColor(235, 235, 235);
+                }
+                doc.rect(10, yPos - 5, 190, 10, 'F');
+                
+                // Add row data
+                xPos = 10;
+                
+                // Club name
+                doc.text(club, xPos + 2, yPos);
+                xPos += clubColWidths[0];
+                
+                // Total guests
+                doc.text(stats.totalGuests.toString(), xPos + 2, yPos);
+                xPos += clubColWidths[1];
+                
+                // Stag count
+                doc.text(stats.stag.toString(), xPos + 2, yPos);
+                xPos += clubColWidths[2];
+                
+                // Couple count
+                doc.text(stats.couple.toString(), xPos + 2, yPos);
+                xPos += clubColWidths[3];
+                
+                // Amount
+                doc.text(`${stats.paidAmount.toLocaleString()} / ${stats.totalAmount.toLocaleString()}`, xPos + 2, yPos);
+                
+                yPos += 10;
+                rowIndex++;
+                
+                // Add a new page if needed
+                if (yPos > 250) {
+                    doc.addPage();
+                    
+                    // Add header to new page
+                    doc.setFillColor(darkColor);
+                    doc.rect(0, 0, 210, 20, 'F');
+                    
+                    // Add title to new page
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(16);
+                    doc.text('KOCHIN HANGOVER - Statistics (Continued)', 105, 15, { align: 'center' });
+                    
+                    // Reset for new page
+                    yPos = 30;
+                }
             }
             
             // Add footer
@@ -2012,8 +2144,8 @@ async function downloadStatsCSV() {
                 };
             }
             clubStats[clubName].totalGuests++;
-            clubStats[clubName].totalAmount += guest.total_amount || 0;
-            clubStats[clubName].paidAmount += guest.paid_amount || 0;
+            clubStats[clubName].totalAmount += Number(guest.total_amount || 0);
+            clubStats[clubName].paidAmount += Number(guest.paid_amount || 0);
         });
         
         // Convert to CSV
