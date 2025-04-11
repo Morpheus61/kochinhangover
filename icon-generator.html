@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA Icon Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .canvas-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .icon-item {
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin-bottom: 5px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>PWA Icon Generator for Kochin Hangover</h1>
+    <p>This tool will generate all the necessary icon sizes for your PWA using the Kochin Hangover logo.</p>
+    
+    <div>
+        <img id="sourceImage" src="src/assets/kochin-logo.png" alt="Source Logo" style="max-width: 300px; display: none;">
+    </div>
+    
+    <div class="canvas-container" id="canvasContainer"></div>
+    
+    <button id="generateBtn">Generate Icons</button>
+    <button id="downloadBtn" style="display: none;">Download All Icons</button>
+    
+    <script>
+        // Icon sizes needed for PWA
+        const sizes = [16, 32, 48, 72, 96, 128, 144, 152, 192, 384, 512];
+        const specialIcons = [
+            { name: 'apple-touch-icon', size: 180 }
+        ];
+        
+        // Function to generate icons
+        function generateIcons() {
+            const sourceImage = document.getElementById('sourceImage');
+            const canvasContainer = document.getElementById('canvasContainer');
+            canvasContainer.innerHTML = '';
+            
+            // Generate regular icons
+            sizes.forEach(size => {
+                const iconItem = document.createElement('div');
+                iconItem.className = 'icon-item';
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                canvas.id = `icon-${size}`;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#2a0e3a'; // Background color matching the app
+                ctx.fillRect(0, 0, size, size);
+                
+                // Calculate dimensions to maintain aspect ratio
+                const aspectRatio = sourceImage.width / sourceImage.height;
+                let drawWidth, drawHeight, offsetX, offsetY;
+                
+                if (aspectRatio > 1) {
+                    drawWidth = size;
+                    drawHeight = size / aspectRatio;
+                    offsetX = 0;
+                    offsetY = (size - drawHeight) / 2;
+                } else {
+                    drawHeight = size;
+                    drawWidth = size * aspectRatio;
+                    offsetX = (size - drawWidth) / 2;
+                    offsetY = 0;
+                }
+                
+                // Draw the image centered
+                ctx.drawImage(sourceImage, offsetX, offsetY, drawWidth, drawHeight);
+                
+                const label = document.createElement('div');
+                label.textContent = `${size}x${size}`;
+                
+                iconItem.appendChild(canvas);
+                iconItem.appendChild(label);
+                canvasContainer.appendChild(iconItem);
+            });
+            
+            // Generate special icons
+            specialIcons.forEach(icon => {
+                const iconItem = document.createElement('div');
+                iconItem.className = 'icon-item';
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = icon.size;
+                canvas.height = icon.size;
+                canvas.id = icon.name;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#2a0e3a'; // Background color matching the app
+                ctx.fillRect(0, 0, icon.size, icon.size);
+                
+                // Calculate dimensions to maintain aspect ratio
+                const aspectRatio = sourceImage.width / sourceImage.height;
+                let drawWidth, drawHeight, offsetX, offsetY;
+                
+                if (aspectRatio > 1) {
+                    drawWidth = icon.size;
+                    drawHeight = icon.size / aspectRatio;
+                    offsetX = 0;
+                    offsetY = (icon.size - drawHeight) / 2;
+                } else {
+                    drawHeight = icon.size;
+                    drawWidth = icon.size * aspectRatio;
+                    offsetX = (icon.size - drawWidth) / 2;
+                    offsetY = 0;
+                }
+                
+                // Draw the image centered
+                ctx.drawImage(sourceImage, offsetX, offsetY, drawWidth, drawHeight);
+                
+                const label = document.createElement('div');
+                label.textContent = `${icon.name} (${icon.size}x${icon.size})`;
+                
+                iconItem.appendChild(canvas);
+                iconItem.appendChild(label);
+                canvasContainer.appendChild(iconItem);
+            });
+            
+            document.getElementById('downloadBtn').style.display = 'inline-block';
+        }
+        
+        // Function to download all icons
+        function downloadAllIcons() {
+            // Download regular icons
+            sizes.forEach(size => {
+                const canvas = document.getElementById(`icon-${size}`);
+                const link = document.createElement('a');
+                link.download = `icon-${size}x${size}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+            
+            // Download special icons
+            specialIcons.forEach(icon => {
+                const canvas = document.getElementById(icon.name);
+                const link = document.createElement('a');
+                link.download = `${icon.name}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+            
+            // Also generate favicon
+            const faviconCanvas = document.getElementById('icon-32');
+            const faviconLink = document.createElement('a');
+            faviconLink.download = 'favicon.ico';
+            faviconLink.href = faviconCanvas.toDataURL('image/png');
+            faviconLink.click();
+        }
+        
+        // Event listeners
+        document.getElementById('generateBtn').addEventListener('click', generateIcons);
+        document.getElementById('downloadBtn').addEventListener('click', downloadAllIcons);
+        
+        // Load the source image
+        const sourceImage = document.getElementById('sourceImage');
+        sourceImage.onload = function() {
+            console.log('Source image loaded:', sourceImage.width, 'x', sourceImage.height);
+        };
+        sourceImage.onerror = function() {
+            console.error('Error loading source image');
+            alert('Error loading the logo image. Please check the file path.');
+        };
+    </script>
+</body>
+</html>

@@ -467,9 +467,173 @@ async function deleteUser(userId) {
     }
 }
 
+// Edit guest function
+async function editGuest(guestId) {
+    try {
+        // Get guest data
+        const { data: guest, error } = await supabase
+            .from('guests')
+            .select('*')
+            .eq('id', guestId)
+            .single();
+        
+        if (error) throw error;
+        
+        // Create edit form modal
+        const modal = document.createElement('div');
+        modal.className = 'modal flex items-center justify-center';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold kochin-header">Edit Guest</h3>
+                    <button class="text-gray-300 hover:text-white close-modal-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form id="editGuestForm">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Name</label>
+                            <input type="text" id="editGuestName" class="kochin-input w-full" value="${guest.guest_name}" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Club Name</label>
+                            <input type="text" id="editClubName" class="kochin-input w-full" value="${guest.club_name || ''}">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Mobile Number</label>
+                            <input type="tel" id="editMobileNumber" class="kochin-input w-full" value="${guest.mobile_number}" required pattern="[0-9]{10}" title="Please enter a valid 10-digit mobile number">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Entry Type</label>
+                            <select id="editEntryType" class="kochin-input w-full" required>
+                                <option value="stag" ${guest.entry_type === 'stag' ? 'selected' : ''}>Stag (₹2750)</option>
+                                <option value="couple" ${guest.entry_type === 'couple' ? 'selected' : ''}>Couple (₹4750)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Status</label>
+                            <select id="editStatus" class="kochin-input w-full" required>
+                                <option value="paid" ${guest.status === 'paid' ? 'selected' : ''}>Paid</option>
+                                <option value="partially_paid" ${guest.status === 'partially_paid' ? 'selected' : ''}>Partially Paid</option>
+                                <option value="verified" ${guest.status === 'verified' ? 'selected' : ''}>Verified</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Paid Amount (₹)</label>
+                            <input type="number" id="editPaidAmount" class="kochin-input w-full" value="${guest.paid_amount}" min="0" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Total Amount (₹)</label>
+                            <input type="number" id="editTotalAmount" class="kochin-input w-full" value="${guest.total_amount}" min="0" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 flex space-x-4">
+                        <button type="submit" class="kochin-button flex-1">
+                            <i class="fas fa-save mr-2"></i> Save Changes
+                        </button>
+                        <button type="button" class="kochin-button bg-gray-600 flex-1 close-modal-btn">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Add event listener to close modal
+        modal.querySelectorAll('.close-modal-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+        });
+        
+        // Add event listener to form submit
+        document.getElementById('editGuestForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const guestName = document.getElementById('editGuestName').value;
+            const clubName = document.getElementById('editClubName').value;
+            const mobileNumber = document.getElementById('editMobileNumber').value;
+            const entryType = document.getElementById('editEntryType').value;
+            const status = document.getElementById('editStatus').value;
+            const paidAmount = Number(document.getElementById('editPaidAmount').value);
+            const totalAmount = Number(document.getElementById('editTotalAmount').value);
+            
+            try {
+                // Update guest
+                const updateData = {
+                    guest_name: guestName,
+                    club_name: clubName,
+                    mobile_number: mobileNumber,
+                    entry_type: entryType,
+                    status: status,
+                    paid_amount: paidAmount,
+                    total_amount: totalAmount
+                };
+                
+                const { error: updateError } = await supabase
+                    .from('guests')
+                    .update(updateData)
+                    .eq('id', guestId);
+                
+                if (updateError) throw updateError;
+                
+                // Remove modal
+                document.body.removeChild(modal);
+                
+                // Reload guest list and stats
+                await loadGuestList();
+                await loadStats();
+                
+                alert('Guest updated successfully!');
+            } catch (error) {
+                console.error('Error updating guest:', error);
+                alert('Error updating guest: ' + error.message);
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error editing guest:', error);
+        alert('Error editing guest: ' + error.message);
+    }
+}
+
+// Delete guest function
+async function deleteGuest(guestId) {
+    try {
+        // Confirm deletion
+        if (!confirm('Are you sure you want to delete this guest?')) {
+            return;
+        }
+        
+        // Delete guest
+        const { error } = await supabase
+            .from('guests')
+            .delete()
+            .eq('id', guestId);
+        
+        if (error) throw error;
+        
+        // Reload guest list and stats
+        await loadGuestList();
+        await loadStats();
+        
+        alert('Guest deleted successfully!');
+    } catch (error) {
+        console.error('Error deleting guest:', error);
+        alert('Error deleting guest: ' + error.message);
+    }
+}
+
 // Make the functions available globally
 window.editUser = editUser;
 window.deleteUser = deleteUser;
+window.editGuest = editGuest;
+window.deleteGuest = deleteGuest;
 
 // Initialize QR Scanner
 function initQRScanner() {
@@ -623,7 +787,7 @@ window.verifyGuest = async function(guestId) {
         alert('Guest entry verified successfully!');
         
         // Close the modal and resume scanning
-        const modal = document.querySelector('.fixed.inset-0.flex.items-center.justify-center.bg-black.bg-opacity-50');
+        const modal = document.querySelector('.fixed.inset-0.flex.items-center.justify-center.z-50');
         if (modal) {
             modal.remove();
             if (qrScanner) {
@@ -701,6 +865,15 @@ function setupEventListeners() {
     document.getElementById('registrationForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        // Add a submission lock to prevent multiple submissions
+        const submitButton = e.target.querySelector('button[type="submit"]');
+        if (submitButton.disabled) return; // If already submitting, exit early
+        
+        // Disable the button and change text to show processing
+        submitButton.disabled = true;
+        const originalButtonText = submitButton.innerHTML;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
+        
         try {
             const formData = {
                 guest_name: document.getElementById('guestName').value,
@@ -743,6 +916,10 @@ function setupEventListeners() {
         } catch (error) {
             console.error('Registration error:', error);
             alert(error.message || 'Failed to register guest');
+        } finally {
+            // Re-enable the button and restore original text regardless of success/failure
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalButtonText;
         }
     });
 
@@ -1359,7 +1536,7 @@ async function downloadGuestsPDF() {
             
             // Draw table rows
             let yPos = startY + 10;
-            doc.setTextColor(50, 50, 50);
+            doc.setTextColor(darkColor);
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(10);
             
@@ -1382,7 +1559,7 @@ async function downloadGuestsPDF() {
                         xPos += colWidths[i];
                     });
                     
-                    doc.setTextColor(50, 50, 50);
+                    doc.setTextColor(darkColor);
                     doc.setFont('helvetica', 'normal');
                     doc.setFontSize(10);
                 }
@@ -1447,7 +1624,7 @@ async function downloadGuestsPDF() {
                 doc.setFont('helvetica', 'bold');
                 doc.text(statusText, xPos + 2, yPos + 7);
                 doc.setFont('helvetica', 'normal');
-                doc.setTextColor(50, 50, 50);
+                doc.setTextColor(darkColor);
                 
                 yPos += 10;
             });
@@ -1927,6 +2104,19 @@ async function downloadStatsCSV() {
         console.error('Error generating CSV:', error);
         alert('Failed to generate CSV. Please try again.');
     }
+}
+
+// Register service worker for PWA functionality
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+            .then(registration => {
+                console.log('Service Worker registered with scope:', registration.scope);
+            })
+            .catch(error => {
+                console.error('Service Worker registration failed:', error);
+            });
+    });
 }
 
 // Initialize app when DOM is loaded
