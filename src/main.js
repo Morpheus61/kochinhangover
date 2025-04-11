@@ -403,7 +403,7 @@ async function editUser(userId) {
                 // Reload users list
                 await loadUsers();
                 
-                alert('User updated successfully');
+                alert('User updated successfully!');
             } catch (error) {
                 console.error('Error updating user:', error);
                 alert('Error updating user: ' + error.message);
@@ -435,7 +435,7 @@ async function deleteUser(userId) {
         // Reload users list
         await loadUsers();
         
-        alert('User deleted successfully');
+        alert('User deleted successfully!');
     } catch (error) {
         console.error('Error deleting user:', error);
         alert('Error deleting user: ' + error.message);
@@ -985,8 +985,17 @@ function setupEventListeners() {
                     `Please show this pass at the entrance.\n\n` +
                     `Note: Your guest pass image has been downloaded to your device. Please send it as an attachment after this message.`;
                 
+                // Remove any existing modals first
+                const existingModals = document.querySelectorAll('.fixed.inset-0.flex.items-center.justify-center.z-50');
+                existingModals.forEach(modal => {
+                    if (modal && modal.parentNode) {
+                        modal.parentNode.removeChild(modal);
+                    }
+                });
+                
                 // Create a modal to guide the user
                 const modal = document.createElement('div');
+                modal.id = 'whatsappShareModal';
                 modal.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75';
                 modal.innerHTML = `
                     <div class="kochin-container p-6 max-w-md mx-auto">
@@ -1000,10 +1009,10 @@ function setupEventListeners() {
                             <li class="mb-2">Find and select the downloaded guest pass image</li>
                         </ol>
                         <div class="flex justify-between">
-                            <button id="continueToWhatsApp" class="kochin-button bg-green-600">
+                            <button id="continueToWhatsAppBtn" class="kochin-button bg-green-600">
                                 <i class="fab fa-whatsapp mr-2"></i> Continue to WhatsApp
                             </button>
-                            <button id="closeShareModal" class="kochin-button bg-gray-600">
+                            <button id="closeShareModalBtn" class="kochin-button bg-gray-600">
                                 Close
                             </button>
                         </div>
@@ -1012,22 +1021,11 @@ function setupEventListeners() {
                 
                 document.body.appendChild(modal);
                 
-                // Add event listeners to the modal buttons
-                document.getElementById('continueToWhatsApp').addEventListener('click', () => {
+                // Add event listeners directly with onclick attributes
+                document.getElementById('continueToWhatsAppBtn').onclick = function() {
                     // Remove the modal
-                    try {
-                        if (modal && modal.parentNode) {
-                            modal.parentNode.removeChild(modal);
-                        } else {
-                            document.body.removeChild(modal);
-                        }
-                    } catch (error) {
-                        console.error('Error closing modal:', error);
-                        // Fallback method to remove modal
-                        const modalElement = document.querySelector('.fixed.inset-0.flex.items-center.justify-center.z-50');
-                        if (modalElement && modalElement.parentNode) {
-                            modalElement.parentNode.removeChild(modalElement);
-                        }
+                    if (modal && modal.parentNode) {
+                        modal.parentNode.removeChild(modal);
                     }
                     
                     // Open WhatsApp chat directly with the guest
@@ -1037,25 +1035,14 @@ function setupEventListeners() {
                     
                     // Open WhatsApp in a new tab
                     window.open(whatsappUrl, '_blank');
-                });
+                };
                 
-                document.getElementById('closeShareModal').addEventListener('click', () => {
+                document.getElementById('closeShareModalBtn').onclick = function() {
                     // Remove the modal
-                    try {
-                        if (modal && modal.parentNode) {
-                            modal.parentNode.removeChild(modal);
-                        } else {
-                            document.body.removeChild(modal);
-                        }
-                    } catch (error) {
-                        console.error('Error closing modal:', error);
-                        // Fallback method to remove modal
-                        const modalElement = document.querySelector('.fixed.inset-0.flex.items-center.justify-center.z-50');
-                        if (modalElement && modalElement.parentNode) {
-                            modalElement.parentNode.removeChild(modalElement);
-                        }
+                    if (modal && modal.parentNode) {
+                        modal.parentNode.removeChild(modal);
                     }
-                });
+                };
                 
             } catch (error) {
                 console.error('Error sharing guest pass:', error);
