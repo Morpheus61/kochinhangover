@@ -54,9 +54,7 @@ async function handleLogin(user) {
 // Handle logout
 async function handleLogout() {
     try {
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
-        
+        // No need to call Supabase Auth signOut since we're using direct database authentication
         currentUser = null;
         sessionStorage.removeItem('currentUser');
         showLoginScreen();
@@ -71,20 +69,10 @@ async function initializeApp() {
     const session = JSON.parse(sessionStorage.getItem('currentUser'));
     
     if (session) {
-        // Verify session with Supabase
-        const { data: { user }, error } = await supabase.auth.getUser(session.access_token);
-        
-        if (error) {
-            console.error("Session validation error:", error);
-            sessionStorage.removeItem('currentUser');
-            showLoginScreen();
-            return;
-        }
-        
-        if (user) {
-            await handleLogin(user);
-            return;
-        }
+        // Use the stored user directly since we're using database authentication
+        currentUser = session;
+        await handleLogin(currentUser);
+        return;
     }
     
     showLoginScreen();
@@ -377,13 +365,12 @@ function setupEventListeners() {
                 throw new Error('Invalid username or password');
             }
 
-            // Create auth session
-            const { data: { user }, error: authError } = await supabase.auth.signInWithPassword({
-                email: `${username}@kochin.com`, // Using a dummy email
-                password: password
-            });
-
-            if (authError) throw authError;
+            // Skip Supabase Auth and use the database user directly
+            const user = {
+                id: users[0].id,
+                username: users[0].username,
+                role: users[0].role
+            };
 
             // Store user info in session
             sessionStorage.setItem('currentUser', JSON.stringify(user));
@@ -1291,18 +1278,4 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoginScreen();
     });
     setupEventListeners();
-});
-
-// Auth state listener
-supabase.auth.onAuthStateChange((event, session) => {
-    console.log(`Auth state changed: ${event}`);
-    if (event === 'SIGNED_IN' && session?.user) {
-        currentUser = session.user;
-        sessionStorage.setItem('currentUser', JSON.stringify(session.user));
-        showApp();
-    } else if (event === 'SIGNED_OUT') {
-        currentUser = null;
-        sessionStorage.removeItem('currentUser');
-        showLoginScreen();
-    }
 });
