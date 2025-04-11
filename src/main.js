@@ -1297,11 +1297,13 @@ async function downloadGuestsPDF() {
         doc.setFillColor(darkColor);
         doc.rect(0, 0, 210, 40, 'F');
         
-        // Add logo
-        const logoImg = document.createElement('img');
-        logoImg.src = 'https://i.ibb.co/kQCfDFZ/kochin-logo.png';
+        // Add logo - using base64 encoded SVG
+        const logoBase64 = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MDAgNTAwIj4KICA8c3R5bGU+CiAgICAubG9nby10ZXh0IHsgZm9udC1mYW1pbHk6ICdBcmlhbCBCbGFjaycsIHNhbnMtc2VyaWY7IGZvbnQtd2VpZ2h0OiBib2xkOyB9CiAgICAua29jaGluIHsgZmlsbDogI2U4MzI4MzsgfQogICAgLmhhbmdvdmVyIHsgZmlsbDogIzM0ZGJkYjsgfQogIDwvc3R5bGU+CiAgPGc+CiAgICA8IS0tIEJhY2tncm91bmQgZWxlbWVudHMgLS0+CiAgICA8Y2lyY2xlIGN4PSIyNTAiIGN5PSIyNTAiIHI9IjIwMCIgZmlsbD0iIzJhMGUzYSIgb3BhY2l0eT0iMC44Ii8+CiAgICAKICAgIDwhLS0gRGVjb3JhdGl2ZSBlbGVtZW50cyAtLT4KICAgIDxwYXRoIGQ9Ik02MCwxODAgUTE1MCwxMjAgMjUwLDE1MCBUNDQwLDE4MCIgc3Ryb2tlPSIjZTgzMjgzIiBzdHJva2Utd2lkdGg9IjUiIGZpbGw9Im5vbmUiLz4KICAgIDxwYXRoIGQ9Ik02MCwzMjAgUTE1MCwzODAgMjUwLDM1MCBUNDQwLDMyMCIgc3Ryb2tlPSIjMzRkYmRiIiBzdHJva2Utd2lkdGg9IjUiIGZpbGw9Im5vbmUiLz4KICAgIAogICAgPCEtLSBCZWVyIG11ZyAtLT4KICAgIDxyZWN0IHg9IjE4MCIgeT0iMjAwIiB3aWR0aD0iNjAiIGhlaWdodD0iODAiIHJ4PSI1IiBmaWxsPSIjZjdkMDQ2Ii8+CiAgICA8cmVjdCB4PSIxODAiIHk9IjE4MCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjIwIiByeD0iNSIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuOCIvPgogICAgPHJlY3QgeD0iMjQwIiB5PSIyMDAiIHdpZHRoPSIxMCIgaGVpZ2h0PSI2MCIgcng9IjUiIGZpbGw9IiNmN2QwNDYiLz4KICAgIDxjaXJjbGUgY3g9IjI0NSIgY3k9IjIzMCIgcj0iMTUiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIwLjMiLz4KICAgIAogICAgPCEtLSBUZXh0IC0tPgogICAgPHRleHQgeD0iMjUwIiB5PSIyMjAiIGNsYXNzPSJsb2dvLXRleHQga29jaGluIiBmb250LXNpemU9IjQ4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5LT0NISU48L3RleHQ+CiAgICA8dGV4dCB4PSIyNTAiIHk9IjI4MCIgY2xhc3M9ImxvZ28tdGV4dCBoYW5nb3ZlciIgZm9udC1zaXplPSI0OCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SEFOR09WRVI8L3RleHQ+CiAgPC9nPgo8L3N2Zz4=";
         
-        // Function to finalize the PDF after logo is added
+        // Add the logo directly to the PDF
+        doc.addImage(logoBase64, 'SVG', 10, 5, 30, 30);
+        
+        // Function to finalize the PDF
         function finalizePDF() {
             // Add title
             doc.setTextColor(255, 255, 255);
@@ -1452,29 +1454,7 @@ async function downloadGuestsPDF() {
             doc.save('kochin-hangover-guest-list.pdf');
         }
         
-        // Handle logo loading
-        logoImg.onload = function() {
-            // Once the image is loaded, add it to the PDF
-            const canvas = document.createElement('canvas');
-            canvas.width = logoImg.width;
-            canvas.height = logoImg.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(logoImg, 0, 0, logoImg.width, logoImg.height);
-            const logoDataUrl = canvas.toDataURL('image/png');
-            
-            // Add the logo to the PDF
-            doc.addImage(logoDataUrl, 'PNG', 10, 5, 30, 30);
-            
-            // Continue with the rest of the PDF generation
-            finalizePDF();
-        };
-        
-        // Handle error if image loading fails
-        logoImg.onerror = function() {
-            console.error('Error loading logo image');
-            // Continue with PDF generation without the logo
-            finalizePDF();
-        };
+        finalizePDF();
         
     } catch (error) {
         console.error('Error generating PDF:', error);
@@ -1581,11 +1561,13 @@ async function downloadStatsPDF() {
         doc.setFillColor(darkColor);
         doc.rect(0, 0, 210, 40, 'F');
         
-        // Add logo
-        const logoImg = document.createElement('img');
-        logoImg.src = 'https://i.ibb.co/kQCfDFZ/kochin-logo.png';
+        // Add logo - using base64 encoded SVG
+        const logoBase64 = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MDAgNTAwIj4KICA8c3R5bGU+CiAgICAubG9nby10ZXh0IHsgZm9udC1mYW1pbHk6ICdBcmlhbCBCbGFjaycsIHNhbnMtc2VyaWY7IGZvbnQtd2VpZ2h0OiBib2xkOyB9CiAgICAua29jaGluIHsgZmlsbDogI2U4MzI4MzsgfQogICAgLmhhbmdvdmVyIHsgZmlsbDogIzM0ZGJkYjsgfQogIDwvc3R5bGU+CiAgPGc+CiAgICA8IS0tIEJhY2tncm91bmQgZWxlbWVudHMgLS0+CiAgICA8Y2lyY2xlIGN4PSIyNTAiIGN5PSIyNTAiIHI9IjIwMCIgZmlsbD0iIzJhMGUzYSIgb3BhY2l0eT0iMC44Ii8+CiAgICAKICAgIDwhLS0gRGVjb3JhdGl2ZSBlbGVtZW50cyAtLT4KICAgIDxwYXRoIGQ9Ik02MCwxODAgUTE1MCwxMjAgMjUwLDE1MCBUNDQwLDE4MCIgc3Ryb2tlPSIjZTgzMjgzIiBzdHJva2Utd2lkdGg9IjUiIGZpbGw9Im5vbmUiLz4KICAgIDxwYXRoIGQ9Ik02MCwzMjAgUTE1MCwzODAgMjUwLDM1MCBUNDQwLDMyMCIgc3Ryb2tlPSIjMzRkYmRiIiBzdHJva2Utd2lkdGg9IjUiIGZpbGw9Im5vbmUiLz4KICAgIAogICAgPCEtLSBCZWVyIG11ZyAtLT4KICAgIDxyZWN0IHg9IjE4MCIgeT0iMjAwIiB3aWR0aD0iNjAiIGhlaWdodD0iODAiIHJ4PSI1IiBmaWxsPSIjZjdkMDQ2Ii8+CiAgICA8cmVjdCB4PSIxODAiIHk9IjE4MCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjIwIiByeD0iNSIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuOCIvPgogICAgPHJlY3QgeD0iMjQwIiB5PSIyMDAiIHdpZHRoPSIxMCIgaGVpZ2h0PSI2MCIgcng9IjUiIGZpbGw9IiNmN2QwNDYiLz4KICAgIDxjaXJjbGUgY3g9IjI0NSIgY3k9IjIzMCIgcj0iMTUiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIwLjMiLz4KICAgIAogICAgPCEtLSBUZXh0IC0tPgogICAgPHRleHQgeD0iMjUwIiB5PSIyMjAiIGNsYXNzPSJsb2dvLXRleHQga29jaGluIiBmb250LXNpemU9IjQ4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5LT0NISU48L3RleHQ+CiAgICA8dGV4dCB4PSIyNTAiIHk9IjI4MCIgY2xhc3M9ImxvZ28tdGV4dCBoYW5nb3ZlciIgZm9udC1zaXplPSI0OCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SEFOR09WRVI8L3RleHQ+CiAgPC9nPgo8L3N2Zz4=";
         
-        // Function to finalize the PDF after logo is added
+        // Add the logo directly to the PDF
+        doc.addImage(logoBase64, 'SVG', 10, 5, 30, 30);
+        
+        // Function to finalize the PDF
         function finalizePDF() {
             // Add title
             doc.setTextColor(255, 255, 255);
@@ -1840,29 +1822,7 @@ async function downloadStatsPDF() {
             doc.save('kochin-hangover-statistics.pdf');
         }
         
-        // Handle logo loading
-        logoImg.onload = function() {
-            // Once the image is loaded, add it to the PDF
-            const canvas = document.createElement('canvas');
-            canvas.width = logoImg.width;
-            canvas.height = logoImg.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(logoImg, 0, 0, logoImg.width, logoImg.height);
-            const logoDataUrl = canvas.toDataURL('image/png');
-            
-            // Add the logo to the PDF
-            doc.addImage(logoDataUrl, 'PNG', 10, 5, 30, 30);
-            
-            // Continue with the rest of the PDF generation
-            finalizePDF();
-        };
-        
-        // Handle error if image loading fails
-        logoImg.onerror = function() {
-            console.error('Error loading logo image');
-            // Continue with PDF generation without the logo
-            finalizePDF();
-        };
+        finalizePDF();
         
     } catch (error) {
         console.error('Error generating PDF:', error);
