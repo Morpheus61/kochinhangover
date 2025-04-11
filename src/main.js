@@ -1462,10 +1462,6 @@ async function downloadGuestsPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // Add Unicode font support
-        doc.addFont('https://cdn.jsdelivr.net/npm/noto-sans@latest/fonts/NotoSans-Regular.ttf', 'NotoSans', 'normal');
-        doc.addFont('https://cdn.jsdelivr.net/npm/noto-sans@latest/fonts/NotoSans-Bold.ttf', 'NotoSans', 'bold');
-        
         // Define theme colors
         const primaryColor = '#e83283';
         const darkColor = '#2a0e3a';
@@ -1476,7 +1472,7 @@ async function downloadGuestsPDF() {
         
         // Add title
         doc.setTextColor(255, 255, 255);
-        doc.setFont('NotoSans', 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(24);
         doc.text('KOCHIN HANGOVER', 105, 20, { align: 'center' });
         
@@ -1508,7 +1504,7 @@ async function downloadGuestsPDF() {
         
         // Add header text
         doc.setTextColor(255, 255, 255);
-        doc.setFont('NotoSans', 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         
         let xPos = 10;
@@ -1520,7 +1516,7 @@ async function downloadGuestsPDF() {
         // Draw table rows
         let yPos = startY + 10;
         doc.setTextColor(darkColor);
-        doc.setFont('NotoSans', 'normal');
+        doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
         
         // Add alternating row colors
@@ -1545,9 +1541,9 @@ async function downloadGuestsPDF() {
             xPos += colWidths[0];
             
             // Guest name and club on two lines
-            doc.setFont('NotoSans', 'bold');
+            doc.setFont('helvetica', 'bold');
             doc.text(guest.guest_name || '', xPos + 2, yPos - 2);
-            doc.setFont('NotoSans', 'normal');
+            doc.setFont('helvetica', 'normal');
             doc.setFontSize(8);
             doc.text(guest.club_name || '', xPos + 2, yPos + 4);
             doc.setFontSize(10);
@@ -1586,9 +1582,9 @@ async function downloadGuestsPDF() {
             
             // Add status text
             doc.setTextColor(255, 255, 255);
-            doc.setFont('NotoSans', 'bold');
+            doc.setFont('helvetica', 'bold');
             doc.text(statusText, xPos + 2, yPos);
-            doc.setFont('NotoSans', 'normal');
+            doc.setFont('helvetica', 'normal');
             doc.setTextColor(darkColor);
             
             yPos += rowHeight;
@@ -1603,7 +1599,7 @@ async function downloadGuestsPDF() {
                 
                 // Add title to new page
                 doc.setTextColor(255, 255, 255);
-                doc.setFont('NotoSans', 'bold');
+                doc.setFont('helvetica', 'bold');
                 doc.setFontSize(16);
                 doc.text('KOCHIN HANGOVER - Guest List (Continued)', 105, 15, { align: 'center' });
                 
@@ -1694,10 +1690,6 @@ async function downloadStatsPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // Add Unicode font support
-        doc.addFont('https://cdn.jsdelivr.net/npm/noto-sans@latest/fonts/NotoSans-Regular.ttf', 'NotoSans', 'normal');
-        doc.addFont('https://cdn.jsdelivr.net/npm/noto-sans@latest/fonts/NotoSans-Bold.ttf', 'NotoSans', 'bold');
-        
         // Define theme colors
         const primaryColor = '#e83283';
         const darkColor = '#2a0e3a';
@@ -1708,7 +1700,7 @@ async function downloadStatsPDF() {
         
         // Add title
         doc.setTextColor(255, 255, 255);
-        doc.setFont('NotoSans', 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(24);
         doc.text('KOCHIN HANGOVER', 105, 20, { align: 'center' });
         
@@ -1761,7 +1753,7 @@ async function downloadStatsPDF() {
         // Add overall stats section
         let yPos = 50;
         doc.setTextColor(darkColor);
-        doc.setFont('NotoSans', 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(16);
         doc.text('Overall Statistics', 105, yPos, { align: 'center' });
         
@@ -1779,7 +1771,7 @@ async function downloadStatsPDF() {
         
         // Card content
         doc.setTextColor(primaryColor);
-        doc.setFont('NotoSans', 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         doc.text('Total Registrations', margin + cardWidth/2, yPos + 10, { align: 'center' });
         doc.text('Total Revenue', margin + cardWidth + margin + cardWidth/2, yPos + 10, { align: 'center' });
@@ -1799,7 +1791,7 @@ async function downloadStatsPDF() {
         
         // Card content
         doc.setTextColor(primaryColor);
-        doc.setFont('NotoSans', 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         doc.text('Verified Entries', margin + cardWidth/2, yPos + 10, { align: 'center' });
         doc.text('Pending Entries', margin + cardWidth + margin + cardWidth/2, yPos + 10, { align: 'center' });
@@ -1812,7 +1804,7 @@ async function downloadStatsPDF() {
         // Entry type distribution
         yPos += cardHeight + margin + 10;
         doc.setTextColor(darkColor);
-        doc.setFont('NotoSans', 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(14);
         doc.text('Entry Type Distribution', 105, yPos, { align: 'center' });
         
@@ -1822,7 +1814,7 @@ async function downloadStatsPDF() {
         doc.rect(50, yPos, 110, 10, 'F');
         
         doc.setTextColor(255, 255, 255);
-        doc.setFont('NotoSans', 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
         doc.text('Entry Type', 70, yPos + 7);
         doc.text('Count', 140, yPos + 7);
@@ -1846,7 +1838,7 @@ async function downloadStatsPDF() {
         // Add club-wise statistics
         yPos += 30;
         doc.setTextColor(darkColor);
-        doc.setFont('NotoSans', 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(14);
         doc.text('Club-wise Statistics', 105, yPos, { align: 'center' });
         yPos += 10;
@@ -1883,7 +1875,7 @@ async function downloadStatsPDF() {
         
         // Add header text
         doc.setTextColor(255, 255, 255);
-        doc.setFont('NotoSans', 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
         
         let xPos = 10;
@@ -1895,7 +1887,7 @@ async function downloadStatsPDF() {
         // Draw table rows
         yPos += 10;
         doc.setTextColor(darkColor);
-        doc.setFont('NotoSans', 'normal');
+        doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         
         let rowIndex = 0;
@@ -1944,7 +1936,7 @@ async function downloadStatsPDF() {
                 
                 // Add title to new page
                 doc.setTextColor(255, 255, 255);
-                doc.setFont('NotoSans', 'bold');
+                doc.setFont('helvetica', 'bold');
                 doc.setFontSize(16);
                 doc.text('KOCHIN HANGOVER - Statistics (Continued)', 105, 15, { align: 'center' });
                 
