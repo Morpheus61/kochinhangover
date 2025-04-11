@@ -230,10 +230,12 @@ async function loadGuestList(searchTerm = '') {
         let filteredGuests = guests;
         if (searchTerm && searchTerm.trim() !== '') {
             const term = searchTerm.toLowerCase().trim();
-            filteredGuests = guests.filter(guest => 
-                (guest.guest_name && guest.guest_name.toLowerCase().includes(term)) || 
-                (guest.club_name && guest.club_name.toLowerCase().includes(term))
-            );
+            filteredGuests = guests.filter(guest => {
+                const guestName = guest.guest_name ? guest.guest_name.toLowerCase() : '';
+                const clubName = guest.club_name ? guest.club_name.toLowerCase() : '';
+                
+                return guestName.includes(term) || clubName.includes(term);
+            });
         }
         
         tbody.innerHTML = filteredGuests.map(guest => `
@@ -1002,9 +1004,13 @@ function setupEventListeners() {
         const newSearchInput = searchInput.cloneNode(true);
         searchInput.parentNode.replaceChild(newSearchInput, searchInput);
         
-        // Add event listener to the new element
+        // Add event listener with debounce to prevent excessive filtering
+        let debounceTimer;
         newSearchInput.addEventListener('input', function() {
-            loadGuestList(this.value);
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                loadGuestList(this.value);
+            }, 300); // 300ms debounce delay
         });
     }
 
