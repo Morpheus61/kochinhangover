@@ -97,7 +97,7 @@ async function setupNavigation() {
     const isAdmin = userRole?.role === 'admin';
     const isDoorman = userRole?.role === 'doorman';
 
-    // Show/hide navigation buttons based on role
+    // Show/hide user management button based on role
     document.getElementById('usersBtn')?.classList.toggle('hidden', !isAdmin);
     
     // Update user role display
@@ -118,20 +118,45 @@ async function setupNavigation() {
         }
     }
     
-    // Restrict staff to only Registered Guests and Stats
-    if (isStaff) {
+    // Reset all navigation buttons and tabs visibility first
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('hidden'));
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+    
+    // Admin: Full Access to all features
+    if (isAdmin) {
+        // Show all navigation buttons
+        document.getElementById('newRegistrationBtn')?.classList.remove('hidden');
+        document.getElementById('entryVerificationBtn')?.classList.remove('hidden');
+        document.getElementById('guestListBtn')?.classList.remove('hidden');
+        document.getElementById('statsBtn')?.classList.remove('hidden');
+        
+        // Auto-navigate to registration tab for admin users
+        showTab('registration');
+    }
+    
+    // Staff: Access only to Registered Guests and Stats
+    else if (isStaff) {
+        // Hide registration and verification buttons
         document.getElementById('newRegistrationBtn')?.classList.add('hidden');
         document.getElementById('entryVerificationBtn')?.classList.add('hidden');
+        
+        // Show guests and stats buttons
+        document.getElementById('guestListBtn')?.classList.remove('hidden');
+        document.getElementById('statsBtn')?.classList.remove('hidden');
         
         // Auto-navigate to guests tab for staff users
         showTab('guests');
     }
     
-    // Restrict doorman to only Entry Verification
-    if (isDoorman) {
+    // Doorman: Access only to Verification
+    else if (isDoorman) {
+        // Hide all buttons except verification
         document.getElementById('newRegistrationBtn')?.classList.add('hidden');
         document.getElementById('guestListBtn')?.classList.add('hidden');
         document.getElementById('statsBtn')?.classList.add('hidden');
+        
+        // Show only verification button
+        document.getElementById('entryVerificationBtn')?.classList.remove('hidden');
         
         // Auto-navigate to verification tab for doorman users
         showTab('verification');
@@ -793,49 +818,151 @@ function setupEventListeners() {
                 
                 // Create a temporary div to generate the guest pass image
                 const tempDiv = document.createElement('div');
-                tempDiv.className = 'kochin-container p-6 bg-white text-[#2a0e3a]';
+                tempDiv.className = 'guest-pass-container';
                 tempDiv.style.width = '600px';
+                tempDiv.style.height = '800px';
                 tempDiv.style.position = 'absolute';
                 tempDiv.style.left = '-9999px';
                 tempDiv.innerHTML = `
-                    <div class="flex flex-col items-center">
-                        <h2 class="text-3xl font-bold mb-2 text-[#e83283]">KOCHIN HANGOVER</h2>
-                        <h3 class="text-xl mb-6">Guest Pass</h3>
+                    <div style="
+                        width: 600px;
+                        padding: 20px;
+                        background: linear-gradient(135deg, #2a0e3a 0%, #3a1e4a 100%);
+                        border-radius: 20px;
+                        border: 8px solid #e83283;
+                        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                        color: white;
+                        font-family: Arial, sans-serif;
+                        position: relative;
+                        overflow: hidden;
+                    ">
+                        <!-- Decorative elements -->
+                        <div style="
+                            position: absolute;
+                            top: -50px;
+                            left: -50px;
+                            width: 150px;
+                            height: 150px;
+                            border-radius: 50%;
+                            background: rgba(232, 50, 131, 0.2);
+                        "></div>
+                        <div style="
+                            position: absolute;
+                            bottom: -50px;
+                            right: -50px;
+                            width: 150px;
+                            height: 150px;
+                            border-radius: 50%;
+                            background: rgba(52, 219, 219, 0.2);
+                        "></div>
                         
-                        <div class="flex w-full mb-6">
-                            <div class="w-1/2 pr-4">
-                                <div class="mb-4">
-                                    <p class="text-gray-600 text-sm">Full Name</p>
-                                    <p class="text-xl font-bold">${guest.guest_name}</p>
+                        <!-- Header -->
+                        <div style="
+                            text-align: center;
+                            margin-bottom: 20px;
+                            padding-bottom: 15px;
+                            border-bottom: 2px solid #e83283;
+                        ">
+                            <h1 style="
+                                font-size: 36px;
+                                font-weight: bold;
+                                margin: 0;
+                                color: #e83283;
+                                text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+                            ">KOCHIN HANGOVER</h1>
+                            <h2 style="
+                                font-size: 24px;
+                                margin: 5px 0 0;
+                                color: #34dbdb;
+                            ">Guest Pass</h2>
+                        </div>
+                        
+                        <!-- Content -->
+                        <div style="display: flex;">
+                            <!-- Guest Info -->
+                            <div style="width: 60%; padding-right: 20px;">
+                                <div style="margin-bottom: 15px;">
+                                    <p style="font-size: 14px; margin: 0; color: #f7d046;">Full Name</p>
+                                    <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0;">${guest.guest_name}</p>
                                 </div>
-                                <div class="mb-4">
-                                    <p class="text-gray-600 text-sm">Club Name</p>
-                                    <p class="text-xl font-bold">${guest.club_name || 'N/A'}</p>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <p style="font-size: 14px; margin: 0; color: #f7d046;">Club Name</p>
+                                    <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0;">${guest.club_name || 'N/A'}</p>
                                 </div>
-                                <div class="mb-4">
-                                    <p class="text-gray-600 text-sm">Mobile Number</p>
-                                    <p class="text-xl font-bold">${guest.mobile_number}</p>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <p style="font-size: 14px; margin: 0; color: #f7d046;">Mobile Number</p>
+                                    <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0;">${guest.mobile_number}</p>
                                 </div>
-                                <div class="mb-4">
-                                    <p class="text-gray-600 text-sm">Entry Type</p>
-                                    <p class="text-xl font-bold">${guest.entry_type.toUpperCase()}</p>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <p style="font-size: 14px; margin: 0; color: #f7d046;">Entry Type</p>
+                                    <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0;">${guest.entry_type.toUpperCase()}</p>
                                 </div>
-                                <div class="mb-4">
-                                    <p class="text-gray-600 text-sm">Status</p>
-                                    <p class="text-xl font-bold ${guest.status === 'paid' ? 'text-green-600' : 'text-yellow-600'}">
-                                        ${guest.status === 'paid' ? 'PAID' : 'PARTIALLY PAID'}
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <p style="font-size: 14px; margin: 0; color: #f7d046;">Status</p>
+                                    <p style="
+                                        font-size: 24px; 
+                                        font-weight: bold; 
+                                        margin: 5px 0 0;
+                                        color: ${guest.status === 'paid' || guest.status === 'verified' ? '#4ade80' : '#fcd34d'};
+                                    ">
+                                        ${guest.status === 'paid' || guest.status === 'verified' ? 'PAID' : 'PAYMENT PENDING'}
                                     </p>
                                 </div>
                             </div>
-                            <div class="w-1/2 flex flex-col items-center justify-center">
-                                <img src="${qrCodeDataURL}" alt="QR Code" class="w-48 h-48 mb-2">
-                                <p class="text-sm text-center text-gray-600">Scan this QR code at the entrance</p>
+                            
+                            <!-- QR Code -->
+                            <div style="
+                                width: 40%;
+                                display: flex;
+                                flex-direction: column;
+                                align-items: center;
+                                justify-content: center;
+                            ">
+                                <div style="
+                                    background: white;
+                                    padding: 10px;
+                                    border-radius: 10px;
+                                    border: 3px solid #e83283;
+                                ">
+                                    <img src="${qrCodeDataURL}" alt="QR Code" style="width: 180px; height: 180px;">
+                                </div>
+                                <p style="
+                                    text-align: center;
+                                    font-size: 14px;
+                                    margin-top: 10px;
+                                    color: #34dbdb;
+                                ">Scan this QR code at the entrance</p>
                             </div>
                         </div>
                         
-                        <div class="w-full pt-4 border-t border-gray-300 text-center">
-                            <p class="text-sm text-gray-600">Date: ${new Date().toLocaleDateString()}</p>
-                            <p class="text-sm text-gray-600 mt-1">Venue: Kochin Club, Marine Drive</p>
+                        <!-- Footer -->
+                        <div style="
+                            margin-top: 20px;
+                            padding-top: 15px;
+                            border-top: 2px solid #e83283;
+                            text-align: center;
+                        ">
+                            <p style="font-size: 16px; margin: 5px 0; color: #f7d046;">Date: 3rd May, 2025</p>
+                            <p style="font-size: 16px; margin: 5px 0; color: #f7d046;">Venue: Casino Hotel, Wellington Island, Kochi</p>
+                        </div>
+                        
+                        <!-- Decorative icons -->
+                        <div style="
+                            display: flex;
+                            justify-content: space-between;
+                            margin-top: 15px;
+                            color: #e83283;
+                            font-size: 20px;
+                        ">
+                            <span style="transform: rotate(15deg);">🍸</span>
+                            <span style="transform: rotate(-15deg);">🍹</span>
+                            <span style="transform: rotate(15deg);">🍸</span>
+                            <span style="transform: rotate(-15deg);">🍹</span>
+                            <span style="transform: rotate(15deg);">🍸</span>
                         </div>
                     </div>
                 `;
@@ -849,13 +976,21 @@ function setupEventListeners() {
                 // Remove the temporary div
                 document.body.removeChild(tempDiv);
                 
+                // Create a download link for the guest pass
+                const downloadLink = document.createElement('a');
+                downloadLink.href = imageDataURL;
+                downloadLink.download = `kochin-hangover-pass-${guest.guest_name.replace(/\s+/g, '-').toLowerCase()}.png`;
+                
+                // Trigger the download
+                downloadLink.click();
+                
                 // Create WhatsApp share message
                 const message = `*KOCHIN HANGOVER - GUEST PASS*\n\n` +
                     `*Name:* ${guest.guest_name}\n` +
                     `*Club:* ${guest.club_name || 'N/A'}\n` +
                     `*Mobile:* ${guest.mobile_number}\n` +
                     `*Entry Type:* ${guest.entry_type.toUpperCase()}\n\n` +
-                    `Please show this pass at the entrance. Your QR code is attached.`;
+                    `Please show this pass at the entrance.`;
                 
                 // Create a blob from the image data URL
                 const blob = await (await fetch(imageDataURL)).blob();
@@ -973,22 +1108,9 @@ async function downloadGuestsPDF() {
         const darkColor = '#2a0e3a';
         const accentColor = '#f7d046';
         
-        // Add header with logo and title
+        // Add header
         doc.setFillColor(darkColor);
         doc.rect(0, 0, 210, 40, 'F');
-        
-        // Add curved bottom edge to header
-        doc.setFillColor(255, 255, 255);
-        doc.roundedRect(0, 35, 210, 10, 5, 5, 'F');
-        
-        // Add gradient effect
-        for (let i = 0; i < 20; i++) {
-            const alpha = 0.1 - (i * 0.005);
-            doc.setFillColor(232, 50, 131, alpha);
-            doc.circle(30, 20, 40 - i, 'F');
-            doc.setFillColor(52, 219, 219, alpha);
-            doc.circle(180, 20, 40 - i, 'F');
-        }
         
         // Add title
         doc.setTextColor(255, 255, 255);
@@ -999,7 +1121,6 @@ async function downloadGuestsPDF() {
         doc.text('Guest List', 105, 30, { align: 'center' });
         
         // Add date
-        doc.setTextColor(255, 255, 255);
         doc.setFontSize(10);
         const currentDate = new Date().toLocaleString('en-US', {
             year: 'numeric',
@@ -1014,7 +1135,7 @@ async function downloadGuestsPDF() {
         
         // Table header
         const startY = 50;
-        const colWidths = [10, 50, 30, 30, 35, 35];
+        const colWidths = [10, 50, 30, 30, 40, 40];
         const headers = ['#', 'Guest Name', 'Club', 'Entry Type', 'Amount', 'Status'];
         
         // Draw table header
@@ -1088,13 +1209,12 @@ async function downloadGuestsPDF() {
             doc.text(entryTypeDisplay, xPos + 2, yPos + 7);
             xPos += colWidths[3];
             
-            // Amount
-            // Format the amount to be more readable
+            // Amount - Simplified to avoid overlap
             let amountText = '';
             if (guest.paid_amount === guest.total_amount) {
                 amountText = `₹${guest.total_amount}`;
             } else {
-                amountText = `₹${guest.paid_amount} / ₹${guest.total_amount}`;
+                amountText = `₹${guest.paid_amount}`;
             }
             doc.text(amountText, xPos + 2, yPos + 7);
             xPos += colWidths[4];
@@ -1110,7 +1230,7 @@ async function downloadGuestsPDF() {
                 statusText = 'PAID';
                 statusColor = [0, 100, 200]; // Blue
             } else if (guest.status === 'partially_paid' || (guest.paid_amount > 0 && guest.paid_amount < guest.total_amount)) {
-                statusText = 'PARTIAL PAYMENT';
+                statusText = 'PARTIAL';
                 statusColor = [232, 50, 131]; // Primary color
             } else {
                 statusText = 'PENDING';
@@ -1143,14 +1263,6 @@ async function downloadGuestsPDF() {
             // Kochin Hangover text
             doc.setFontSize(8);
             doc.text('Kochin Hangover - Entry Management System', 10, 293);
-            
-            // Add decorative elements
-            doc.setFillColor(primaryColor);
-            doc.circle(200, 293, 3, 'F');
-            doc.setFillColor(secondaryColor);
-            doc.circle(195, 293, 2, 'F');
-            doc.setFillColor(accentColor);
-            doc.circle(190, 293, 1.5, 'F');
         }
         
         // Save the PDF
@@ -1541,24 +1653,21 @@ async function downloadStatsCSV() {
                 clubStats[clubName] = {
                     totalGuests: 0,
                     totalAmount: 0,
-                    paidAmount: 0,
-                    pendingAmount: 0
+                    paidAmount: 0
                 };
             }
             clubStats[clubName].totalGuests++;
             clubStats[clubName].totalAmount += guest.total_amount;
             clubStats[clubName].paidAmount += guest.paid_amount;
-            clubStats[clubName].pendingAmount += (guest.total_amount - guest.paid_amount);
         });
         
         // Convert to CSV
-        const headers = ['Club Name', 'Total Guests', 'Total Amount (₹)', 'Paid Amount (₹)', 'Pending Amount (₹)'];
+        const headers = ['Club Name', 'Total Guests', 'Total Amount (₹)', 'Paid Amount (₹)'];
         const csvData = Object.entries(clubStats).map(([club, stats]) => [
             club,
             stats.totalGuests,
             stats.totalAmount,
-            stats.paidAmount,
-            stats.pendingAmount
+            stats.paidAmount
         ]);
         
         // Add summary row
@@ -1566,8 +1675,7 @@ async function downloadStatsCSV() {
             'TOTAL',
             guests.length,
             guests.reduce((sum, guest) => sum + guest.total_amount, 0),
-            guests.reduce((sum, guest) => sum + guest.paid_amount, 0),
-            guests.reduce((sum, guest) => sum + (guest.total_amount - guest.paid_amount), 0)
+            guests.reduce((sum, guest) => sum + guest.paid_amount, 0)
         ]);
         
         // Use PapaParse to generate CSV
