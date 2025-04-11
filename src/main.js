@@ -1470,7 +1470,7 @@ async function downloadGuestsPDF() {
         const darkColor = '#2a0e3a';
         const accentColor = '#f7d046';
         
-        // Add header
+        // Add header with logo and title
         doc.setFillColor(darkColor);
         doc.rect(0, 0, 210, 40, 'F');
         
@@ -1481,33 +1481,61 @@ async function downloadGuestsPDF() {
         doc.circle(210, 40, 30, 'F');
         doc.setGlobalAlpha(1);
         
-        // Try to use the PWA icon as the logo
+        // Try to use the base64 encoded logo
         try {
-            const logoImg = new Image();
-            logoImg.src = '/icons/icon-192x192.png';
-            
-            logoImg.onload = function() {
-                // Once the image is loaded, add it to the PDF
-                const canvas = document.createElement('canvas');
-                canvas.width = logoImg.width;
-                canvas.height = logoImg.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(logoImg, 0, 0, logoImg.width, logoImg.height);
-                const logoDataUrl = canvas.toDataURL('image/png');
-                
-                // Add the logo to the PDF
-                doc.addImage(logoDataUrl, 'PNG', 10, 5, 30, 30);
-                
-                // Continue with the rest of the PDF generation
-                finalizePDF();
-            };
-            
-            logoImg.onerror = function() {
-                console.error('Error loading logo image, continuing without logo');
-                finalizePDF();
-            };
+            // Import the base64 logo from the assets
+            import('./assets/logo-base64.js')
+                .then(module => {
+                    const logoBase64 = module.default;
+                    // Add the logo to the PDF
+                    doc.addImage(logoBase64, 'PNG', 10, 5, 30, 30);
+                    
+                    // Continue with the rest of the PDF generation
+                    finalizePDF();
+                })
+                .catch(error => {
+                    console.error('Error loading base64 logo:', error);
+                    // Fallback to direct image loading if import fails
+                    try {
+                        const logoImg = new Image();
+                        logoImg.crossOrigin = "Anonymous";
+                        logoImg.src = 'icons/icon-192x192.png';
+                        
+                        logoImg.onload = function() {
+                            // Once the image is loaded, add it to the PDF
+                            const canvas = document.createElement('canvas');
+                            canvas.width = logoImg.width;
+                            canvas.height = logoImg.height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(logoImg, 0, 0, logoImg.width, logoImg.height);
+                            const logoDataUrl = canvas.toDataURL('image/png');
+                            
+                            // Add the logo to the PDF
+                            doc.addImage(logoDataUrl, 'PNG', 10, 5, 30, 30);
+                            
+                            // Continue with the rest of the PDF generation
+                            finalizePDF();
+                        };
+                        
+                        logoImg.onerror = function(e) {
+                            console.error('Error loading logo image, continuing without logo', e);
+                            finalizePDF();
+                        };
+                        
+                        // Set a timeout in case the image loading hangs
+                        setTimeout(() => {
+                            if (!logoImg.complete) {
+                                console.error('Logo image loading timed out, continuing without logo');
+                                finalizePDF();
+                            }
+                        }, 3000);
+                    } catch (e) {
+                        console.error('Error in fallback logo loading:', e);
+                        finalizePDF();
+                    }
+                });
         } catch (e) {
-            console.error('Error setting up logo image:', e);
+            console.error('Error in main logo loading block:', e);
             finalizePDF();
         }
         
@@ -1755,33 +1783,61 @@ async function downloadStatsPDF() {
         doc.circle(210, 40, 30, 'F');
         doc.setGlobalAlpha(1);
         
-        // Try to use the PWA icon as the logo
+        // Try to use the base64 encoded logo
         try {
-            const logoImg = new Image();
-            logoImg.src = '/icons/icon-192x192.png';
-            
-            logoImg.onload = function() {
-                // Once the image is loaded, add it to the PDF
-                const canvas = document.createElement('canvas');
-                canvas.width = logoImg.width;
-                canvas.height = logoImg.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(logoImg, 0, 0, logoImg.width, logoImg.height);
-                const logoDataUrl = canvas.toDataURL('image/png');
-                
-                // Add the logo to the PDF
-                doc.addImage(logoDataUrl, 'PNG', 10, 5, 30, 30);
-                
-                // Continue with the rest of the PDF generation
-                finalizePDF();
-            };
-            
-            logoImg.onerror = function() {
-                console.error('Error loading logo image, continuing without logo');
-                finalizePDF();
-            };
+            // Import the base64 logo from the assets
+            import('./assets/logo-base64.js')
+                .then(module => {
+                    const logoBase64 = module.default;
+                    // Add the logo to the PDF
+                    doc.addImage(logoBase64, 'PNG', 10, 5, 30, 30);
+                    
+                    // Continue with the rest of the PDF generation
+                    finalizePDF();
+                })
+                .catch(error => {
+                    console.error('Error loading base64 logo:', error);
+                    // Fallback to direct image loading if import fails
+                    try {
+                        const logoImg = new Image();
+                        logoImg.crossOrigin = "Anonymous";
+                        logoImg.src = 'icons/icon-192x192.png';
+                        
+                        logoImg.onload = function() {
+                            // Once the image is loaded, add it to the PDF
+                            const canvas = document.createElement('canvas');
+                            canvas.width = logoImg.width;
+                            canvas.height = logoImg.height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(logoImg, 0, 0, logoImg.width, logoImg.height);
+                            const logoDataUrl = canvas.toDataURL('image/png');
+                            
+                            // Add the logo to the PDF
+                            doc.addImage(logoDataUrl, 'PNG', 10, 5, 30, 30);
+                            
+                            // Continue with the rest of the PDF generation
+                            finalizePDF();
+                        };
+                        
+                        logoImg.onerror = function(e) {
+                            console.error('Error loading logo image, continuing without logo', e);
+                            finalizePDF();
+                        };
+                        
+                        // Set a timeout in case the image loading hangs
+                        setTimeout(() => {
+                            if (!logoImg.complete) {
+                                console.error('Logo image loading timed out, continuing without logo');
+                                finalizePDF();
+                            }
+                        }, 3000);
+                    } catch (e) {
+                        console.error('Error in fallback logo loading:', e);
+                        finalizePDF();
+                    }
+                });
         } catch (e) {
-            console.error('Error setting up logo image:', e);
+            console.error('Error in main logo loading block:', e);
             finalizePDF();
         }
         
