@@ -968,13 +968,9 @@ function setupEventListeners() {
                 // Remove the temporary div
                 document.body.removeChild(tempDiv);
                 
-                // Create a download link for the guest pass
-                const downloadLink = document.createElement('a');
-                downloadLink.href = imageDataURL;
-                downloadLink.download = `kochin-hangover-pass-${guest.guest_name.replace(/\s+/g, '-').toLowerCase()}.png`;
-                
-                // Trigger the download
-                downloadLink.click();
+                // Store the image data URL for later use
+                const guestPassImageUrl = imageDataURL;
+                const guestPassFileName = `kochin-hangover-pass-${guest.guest_name.replace(/\s+/g, '-').toLowerCase()}.png`;
                 
                 // Create WhatsApp share message
                 const message = `*KOCHIN HANGOVER - GUEST PASS*\n\n` +
@@ -1000,7 +996,7 @@ function setupEventListeners() {
                 modal.innerHTML = `
                     <div class="kochin-container p-6 max-w-md mx-auto">
                         <h3 class="text-xl font-bold mb-4 kochin-header">Share Guest Pass</h3>
-                        <p class="mb-4">The guest pass image has been downloaded to your device.</p>
+                        <p class="mb-4">The guest pass image will be downloaded when you continue.</p>
                         <p class="mb-4">After clicking "Continue to WhatsApp", please:</p>
                         <ol class="list-decimal pl-6 mb-6">
                             <li class="mb-2">Send the text message first</li>
@@ -1021,12 +1017,29 @@ function setupEventListeners() {
                 
                 document.body.appendChild(modal);
                 
+                // Flag to track if download has been triggered
+                let downloadTriggered = false;
+                
+                // Function to trigger download only once
+                const triggerDownload = () => {
+                    if (!downloadTriggered) {
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = guestPassImageUrl;
+                        downloadLink.download = guestPassFileName;
+                        downloadLink.click();
+                        downloadTriggered = true;
+                    }
+                };
+                
                 // Add event listeners directly with onclick attributes
                 document.getElementById('continueToWhatsAppBtn').onclick = function() {
                     // Remove the modal
                     if (modal && modal.parentNode) {
                         modal.parentNode.removeChild(modal);
                     }
+                    
+                    // Trigger the download when continuing to WhatsApp
+                    triggerDownload();
                     
                     // Open WhatsApp chat directly with the guest
                     // Remove the + sign if present for the WhatsApp API
@@ -1042,6 +1055,9 @@ function setupEventListeners() {
                     if (modal && modal.parentNode) {
                         modal.parentNode.removeChild(modal);
                     }
+                    
+                    // Trigger the download when closing the modal
+                    triggerDownload();
                 };
                 
             } catch (error) {
