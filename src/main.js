@@ -119,7 +119,7 @@ async function setupNavigation() {
     }
     
     // Reset all navigation buttons and tabs visibility first
-    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('hidden'));
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.add('hidden'));
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
     
     // Admin: Full Access to all features
@@ -134,13 +134,9 @@ async function setupNavigation() {
         showTab('registration');
     }
     
-    // Staff: Access only to Registered Guests and Stats
+    // Staff: Access ONLY to Registered Guests and Stats
     else if (isStaff) {
-        // Hide registration and verification buttons
-        document.getElementById('newRegistrationBtn')?.classList.add('hidden');
-        document.getElementById('entryVerificationBtn')?.classList.add('hidden');
-        
-        // Show guests and stats buttons
+        // Show only guests and stats buttons
         document.getElementById('guestListBtn')?.classList.remove('hidden');
         document.getElementById('statsBtn')?.classList.remove('hidden');
         
@@ -148,15 +144,11 @@ async function setupNavigation() {
         showTab('guests');
     }
     
-    // Doorman: Access only to Verification
+    // Doorman: Access to Verification and Registered Guest List
     else if (isDoorman) {
-        // Hide all buttons except verification
-        document.getElementById('newRegistrationBtn')?.classList.add('hidden');
-        document.getElementById('guestListBtn')?.classList.add('hidden');
-        document.getElementById('statsBtn')?.classList.add('hidden');
-        
-        // Show only verification button
+        // Show only verification and guest list buttons
         document.getElementById('entryVerificationBtn')?.classList.remove('hidden');
+        document.getElementById('guestListBtn')?.classList.remove('hidden');
         
         // Auto-navigate to verification tab for doorman users
         showTab('verification');
@@ -990,21 +982,54 @@ function setupEventListeners() {
                     `*Club:* ${guest.club_name || 'N/A'}\n` +
                     `*Mobile:* ${guest.mobile_number}\n` +
                     `*Entry Type:* ${guest.entry_type.toUpperCase()}\n\n` +
-                    `Please show this pass at the entrance.`;
+                    `Please show this pass at the entrance.\n\n` +
+                    `Note: Your guest pass image has been downloaded to your device. Please send it as an attachment after this message.`;
                 
-                // Create a blob from the image data URL
-                const blob = await (await fetch(imageDataURL)).blob();
+                // Create a modal to guide the user
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75';
+                modal.innerHTML = `
+                    <div class="kochin-container p-6 max-w-md mx-auto">
+                        <h3 class="text-xl font-bold mb-4 kochin-header">Share Guest Pass</h3>
+                        <p class="mb-4">The guest pass image has been downloaded to your device.</p>
+                        <p class="mb-4">After clicking "Continue to WhatsApp", please:</p>
+                        <ol class="list-decimal pl-6 mb-6">
+                            <li class="mb-2">Send the text message first</li>
+                            <li class="mb-2">Tap the attachment icon in WhatsApp</li>
+                            <li class="mb-2">Select "Gallery" or "Documents"</li>
+                            <li class="mb-2">Find and select the downloaded guest pass image</li>
+                        </ol>
+                        <div class="flex justify-between">
+                            <button id="continueToWhatsApp" class="kochin-button bg-green-600">
+                                <i class="fab fa-whatsapp mr-2"></i> Continue to WhatsApp
+                            </button>
+                            <button id="closeShareModal" class="kochin-button bg-gray-600">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                `;
                 
-                // Create a File object from the blob
-                const file = new File([blob], 'guest-pass.png', { type: 'image/png' });
+                document.body.appendChild(modal);
                 
-                // Open WhatsApp chat directly with the guest
-                // Remove the + sign if present for the WhatsApp API
-                const whatsappNumber = mobileNumber.replace('+', '');
-                const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+                // Add event listeners to the modal buttons
+                document.getElementById('continueToWhatsApp').addEventListener('click', () => {
+                    // Remove the modal
+                    document.body.removeChild(modal);
+                    
+                    // Open WhatsApp chat directly with the guest
+                    // Remove the + sign if present for the WhatsApp API
+                    const whatsappNumber = mobileNumber.replace('+', '');
+                    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+                    
+                    // Open WhatsApp in a new tab
+                    window.open(whatsappUrl, '_blank');
+                });
                 
-                // Open WhatsApp in a new tab
-                window.open(whatsappUrl, '_blank');
+                document.getElementById('closeShareModal').addEventListener('click', () => {
+                    // Remove the modal
+                    document.body.removeChild(modal);
+                });
                 
             } catch (error) {
                 console.error('Error sharing guest pass:', error);
@@ -1332,28 +1357,23 @@ async function downloadStatsPDF() {
         const stats = {
             totalRegistrations: guests.length,
             totalAmount: guests.reduce((sum, guest) => sum + guest.total_amount, 0),
-            paidAmount: guests.reduce((sum, guest) => sum + guest.paid_amount, 0),
-            pendingAmount: guests.reduce((sum, guest) => sum + (guest.total_amount - guest.paid_amount), 0),
-            verifiedCount: guests.filter(guest => guest.status === 'verified').length,
-            paidCount: guests.filter(guest => guest.status === 'paid').length,
-            partiallyPaidCount: guests.filter(guest => guest.status === 'partially_paid').length,
-            pendingCount: guests.filter(guest => guest.status === 'pending').length
+            paidAmount: guests.reduce((sum, guest) => sum + guest.paid_amount, 0)
         };
+        
+        document.getElementById('totalRegistrations').textContent = stats.totalRegistrations;
+        document.getElementById('totalAmount').textContent = `₹${stats.totalAmount}`;
         
         // Calculate club-wise stats
         const clubStats = {};
         guests.forEach(guest => {
-            const clubName = guest.club_name || 'No Club';
-            if (!clubStats[clubName]) {
-                clubStats[clubName] = {
+            if (!clubStats[guest.club_name]) {
+                clubStats[guest.club_name] = {
                     totalGuests: 0,
-                    totalAmount: 0,
-                    paidAmount: 0
+                    totalAmount: 0
                 };
             }
-            clubStats[clubName].totalGuests++;
-            clubStats[clubName].totalAmount += guest.total_amount;
-            clubStats[clubName].paidAmount += guest.paid_amount;
+            clubStats[guest.club_name].totalGuests++;
+            clubStats[guest.club_name].totalAmount += guest.total_amount;
         });
         
         // Sort clubs by total guests
@@ -1446,7 +1466,7 @@ async function downloadStatsPDF() {
         
         doc.setFontSize(16);
         doc.text(`₹${stats.paidAmount.toLocaleString()}`, margin + cardWidth/2, yPos + 20, { align: 'center' });
-        doc.text(`₹${stats.pendingAmount.toLocaleString()}`, margin + cardWidth + margin + cardWidth/2, yPos + 20, { align: 'center' });
+        doc.text(`₹${stats.totalAmount - stats.paidAmount}`, margin + cardWidth + margin + cardWidth/2, yPos + 20, { align: 'center' });
         
         // Status breakdown
         yPos += cardHeight + margin + 10;
@@ -1462,33 +1482,38 @@ async function downloadStatsPDF() {
         const totalCount = stats.totalRegistrations;
         
         if (totalCount > 0) {
-            const verifiedWidth = (stats.verifiedCount / totalCount) * chartWidth;
-            const paidWidth = (stats.paidCount / totalCount) * chartWidth;
-            const partialWidth = (stats.partiallyPaidCount / totalCount) * chartWidth;
-            const pendingWidth = (stats.pendingCount / totalCount) * chartWidth;
+            const verifiedCount = guests.filter(guest => guest.status === 'verified').length;
+            const paidCount = guests.filter(guest => guest.status === 'paid').length;
+            const partiallyPaidCount = guests.filter(guest => guest.status === 'partially_paid').length;
+            const pendingCount = totalCount - verifiedCount - paidCount - partiallyPaidCount;
+            
+            const verifiedWidth = (verifiedCount / totalCount) * chartWidth;
+            const paidWidth = (paidCount / totalCount) * chartWidth;
+            const partialWidth = (partiallyPaidCount / totalCount) * chartWidth;
+            const pendingWidth = (pendingCount / totalCount) * chartWidth;
             
             // Draw bars
             let xPos = margin;
             
-            if (stats.verifiedCount > 0) {
+            if (verifiedCount > 0) {
                 doc.setFillColor(0, 150, 0);
                 doc.rect(xPos, yPos, verifiedWidth, chartHeight, 'F');
                 xPos += verifiedWidth;
             }
             
-            if (stats.paidCount > 0) {
+            if (paidCount > 0) {
                 doc.setFillColor(0, 100, 200);
                 doc.rect(xPos, yPos, paidWidth, chartHeight, 'F');
                 xPos += paidWidth;
             }
             
-            if (stats.partiallyPaidCount > 0) {
+            if (partiallyPaidCount > 0) {
                 doc.setFillColor(200, 150, 0);
                 doc.rect(xPos, yPos, partialWidth, chartHeight, 'F');
                 xPos += partialWidth;
             }
             
-            if (stats.pendingCount > 0) {
+            if (pendingCount > 0) {
                 doc.setFillColor(200, 0, 0);
                 doc.rect(xPos, yPos, pendingWidth, chartHeight, 'F');
             }
@@ -1498,31 +1523,31 @@ async function downloadStatsPDF() {
             doc.setFontSize(10);
             
             let legendX = margin;
-            if (stats.verifiedCount > 0) {
+            if (verifiedCount > 0) {
                 doc.setFillColor(0, 150, 0);
                 doc.rect(legendX, yPos, 5, 5, 'F');
-                doc.text(`Verified (${stats.verifiedCount})`, legendX + 8, yPos + 4);
+                doc.text(`Verified (${verifiedCount})`, legendX + 8, yPos + 4);
                 legendX += 50;
             }
             
-            if (stats.paidCount > 0) {
+            if (paidCount > 0) {
                 doc.setFillColor(0, 100, 200);
                 doc.rect(legendX, yPos, 5, 5, 'F');
-                doc.text(`Paid (${stats.paidCount})`, legendX + 8, yPos + 4);
+                doc.text(`Paid (${paidCount})`, legendX + 8, yPos + 4);
                 legendX += 50;
             }
             
-            if (stats.partiallyPaidCount > 0) {
+            if (partiallyPaidCount > 0) {
                 doc.setFillColor(200, 150, 0);
                 doc.rect(legendX, yPos, 5, 5, 'F');
-                doc.text(`Partial (${stats.partiallyPaidCount})`, legendX + 8, yPos + 4);
+                doc.text(`Partial (${partiallyPaidCount})`, legendX + 8, yPos + 4);
                 legendX += 50;
             }
             
-            if (stats.pendingCount > 0) {
+            if (pendingCount > 0) {
                 doc.setFillColor(200, 0, 0);
                 doc.rect(legendX, yPos, 5, 5, 'F');
-                doc.text(`Pending (${stats.pendingCount})`, legendX + 8, yPos + 4);
+                doc.text(`Pending (${pendingCount})`, legendX + 8, yPos + 4);
             }
         }
         
@@ -1603,7 +1628,8 @@ async function downloadStatsPDF() {
             xPos += colWidths[2];
             
             // Paid amount
-            doc.text(`₹${club[1].paidAmount.toLocaleString()}`, xPos + 2, yPos + 7);
+            const paidAmount = guests.filter(guest => guest.club_name === club[0] && (guest.status === 'paid' || guest.status === 'verified')).reduce((sum, guest) => sum + guest.paid_amount, 0);
+            doc.text(`₹${paidAmount.toLocaleString()}`, xPos + 2, yPos + 7);
             
             yPos += 10;
         });
