@@ -3,13 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2a0e3a">
+    <meta name="description" content="Kochin Hangover Entry Management System">
     <title>Kochin Hangover - Entry Management</title>
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+    
+    <!-- External Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    
     <style>
         :root {
             --primary: #e83283;
@@ -39,6 +49,115 @@
             box-shadow: 0 0 20px rgba(52, 219, 219, 0.5);
         }
         
+        .kochin-header {
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+            font-weight: bold;
+        }
+        
+        .kochin-tab {
+            background-color: rgba(42, 14, 58, 0.7);
+            border-top: 2px solid var(--primary);
+            color: var(--light);
+            transition: all 0.3s ease;
+        }
+        
+        .kochin-tab.active {
+            background-color: rgba(232, 50, 131, 0.2);
+            border-top: 2px solid var(--secondary);
+            color: var(--secondary);
+            font-weight: bold;
+        }
+        
+        .kochin-button {
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .kochin-button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .kochin-input {
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 2px solid var(--primary);
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            color: var(--dark);
+            transition: all 0.3s ease;
+        }
+        
+        .kochin-input:focus {
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(52, 219, 219, 0.3);
+            outline: none;
+        }
+        
+        .kochin-card {
+            background-color: rgba(42, 14, 58, 0.7);
+            border-radius: 1rem;
+            border: 2px solid var(--primary);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .kochin-card:hover {
+            box-shadow: 0 0 15px rgba(52, 219, 219, 0.3);
+            border-color: var(--secondary);
+        }
+        
+        .guest-row {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .guest-row:hover {
+            background-color: rgba(232, 50, 131, 0.2);
+        }
+        
+        .guest-row.selected {
+            background-color: rgba(232, 50, 131, 0.3);
+            border-left: 4px solid var(--secondary);
+        }
+        
+        #qrcode {
+            background-color: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background-color: var(--dark);
+            border: 2px solid var(--primary);
+            border-radius: 1rem;
+            box-shadow: 0 0 20px rgba(52, 219, 219, 0.5);
+            padding: 2rem;
+            min-width: 300px;
+            max-width: 500px;
+        }
+
         .logo-text {
             font-size: 2.5rem;
             font-weight: 800;
@@ -54,7 +173,152 @@
             transform: rotate(-2deg);
         }
 
-        /* Add other custom styles as needed */
+        .bottle-icon {
+            display: inline-block;
+            transform: rotate(15deg);
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin: 0 0.5rem;
+        }
+
+        .glass-icon {
+            display: inline-block;
+            font-size: 1.5rem;
+            color: var(--secondary);
+            margin: 0 0.5rem;
+        }
+
+        .pin-input {
+            width: 40px;
+            height: 40px;
+            margin: 0 5px;
+            text-align: center;
+            font-size: 1.5rem;
+            border: 2px solid var(--primary);
+            border-radius: 0.5rem;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(42, 14, 58, 0.5);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary);
+        }
+
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+            
+            .nav-buttons {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 0.5rem;
+                width: 100%;
+            }
+            
+            .nav-button {
+                width: 100%;
+                min-height: 80px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                padding: 1rem;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 0.5rem;
+                backdrop-filter: blur(10px);
+            }
+            
+            .form-container {
+                padding: 1rem;
+            }
+            
+            .form-group {
+                margin-bottom: 1rem;
+            }
+            
+            .form-label {
+                font-size: 0.9rem;
+                margin-bottom: 0.25rem;
+            }
+            
+            .form-input {
+                width: 100%;
+                padding: 0.75rem;
+                font-size: 1rem;
+                border-radius: 0.5rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .guest-table {
+                font-size: 0.9rem;
+            }
+            
+            .guest-table th,
+            .guest-table td {
+                padding: 0.5rem;
+            }
+            
+            #qr-reader {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            
+            #qr-reader__scan_region {
+                min-height: 300px !important;
+            }
+            
+            #qr-reader__dashboard {
+                padding: 0.5rem !important;
+            }
+        }
+        
+        /* QR Scanner Styles */
+        #qr-reader {
+            border: none !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-radius: 1rem !important;
+            overflow: hidden !important;
+        }
+        
+        #qr-reader__status_span {
+            background: var(--primary) !important;
+            color: white !important;
+        }
+        
+        #qr-reader__camera_selection {
+            background: var(--dark) !important;
+            color: white !important;
+            border: 1px solid var(--primary) !important;
+            border-radius: 0.5rem !important;
+            padding: 0.5rem !important;
+        }
+        
+        #qr-reader__dashboard button {
+            background: var(--primary) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 0.5rem !important;
+            padding: 0.5rem 1rem !important;
+            margin: 0.5rem !important;
+        }
     </style>
 </head>
 <body class="kochin-bg">
@@ -63,9 +327,9 @@
         <div class="kochin-container p-8 max-w-md w-full">
             <div class="text-center mb-8">
                 <div class="mb-4">
-                    <i class="fas fa-wine-bottle text-2xl text-accent mr-2"></i>
+                    <i class="bottle-icon fas fa-wine-bottle"></i>
                     <span class="logo-text">Kochin Hangover</span>
-                    <i class="fas fa-glass-martini-alt text-2xl text-secondary ml-2"></i>
+                    <i class="glass-icon fas fa-glass-martini-alt"></i>
                 </div>
                 <h2 class="text-2xl font-bold text-white">Entry Management System</h2>
                 <p class="text-gray-300">May 3rd, 2025</p>
@@ -99,170 +363,389 @@
             <!-- Header -->
             <div class="flex justify-between items-center mb-6">
                 <div class="flex items-center">
-                    <i class="fas fa-wine-bottle text-2xl text-accent mr-2"></i>
+                    <i class="bottle-icon fas fa-wine-bottle"></i>
                     <span class="logo-text">Kochin Hangover</span>
-                    <i class="fas fa-glass-martini-alt text-2xl text-secondary ml-2"></i>
+                    <i class="glass-icon fas fa-glass-martini-alt"></i>
                 </div>
                 <div class="flex items-center space-x-4">
+                    <button id="usersBtn" class="kochin-button bg-purple-600">
+                        <i class="fas fa-users mr-2"></i> Users
+                    </button>
                     <button id="logoutBtn" class="kochin-button bg-red-600">
                         <i class="fas fa-sign-out-alt mr-2"></i> Logout
                     </button>
                 </div>
             </div>
 
-            <!-- Navigation Tabs -->
-            <div class="flex border-b border-gray-700 mb-6">
-                <button id="registrationTab" class="kochin-tab active px-4 py-2" data-tab="registration">
-                    <i class="fas fa-user-plus mr-2"></i> Registration
+            <!-- Navigation -->
+            <div class="flex space-x-4 mb-6">
+                <button id="newRegistrationBtn" class="kochin-button flex-1" data-tab="registration">
+                    <i class="fas fa-user-plus mr-2"></i> New Registration
                 </button>
-                <button id="verificationTab" class="kochin-tab px-4 py-2" data-tab="verification">
-                    <i class="fas fa-qrcode mr-2"></i> Verification
+                <button id="entryVerificationBtn" class="kochin-button flex-1" data-tab="verification">
+                    <i class="fas fa-qrcode mr-2"></i> Entry Verification
                 </button>
-                <button id="guestsTab" class="kochin-tab px-4 py-2" data-tab="guests">
-                    <i class="fas fa-list mr-2"></i> Guests
+                <button id="guestListBtn" class="kochin-button flex-1" data-tab="guests">
+                    <i class="fas fa-list mr-2"></i> Registered Guests
                 </button>
-                <button id="usersBtn" data-tab="users" class="kochin-tab px-4 py-2">
-                    <i class="fas fa-users mr-2"></i> Users
+                <button id="statsBtn" class="kochin-button flex-1" data-tab="stats">
+                    <i class="fas fa-chart-bar mr-2"></i> Stats
                 </button>
             </div>
 
             <!-- Content Sections -->
-            <div id="registrationContent" class="kochin-container p-6 mb-6">
-                <h2 class="text-xl font-bold mb-4">Guest Registration</h2>
-                <form id="registrationForm" class="space-y-4">
+            <div id="registration" class="tab-content kochin-container p-6 mb-6">
+                <h2 class="text-xl font-bold mb-4">New Registration</h2>
+                
+                <form id="registrationForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label for="guestName" class="block text-sm font-medium text-gray-300 mb-1">Full Name</label>
+                        <label for="guestName" class="block text-sm font-medium text-gray-300 mb-1">Name</label>
                         <input type="text" id="guestName" name="guestName" required class="kochin-input w-full">
                     </div>
                     
                     <div>
+                        <label for="clubName" class="block text-sm font-medium text-gray-300 mb-1">Club Name</label>
+                        <input type="text" id="clubName" name="clubName" value="Angels 153" class="kochin-input w-full">
+                    </div>
+                    
+                    <div>
                         <label for="mobileNumber" class="block text-sm font-medium text-gray-300 mb-1">Mobile Number</label>
-                        <input type="tel" id="mobileNumber" name="mobileNumber" required class="kochin-input w-full" pattern="[0-9]{10}">
+                        <input type="tel" id="mobileNumber" name="mobileNumber" required class="kochin-input w-full" pattern="[0-9]{10}" title="Please enter a valid 10-digit mobile number">
+                        <p class="text-xs text-gray-400 mt-1">10-digit mobile number (for QR code delivery and verification)</p>
                     </div>
                     
                     <div>
                         <label for="entryType" class="block text-sm font-medium text-gray-300 mb-1">Entry Type</label>
-                        <select id="entryType" name="entryType" required class="kochin-input w-full">
+                        <select id="entryType" name="entryType" required class="kochin-input w-full" onchange="updateAmount()">
                             <option value="stag">Stag (₹2750)</option>
                             <option value="couple">Couple (₹4750)</option>
                         </select>
                     </div>
                     
                     <div>
-                        <button type="submit" class="kochin-button w-full mt-4">
+                        <label for="paymentMode" class="block text-sm font-medium text-gray-300 mb-1">Payment Mode</label>
+                        <select id="paymentMode" name="paymentMode" required class="kochin-input w-full">
+                            <option value="full_cash">Full Payment - Cash</option>
+                            <option value="full_upi">Full Payment - UPI</option>
+                            <option value="full_card">Full Payment - Card</option>
+                            <option value="partial">Partial Payment</option>
+                        </select>
+                    </div>
+
+                    <div id="partialPaymentSection" class="hidden">
+                        <label for="paidAmount" class="block text-sm font-medium text-gray-300 mb-1">Paid Amount (₹)</label>
+                        <div class="flex items-center space-x-2">
+                            <input type="number" id="paidAmount" name="paidAmount" min="100" class="kochin-input w-full" placeholder="Enter amount paid now">
+                            <span class="text-sm text-gray-400" id="totalAmountDisplay"></span>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">Enter the amount paid now. Full amount will be collected at entry.</p>
+                    </div>
+
+                    <div class="col-span-2">
+                        <button type="submit" class="kochin-button w-full">
                             <i class="fas fa-user-plus mr-2"></i> Register Guest
                         </button>
                     </div>
                 </form>
             </div>
 
-            <div id="verificationContent" class="kochin-container p-6 mb-6 hidden">
-                <h2 class="text-xl font-bold mb-4">Guest Verification</h2>
-                <div id="qr-reader" class="w-full mb-4"></div>
-                <div id="qr-reader-results" class="bg-gray-800 p-4 rounded"></div>
-                <button id="startScan" class="kochin-button mt-4">
-                    <i class="fas fa-camera mr-2"></i> Start Scanner
-                </button>
-                <button id="stopScan" class="kochin-button bg-red-600 mt-4 hidden">
-                    <i class="fas fa-stop mr-2"></i> Stop Scanner
-                </button>
-            </div>
-
-            <div id="guestsContent" class="kochin-container p-6 mb-6 hidden">
-                <h2 class="text-xl font-bold mb-4">Registered Guests</h2>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full">
-                        <thead>
-                            <tr class="border-b border-gray-700">
-                                <th class="py-3 px-4 text-left">Name</th>
-                                <th class="py-3 px-4 text-left">Mobile</th>
-                                <th class="py-3 px-4 text-left">Entry Type</th>
-                                <th class="py-3 px-4 text-left">Status</th>
-                                <th class="py-3 px-4 text-left">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="guestList">
-                            <!-- Guest data will be loaded here -->
-                        </tbody>
-                    </table>
-                </div>
-                <div class="mt-4 flex justify-between">
-                    <button id="exportCSV" class="kochin-button bg-green-600">
-                        <i class="fas fa-file-csv mr-2"></i> Export CSV
-                    </button>
-                    <button id="exportPDF" class="kochin-button bg-red-600">
-                        <i class="fas fa-file-pdf mr-2"></i> Export PDF
-                    </button>
-                </div>
-            </div>
-
-            <div id="users" class="kochin-container p-6 mb-6 hidden">
-                <h2 class="text-xl font-bold mb-4">Users Management</h2>
+            <div id="verification" class="tab-content kochin-container p-6 mb-6 hidden">
+                <h2 class="text-xl font-bold mb-4">Entry Verification</h2>
                 
-                <!-- Add User Form -->
-                <div class="mb-8 bg-gray-700 p-4 rounded-lg">
-                    <h3 class="text-lg font-semibold mb-4">Add New User</h3>
-                    <form id="addUserForm" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label for="newUsername" class="block text-sm font-medium mb-1">Username</label>
-                                <input type="text" id="newUsername" class="kochin-input w-full" required>
-                            </div>
-                            <div>
-                                <label for="newPassword" class="block text-sm font-medium mb-1">Password</label>
-                                <input type="password" id="newPassword" class="kochin-input w-full" required>
-                            </div>
-                            <div>
-                                <label for="newRole" class="block text-sm font-medium mb-1">Role</label>
-                                <select id="newRole" class="kochin-input w-full" required>
-                                    <option value="admin">Admin</option>
-                                    <option value="staff">Staff</option>
-                                </select>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="text-center">
+                        <div id="qr-reader"></div>
+                        <div id="qr-reader-results" class="mt-4"></div>
+                    </div>
+                    <div id="verificationResult" class="hidden">
+                        <div class="bg-gray-800 p-4 rounded-lg">
+                            <h3 class="font-bold mb-2">Guest Details</h3>
+                            <p>Name: <span id="verificationGuestName"></span></p>
+                            <p>Entry Type: <span id="verificationEntryType"></span></p>
+                            <p>Mobile: <span id="verificationMobile"></span></p>
+                            <p>Status: <span id="verificationStatus"></span></p>
+                            <div class="flex space-x-4 mt-4">
+                                <button onclick="verifyGuest(true)" class="bg-green-600 text-white px-4 py-2 rounded">
+                                    <i class="fas fa-check mr-2"></i> Verify Entry
+                                </button>
+                                <button onclick="verifyGuest(false)" class="bg-red-600 text-white px-4 py-2 rounded">
+                                    <i class="fas fa-times mr-2"></i> Deny Entry
+                                </button>
                             </div>
                         </div>
-                        <div class="flex justify-end">
-                            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
-                                Add User
-                            </button>
-                        </div>
-                    </form>
-                </div>
-                
-                <!-- Users List -->
-                <div>
-                    <h3 class="text-lg font-semibold mb-4">Users List</h3>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full bg-gray-700 rounded-lg overflow-hidden">
-                            <thead class="bg-gray-600">
-                                <tr>
-                                    <th class="py-3 px-4 text-left">Username</th>
-                                    <th class="py-3 px-4 text-left">Role</th>
-                                    <th class="py-3 px-4 text-left">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="usersList">
-                                <!-- Users will be loaded here -->
-                            </tbody>
-                        </table>
                     </div>
                 </div>
             </div>
 
-            <!-- Data Status Indicator -->
-            <div id="dataStatus" class="text-center text-gray-400 mt-4"></div>
+            <div id="guests" class="tab-content kochin-container p-6 mb-6 hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Registered Guests</h2>
+                    <div class="flex space-x-2">
+                        <button id="downloadGuestsPDFBtn" class="kochin-button bg-red-600">
+                            <i class="fas fa-file-pdf mr-2"></i> Download PDF
+                        </button>
+                        <button id="downloadGuestsCSVBtn" class="kochin-button bg-green-600">
+                            <i class="fas fa-file-csv mr-2"></i> Download CSV
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full" id="guestsTable">
+                        <thead>
+                            <tr class="border-b border-gray-700">
+                                <th class="py-3 px-4 text-left">Name</th>
+                                <th class="py-3 px-4 text-left">Club</th>
+                                <th class="py-3 px-4 text-left">Entry Type</th>
+                                <th class="py-3 px-4 text-left">Payment</th>
+                                <th class="py-3 px-4 text-left">Status</th>
+                                <th class="py-3 px-4 text-left">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="guestListTableBody">
+                            <!-- Guest rows will be dynamically added here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="stats" class="tab-content kochin-container p-6 mb-6 hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Event Statistics</h2>
+                    <div class="flex space-x-2">
+                        <button id="downloadStatsPDFBtn" class="kochin-button bg-red-600">
+                            <i class="fas fa-file-pdf mr-2"></i> Download PDF
+                        </button>
+                        <button id="downloadStatsCSVBtn" class="kochin-button bg-green-600">
+                            <i class="fas fa-file-csv mr-2"></i> Download CSV
+                        </button>
+                    </div>
+                </div>
+                
+                <h3 class="font-bold text-lg mb-4">Total Registrations</h3>
+                <p class="text-3xl text-green-400" id="totalRegistrations">0</p>
+                
+                <h3 class="font-bold text-lg mb-4">Total Amount</h3>
+                <p class="text-3xl text-blue-400" id="totalAmount">₹0</p>
+                
+                <h3 class="font-bold text-lg mb-4">Registrations by Club</h3>
+                <div class="bg-gray-800 rounded-lg overflow-hidden">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="bg-gray-900">
+                                <th class="py-3 px-4 text-left">Club Name</th>
+                                <th class="py-3 px-4 text-left">Total Guests</th>
+                                <th class="py-3 px-4 text-left">Total Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clubStats">
+                            <!-- Club stats will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="users" class="tab-content kochin-container p-6 mb-6 hidden">
+                <h2 class="text-xl font-bold mb-4">Users Management</h2>
+                
+                <!-- Add User Form -->
+                <form id="addUserForm" class="mb-8">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Username</label>
+                            <input type="text" id="createUsername" class="kochin-input w-full" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Password</label>
+                            <input type="password" id="createPassword" class="kochin-input w-full" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Role</label>
+                            <select id="createRole" class="kochin-input w-full" required>
+                                <option value="admin">Admin</option>
+                                <option value="staff">Staff</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button type="submit" class="kochin-button">
+                            <i class="fas fa-plus mr-2"></i> Add User
+                        </button>
+                    </div>
+                    <div id="addUserError" class="mt-2 text-red-500 hidden"></div>
+                </form>
+                
+                <!-- Users List -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="border-b border-gray-700">
+                                <th class="py-3 px-4 text-left">Username</th>
+                                <th class="py-3 px-4 text-left">Role</th>
+                                <th class="py-3 px-4 text-left">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersList">
+                            <!-- User rows will be dynamically added here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- MPIN Verification Modal -->
+    <div id="mpinVerificationModal" class="modal flex items-center justify-center">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold kochin-header">Verify Transaction</h3>
+                <button onclick="closeMpinModal()" class="text-gray-300 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <p class="mb-4 text-center">Please enter your 4-digit MPIN to verify this transaction</p>
+            
+            <div class="flex justify-center mb-6">
+                <input type="password" class="pin-input" maxlength="1" data-index="0">
+                <input type="password" class="pin-input" maxlength="1" data-index="1">
+                <input type="password" class="pin-input" maxlength="1" data-index="2">
+                <input type="password" class="pin-input" maxlength="1" data-index="3">
+            </div>
+            
+            <div class="text-center">
+                <button id="verifyMpinBtn" class="kochin-button">Verify</button>
+            </div>
+            
+            <div id="mpinError" class="hidden text-red-500 text-center mt-4"></div>
+        </div>
+    </div>
+
+    <!-- Create MPIN Modal -->
+    <div id="createMpinModal" class="modal flex items-center justify-center">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold kochin-header">Create MPIN</h3>
+                <button onclick="closeCreateMpinModal()" class="text-gray-300 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <p class="mb-4 text-center">Please create a 4-digit MPIN for transaction verification</p>
+            
+            <div class="flex justify-center mb-6">
+                <input type="password" class="pin-input create-pin" maxlength="1" data-index="0">
+                <input type="password" class="pin-input create-pin" maxlength="1" data-index="1">
+                <input type="password" class="pin-input create-pin" maxlength="1" data-index="2">
+                <input type="password" class="pin-input create-pin" maxlength="1" data-index="3">
+            </div>
+            
+            <p class="mb-4 text-center">Confirm your MPIN</p>
+            
+            <div class="flex justify-center mb-6">
+                <input type="password" class="pin-input confirm-pin" maxlength="1" data-index="0">
+                <input type="password" class="pin-input confirm-pin" maxlength="1" data-index="1">
+                <input type="password" class="pin-input confirm-pin" maxlength="1" data-index="2">
+                <input type="password" class="pin-input confirm-pin" maxlength="1" data-index="3">
+            </div>
+            
+            <div class="text-center">
+                <button id="saveMpinBtn" class="kochin-button">Save MPIN</button>
+            </div>
+            
+            <div id="createMpinError" class="hidden text-red-500 text-center mt-4"></div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editUserModal" class="modal hidden">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold mb-4">Edit User</h3>
+            
+            <form id="editUserForm" class="space-y-4">
+                <div>
+                    <label for="editUsername" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+                    <input type="text" id="editUsername" name="editUsername" required class="kochin-input w-full">
+                </div>
+                
+                <div>
+                    <label for="editPassword" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                    <input type="password" id="editPassword" name="editPassword" required class="kochin-input w-full">
+                </div>
+
+                <div>
+                    <label for="editRole" class="block text-sm font-medium text-gray-300 mb-2">Role</label>
+                    <select id="editRole" name="editRole" class="kochin-input w-full" required>
+                        <option value="staff">Staff</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="kochin-button w-full">Update User</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Polyfills and dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/es-module-shims@1.7.3/dist/es-module-shims.js"></script>
     <script type="importmap">
     {
         "imports": {
-            "@supabase/supabase-js": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js",
-            "html5-qrcode": "https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/dist/html5-qrcode.min.js"
+            "@supabase/supabase-js": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"
         }
     }
     </script>
+    
+    <!-- PWA Installation Prompt -->
+    <div id="installPrompt" class="fixed bottom-0 left-0 right-0 bg-[#2a0e3a] border-t border-[#e83283] p-4 hidden">
+        <div class="flex justify-between items-center">
+            <p class="text-white">Install Kochin Hangover for a better experience</p>
+            <div class="flex space-x-2">
+                <button id="installCancelBtn" class="kochin-button bg-gray-600">Later</button>
+                <button id="installConfirmBtn" class="kochin-button">Install</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="main.js"></script>
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful');
+                }).catch(err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+
+        // Handle install prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const installPrompt = document.getElementById('installPrompt');
+            if (installPrompt) installPrompt.classList.remove('hidden');
+        });
+
+        document.getElementById('installConfirmBtn')?.addEventListener('click', () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted install prompt');
+                    } else {
+                        console.log('User dismissed install prompt');
+                    }
+                    deferredPrompt = null;
+                    document.getElementById('installPrompt').classList.add('hidden');
+                });
+            }
+        });
+
+        document.getElementById('installCancelBtn')?.addEventListener('click', () => {
+            document.getElementById('installPrompt').classList.add('hidden');
+        });
+    </script>
 </body>
 </html>

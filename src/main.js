@@ -7,75 +7,32 @@ const supabaseUrl = 'https://rcedawlruorpkzzrvkqn.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjZWRhd2xydW9ycGt6enJ2a3FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxOTU4MDQsImV4cCI6MjA1OTc3MTgwNH0.opF31e2g9ZGIJBAR6McDvBEXPtSOhrmW1c_QQh_u1yg';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Initialize app state
+let currentUser = null;
+let guests = [];
+let users = [];
+let qrScanner = null;
+
 // Constants for entry prices
 const ENTRY_PRICES = {
     stag: 2750,
     couple: 4750
 };
 
-// App state
-let currentUser = null;
-let guests = [];
-let qrScanner = null;
-
-// Initialize the application
-async function initializeApp() {
-    console.log('Initializing application...');
-    
-    // Check for existing session
-    const storedUser = sessionStorage.getItem('currentUser');
-    if (storedUser) {
-        currentUser = JSON.parse(storedUser);
-        console.log('Found stored user session:', currentUser);
-        showApp();
-        await loadGuests();
-        return;
-    }
-
-    // Check Supabase auth session
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) {
-        console.error('Session check error:', error);
-    }
-
-    if (session?.user) {
-        console.log('Valid session found:', session.user);
-        await handleLogin(session.user);
-        return;
-    }
-
-    showLoginScreen();
-}
-
-// DOM Elements
-const loginScreen = document.getElementById('loginScreen');
-const mainApp = document.getElementById('mainApp');
-const loginForm = document.getElementById('loginForm');
-const logoutBtn = document.getElementById('logoutBtn');
-const loginError = document.getElementById('loginError');
-const registrationForm = document.getElementById('registrationForm');
-const guestList = document.getElementById('guestList');
-const dataStatus = document.getElementById('dataStatus');
-
-// Tab elements
-const tabButtons = document.querySelectorAll('[data-tab]');
-const tabContents = document.querySelectorAll('[id$="Content"]');
-
-// QR Scanner elements
-const startScanBtn = document.getElementById('startScan');
-const stopScanBtn = document.getElementById('stopScan');
-const qrReaderResults = document.getElementById('qr-reader-results');
-
 // Show login screen
 function showLoginScreen() {
-    console.log('Showing login screen');
+    const loginScreen = document.getElementById('loginScreen');
+    const mainApp = document.getElementById('mainApp');
+    
     if (loginScreen) loginScreen.classList.remove('hidden');
     if (mainApp) mainApp.classList.add('hidden');
 }
 
-// Show main application
+// Show main app
 function showApp() {
-    console.log('Showing main application');
+    const loginScreen = document.getElementById('loginScreen');
+    const mainApp = document.getElementById('mainApp');
+    
     if (loginScreen) loginScreen.classList.add('hidden');
     if (mainApp) mainApp.classList.remove('hidden');
 }
@@ -83,867 +40,1269 @@ function showApp() {
 // Handle login
 async function handleLogin(user) {
     try {
-        console.log('Handling login for user:', user);
-        
         currentUser = user;
         sessionStorage.setItem('currentUser', JSON.stringify(user));
-        
         showApp();
-        await loadGuests();
-        
-        // Show initial tab
-        showTab('registration');
-        
+        await setupNavigation();
+        await showTab('registration');
     } catch (error) {
-        console.error('Login handling error:', error);
-        showLoginError(error.message || 'Login failed');
+        console.error("Login handling failed:", error);
+        showLoginScreen();
     }
 }
 
 // Handle logout
 async function handleLogout() {
     try {
-        console.log('Logging out user:', currentUser);
-        
-        // Sign out from Supabase
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
         
-        // Clear local session
         currentUser = null;
         sessionStorage.removeItem('currentUser');
-        
-        // Reset UI
         showLoginScreen();
-        resetQRScanner();
-        
     } catch (error) {
         console.error('Logout error:', error);
-        alert('Logout failed: ' + error.message);
     }
 }
 
-// Show login error
-function showLoginError(message) {
-    const loginError = document.getElementById('loginError');
-    if (loginError) {
-        loginError.textContent = message;
-        loginError.classList.remove('hidden');
-    }
-}
-
-// Load guests from Supabase
-async function loadGuests() {
-    try {
-        updateDataStatus('Loading guest data...');
+// Initialize app
+async function initializeApp() {
+    // Check for existing session
+    const session = JSON.parse(sessionStorage.getItem('currentUser'));
+    
+    if (session) {
+        // Verify session with Supabase
+        const { data: { user }, error } = await supabase.auth.getUser(session.access_token);
         
-        const { data, error } = await supabase
+        if (error) {
+            console.error("Session validation error:", error);
+            sessionStorage.removeItem('currentUser');
+            showLoginScreen();
+            return;
+        }
+        
+        if (user) {
+            await handleLogin(user);
+            return;
+        }
+    }
+    
+    showLoginScreen();
+}
+
+// Setup navigation based on user role
+async function setupNavigation() {
+    if (!currentUser) return;
+
+    const { data: userRole, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', currentUser.id)
+        .single();
+
+    if (error) {
+        console.error('Error fetching user role:', error);
+        return;
+    }
+
+    const isStaff = userRole?.role === 'staff';
+    const isAdmin = userRole?.role === 'admin';
+    const isDoorman = userRole?.role === 'doorman';
+
+    // Show/hide navigation buttons based on role
+    document.getElementById('usersBtn')?.classList.toggle('hidden', !isAdmin);
+    
+    // Restrict staff to only Registered Guests and Stats
+    if (isStaff) {
+        document.getElementById('newRegistrationBtn')?.classList.add('hidden');
+        document.getElementById('entryVerificationBtn')?.classList.add('hidden');
+        
+        // Auto-navigate to guests tab for staff users
+        showTab('guests');
+    }
+    
+    // Restrict doorman to only Entry Verification
+    if (isDoorman) {
+        document.getElementById('newRegistrationBtn')?.classList.add('hidden');
+        document.getElementById('guestListBtn')?.classList.add('hidden');
+        document.getElementById('statsBtn')?.classList.add('hidden');
+        
+        // Auto-navigate to verification tab for doorman users
+        showTab('verification');
+    }
+}
+
+// Show specific tab
+async function showTab(tabId) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+
+    // Show selected tab
+    document.getElementById(tabId)?.classList.remove('hidden');
+    document.querySelector(`[data-tab="${tabId}"]`)?.classList.add('active');
+
+    // Special handling for specific tabs
+    if (tabId === 'guests') {
+        await loadGuestList();
+    } else if (tabId === 'stats') {
+        await loadStats();
+    } else if (tabId === 'verification') {
+        initQRScanner();
+    }
+}
+
+// Load guest list
+async function loadGuestList() {
+    try {
+        const { data: guests, error } = await supabase
             .from('guests')
             .select('*')
             .order('created_at', { ascending: false });
         
         if (error) throw error;
         
-        // Map database column names to our expected property names
-        guests = (data || []).map(guest => ({
-            id: guest.id,
-            name: guest.guest_name,
-            mobile: guest.mobile_number,
-            entry_type: guest.entry_type,
-            verified: guest.status === 'verified',
-            created_at: guest.created_at,
-            club_name: guest.club_name,
-            payment_method: guest.payment_method,
-            amount: guest.amount,
-            paid_amount: guest.paid_amount
-        }));
+        const tbody = document.getElementById('guestListTableBody');
+        if (!tbody) return;
         
-        renderGuestList();
-        updateStatistics();
-        
-        if (guests.length === 0) {
-            updateDataStatus('No guest data found');
-        } else {
-            updateDataStatus(`${guests.length} guests loaded`);
-        }
-        
-    } catch (error) {
-        console.error('Error loading guests:', error);
-        updateDataStatus('Failed to load guests');
-    }
-}
-
-// Render guest list
-function renderGuestList() {
-    if (!guestList) return;
-    
-    guestList.innerHTML = guests.map(guest => `
-        <tr class="border-b border-gray-700">
-            <td class="py-3 px-4">${guest.name || 'N/A'}</td>
-            <td class="py-3 px-4">${guest.mobile || 'N/A'}</td>
-            <td class="py-3 px-4">${guest.entry_type === 'couple' ? 'Couple' : 'Stag'}</td>
-            <td class="py-3 px-4">
-                <span class="px-2 py-1 rounded-full text-xs ${
-                    guest.verified ? 'bg-green-500' : 'bg-yellow-500'
-                }">
-                    ${guest.verified ? 'Verified' : 'Pending'}
-                </span>
-            </td>
-            <td class="py-3 px-4">
-                <button class="text-blue-400 hover:text-blue-600 mr-2" onclick="verifyGuest('${guest.id}')">
-                    <i class="fas fa-check"></i>
-                </button>
-                <button class="text-green-400 hover:text-green-600 mr-2" onclick="generateQR('${guest.id}')">
-                    <i class="fas fa-qrcode"></i>
-                </button>
-                <button class="text-purple-400 hover:text-purple-600 mr-2" onclick="shareGuestPass('${guest.id}')">
-                    <i class="fab fa-whatsapp"></i>
-                </button>
-                <button class="text-red-400 hover:text-red-600" onclick="deleteGuest('${guest.id}')">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        </tr>
-    `).join('');
-}
-
-// Update statistics
-function updateStatistics() {
-    const totalElement = document.getElementById('totalRegistrations');
-    const verifiedElement = document.getElementById('verifiedEntries');
-    const pendingElement = document.getElementById('pendingEntries');
-    
-    if (totalElement) totalElement.textContent = guests.length;
-    if (verifiedElement) verifiedElement.textContent = guests.filter(g => g.verified).length;
-    if (pendingElement) pendingElement.textContent = guests.filter(g => !g.verified).length;
-}
-
-// Register new guest
-async function registerGuest(guestData) {
-    try {
-        updateDataStatus('Registering guest...');
-        
-        const { data, error } = await supabase
-            .from('guests')
-            .insert([{
-                guest_name: guestData.name,
-                mobile_number: guestData.mobile,
-                entry_type: guestData.entryType,
-                status: 'pending',
-                created_at: new Date().toISOString()
-            }])
-            .select();
-        
-        if (error) throw error;
-        
-        await loadGuests();
-        registrationForm.reset();
-        updateDataStatus('Guest registered successfully');
-        
-        // Generate QR code for the new guest
-        if (data && data.length > 0) {
-            generateQR(data[0].id);
-        }
-        
-    } catch (error) {
-        console.error('Registration error:', error);
-        updateDataStatus('Failed to register guest');
-    }
-}
-
-// Verify guest
-window.verifyGuest = async function(guestId) {
-    try {
-        updateDataStatus('Verifying guest...');
-        
-        const { error } = await supabase
-            .from('guests')
-            .update({ status: 'verified' })
-            .eq('id', guestId);
-        
-        if (error) throw error;
-        
-        await loadGuests();
-        updateDataStatus('Guest verified');
-        
-    } catch (error) {
-        console.error('Verification error:', error);
-        updateDataStatus('Failed to verify guest');
-    }
-};
-
-// Delete guest
-window.deleteGuest = async function(guestId) {
-    if (!confirm('Are you sure you want to delete this guest?')) return;
-    
-    try {
-        updateDataStatus('Deleting guest...');
-        
-        const { error } = await supabase
-            .from('guests')
-            .delete()
-            .eq('id', guestId);
-        
-        if (error) throw error;
-        
-        await loadGuests();
-        updateDataStatus('Guest deleted');
-        
-    } catch (error) {
-        console.error('Deletion error:', error);
-        updateDataStatus('Failed to delete guest');
-    }
-};
-
-// Generate QR code for a guest
-window.generateQR = async function(guestId) {
-    try {
-        // Find the guest
-        const guest = guests.find(g => g.id === guestId);
-        if (!guest) throw new Error('Guest not found');
-        
-        // Create QR code data
-        const qrData = JSON.stringify({
-            id: guest.id,
-            name: guest.name,
-            mobile: guest.mobile,
-            entry_type: guest.entry_type,
-            verified: guest.verified
-        });
-        
-        // Generate QR code
-        const qrCodeDataURL = await QRCode.toDataURL(qrData);
-        
-        // Create modal to display QR code
-        const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-75 z-50';
-        modal.innerHTML = `
-            <div class="bg-gray-800 p-6 rounded-lg max-w-sm w-full">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold">Guest QR Code</h3>
-                    <button class="text-gray-400 hover:text-white" id="closeQRModal">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="text-center mb-4">
-                    <p class="mb-2"><strong>Name:</strong> ${guest.name}</p>
-                    <p class="mb-4"><strong>Entry Type:</strong> ${guest.entry_type === 'couple' ? 'Couple' : 'Stag'}</p>
-                    <div class="bg-white p-4 rounded-lg inline-block">
-                        <img src="${qrCodeDataURL}" alt="Guest QR Code" class="mx-auto">
-                    </div>
-                </div>
-                <div class="flex justify-between">
-                    <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded" id="downloadQR">
-                        <i class="fas fa-download mr-2"></i> Download
-                    </button>
-                    <button class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded" id="shareQR">
-                        <i class="fas fa-share-alt mr-2"></i> Share
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        // Close modal
-        document.getElementById('closeQRModal').addEventListener('click', () => {
-            document.body.removeChild(modal);
-        });
-        
-        // Download QR code
-        document.getElementById('downloadQR').addEventListener('click', () => {
-            const link = document.createElement('a');
-            link.href = qrCodeDataURL;
-            link.download = `kochin-hangover-qr-${guest.name}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        });
-        
-        // Share QR code (if mobile)
-        document.getElementById('shareQR').addEventListener('click', () => {
-            if (navigator.share) {
-                navigator.share({
-                    title: 'Kochin Hangover QR Code',
-                    text: `QR Code for ${guest.name}`,
-                    url: qrCodeDataURL
-                }).catch(console.error);
-            } else {
-                alert('Sharing is not supported on this device');
-            }
-        });
-        
-    } catch (error) {
-        console.error('QR generation error:', error);
-        alert('Failed to generate QR code: ' + error.message);
-    }
-};
-
-// QR Code Scanner
-function initializeQRScanner() {
-    qrScanner = new Html5QrcodeScanner(
-        "qr-reader",
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        false
-    );
-    
-    qrScanner.render(onScanSuccess, onScanError);
-    
-    startScanBtn.classList.add('hidden');
-    stopScanBtn.classList.remove('hidden');
-}
-
-function resetQRScanner() {
-    if (qrScanner) {
-        qrScanner.clear();
-        qrScanner = null;
-    }
-    
-    startScanBtn.classList.remove('hidden');
-    stopScanBtn.classList.add('hidden');
-    qrReaderResults.innerHTML = '';
-}
-
-function onScanSuccess(decodedText) {
-    console.log('QR Code scanned:', decodedText);
-    
-    try {
-        // Parse QR code data
-        const guestData = JSON.parse(decodedText);
-        
-        // Display guest info
-        qrReaderResults.innerHTML = `
-            <div class="bg-gray-700 p-4 rounded">
-                <h3 class="font-bold text-lg mb-2">Guest Information</h3>
-                <p><strong>Name:</strong> ${guestData.name || 'N/A'}</p>
-                <p><strong>Entry Type:</strong> ${guestData.entry_type === 'couple' ? 'Couple' : 'Stag'}</p>
-                <p><strong>Status:</strong> ${guestData.verified ? 'Verified' : 'Not Verified'}</p>
-                <div class="mt-4">
-                    <button onclick="verifyGuestFromQR('${guestData.id}')" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
-                        <i class="fas fa-check mr-2"></i> Verify Entry
-                    </button>
-                </div>
-            </div>
-        `;
-    } catch (error) {
-        console.error('QR parse error:', error);
-        qrReaderResults.innerHTML = `
-            <div class="bg-red-500 text-white p-3 rounded">
-                <p>Invalid QR Code: ${error.message}</p>
-            </div>
-        `;
-    }
-}
-
-function onScanError(error) {
-    console.error('QR Scan error:', error);
-    qrReaderResults.innerHTML = `
-        <div class="bg-red-500 text-white p-3 rounded">
-            <p>Scan error: ${error}</p>
-        </div>
-    `;
-}
-
-// Verify guest from QR code
-window.verifyGuestFromQR = async function(guestId) {
-    try {
-        const { error } = await supabase
-            .from('guests')
-            .update({ status: 'verified' })
-            .eq('id', guestId);
-        
-        if (error) throw error;
-        
-        await loadGuests();
-        updateDataStatus('Guest verified successfully');
-        
-    } catch (error) {
-        console.error('Error verifying guest from QR:', error);
-        updateDataStatus('Failed to verify guest');
-    }
-    
-    // Reset QR scanner after verification
-    resetQRScanner();
-};
-
-// Share guest pass via WhatsApp
-window.shareGuestPass = async function(guestId) {
-    try {
-        // Find the guest
-        const guest = guests.find(g => g.id === guestId);
-        if (!guest) throw new Error('Guest not found');
-        
-        // Create QR code data
-        const qrData = JSON.stringify({
-            id: guest.id,
-            name: guest.name,
-            mobile: guest.mobile,
-            entry_type: guest.entry_type,
-            verified: guest.verified
-        });
-        
-        // Generate QR code
-        const qrCodeDataURL = await QRCode.toDataURL(qrData);
-        
-        // Create message
-        const message = `
-🎉 *KOCHIN HANGOVER - GUEST PASS* 🎉
-
-Hello ${guest.name},
-
-Your entry pass for Kochin Hangover is ready!
-
-*Details:*
-- Name: ${guest.name}
-- Entry Type: ${guest.entry_type === 'couple' ? 'Couple' : 'Stag'}
-- Date: May 3rd, 2025
-- Venue: Angels 153 Club
-
-Please show this message and QR code at the entrance.
-
-Thank you!
-`;
-        
-        // Format mobile number
-        let mobileNumber = guest.mobile;
-        if (!mobileNumber.startsWith('+')) {
-            mobileNumber = '+91' + mobileNumber; // Assuming India country code
-        }
-        
-        // Open WhatsApp with the message
-        const whatsappURL = `https://wa.me/${mobileNumber}?text=${encodeURIComponent(message)}`;
-        window.open(whatsappURL, '_blank');
-        
-        updateDataStatus('WhatsApp share initiated');
-        
-    } catch (error) {
-        console.error('Error sharing guest pass:', error);
-        alert('Failed to share guest pass: ' + error.message);
-    }
-};
-
-// Users Management
-async function loadUsers() {
-    try {
-        updateDataStatus('Loading users...');
-        
-        const { data: users, error } = await supabase
-            .from('users')
-            .select('*')
-            .order('username');
-        
-        if (error) throw error;
-        
-        const usersList = document.getElementById('usersList');
-        if (!usersList) return;
-        
-        usersList.innerHTML = users.map(user => `
+        tbody.innerHTML = guests.map(guest => `
             <tr class="border-b border-gray-700">
-                <td class="py-3 px-4">${user.username}</td>
-                <td class="py-3 px-4">${user.role}</td>
+                <td class="py-3 px-4">${guest.guest_name || ''}</td>
+                <td class="py-3 px-4">${guest.club_name || ''}</td>
+                <td class="py-3 px-4">${guest.entry_type || ''}</td>
+                <td class="py-3 px-4">₹${guest.paid_amount} / ₹${guest.total_amount}</td>
                 <td class="py-3 px-4">
-                    <button class="text-blue-400 hover:text-blue-600 mr-2" onclick="editUser('${user.id}')">
+                    <span class="px-2 py-1 rounded-full text-xs ${
+                        guest.status === 'verified' ? 'bg-green-500' :
+                        guest.status === 'paid' ? 'bg-blue-500' :
+                        guest.status === 'partially_paid' ? 'bg-yellow-500' :
+                        'bg-red-500'
+                    }">
+                        ${guest.status || 'pending'}
+                    </span>
+                </td>
+                <td class="py-3 px-4">
+                    <button class="text-blue-400 hover:text-blue-600 mr-2" onclick="editGuest('${guest.id}')">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="text-red-400 hover:text-red-600" onclick="deleteUser('${user.id}')">
+                    <button class="text-red-400 hover:text-red-600 mr-2" onclick="deleteGuest('${guest.id}')">
                         <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="whatsapp-share text-green-400 hover:text-green-600" data-guest-id="${guest.id}">
+                        <i class="fab fa-whatsapp"></i>
                     </button>
                 </td>
             </tr>
         `).join('');
-        
-        updateDataStatus(`${users.length} users loaded`);
+
+        // Re-attach event listeners
+        setupEventListeners();
         
     } catch (error) {
-        console.error('Error loading users:', error);
-        updateDataStatus('Failed to load users');
+        console.error('Error loading guest list:', error);
     }
 }
 
-// Add new user
-async function addUser(userData) {
-    try {
-        updateDataStatus('Adding user...');
-        
-        const { data, error } = await supabase
-            .from('users')
-            .insert([{
-                username: userData.username,
-                password: userData.password,
-                role: userData.role
-            }])
-            .select();
-        
-        if (error) throw error;
-        
-        await loadUsers();
-        updateDataStatus('User added successfully');
-        
-        return true;
-        
-    } catch (error) {
-        console.error('Error adding user:', error);
-        updateDataStatus('Failed to add user: ' + error.message);
-        return false;
+// Initialize QR Scanner
+function initQRScanner() {
+    if (qrScanner) {
+        qrScanner.clear();
+        qrScanner = null;
     }
+
+    qrScanner = new Html5QrcodeScanner(
+        "qr-reader", 
+        {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0,
+            showTorchButtonIfSupported: true,
+            showZoomSliderIfSupported: true,
+            defaultZoomValueIfSupported: 2
+        }
+    );
+    
+    qrScanner.render(async (decodedText) => {
+        try {
+            // Parse the QR code data
+            const guestData = JSON.parse(decodedText);
+            
+            // Get the latest guest data from Supabase
+            const { data: guest, error } = await supabase
+                .from('guests')
+                .select('*')
+                .eq('id', guestData.id)
+                .single();
+            
+            if (error) throw error;
+            
+            if (!guest) {
+                throw new Error('Guest not found');
+            }
+            
+            // Calculate expected amount and payment status
+            const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
+            const isFullyPaid = guest.paid_amount >= expectedAmount;
+            
+            // Show verification result modal
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4';
+            modal.innerHTML = `
+                <div class="bg-[#2a0e3a] p-6 rounded-lg max-w-md w-full">
+                    <div class="text-center mb-6">
+                        <i class="fas ${isFullyPaid ? 'fa-check-circle text-green-400' : 'fa-exclamation-triangle text-yellow-400'} text-5xl"></i>
+                        <h3 class="text-2xl font-bold mt-4 ${isFullyPaid ? 'text-green-400' : 'text-yellow-400'}">
+                            ${isFullyPaid ? 'VERIFIED' : 'PAYMENT PENDING'}
+                        </h3>
+                    </div>
+                    
+                    <div class="space-y-4 mb-6">
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Full Name</span>
+                            <span class="font-bold">${guest.guest_name}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Club Name</span>
+                            <span class="font-bold">${guest.club_name || 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Mobile Number</span>
+                            <span class="font-bold">${guest.mobile_number || 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Entry Type</span>
+                            <span class="font-bold">${guest.entry_type}</span>
+                        </div>
+                        ${!isFullyPaid ? `
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Amount Due</span>
+                            <span class="font-bold text-red-400">₹${expectedAmount - guest.paid_amount}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="flex space-x-4">
+                        ${isFullyPaid ? 
+                            `<button onclick="verifyGuest('${guest.id}')" class="kochin-button flex-1 bg-green-600">
+                                <i class="fas fa-check mr-2"></i> Allow Entry
+                            </button>` : 
+                            `<button class="kochin-button bg-yellow-600 flex-1 cursor-not-allowed" disabled>
+                                <i class="fas fa-ban mr-2"></i> Entry Denied
+                            </button>`
+                        }
+                        <button onclick="this.closest('.fixed').remove(); qrScanner.resume();" class="kochin-button bg-gray-700 flex-1">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Stop scanning
+            qrScanner.pause();
+            
+        } catch (error) {
+            console.error('Error verifying guest:', error);
+            alert(error.message || 'Failed to verify guest');
+        }
+    });
 }
 
-// Edit user
-window.editUser = async function(userId) {
+// Verify guest entry
+window.verifyGuest = async function(guestId) {
     try {
-        // Get user data
-        const { data: user, error } = await supabase
-            .from('users')
+        // First check if the guest has fully paid
+        const { data: guestCheck, error: checkError } = await supabase
+            .from('guests')
             .select('*')
-            .eq('id', userId)
+            .eq('id', guestId)
+            .single();
+            
+        if (checkError) throw checkError;
+        
+        // Verify that guest has paid in full (Stag: 2750 and Couple: 4750)
+        const expectedAmount = guestCheck.entry_type === 'stag' ? 2750 : 4750;
+        
+        if (guestCheck.paid_amount < expectedAmount) {
+            throw new Error(`Cannot verify guest. Full payment required (₹${expectedAmount}). Current payment: ₹${guestCheck.paid_amount}`);
+        }
+        
+        // Update guest status to verified
+        const { data: guest, error } = await supabase
+            .from('guests')
+            .update({ status: 'verified', verified_at: new Date().toISOString() })
+            .eq('id', guestId)
+            .select()
             .single();
         
         if (error) throw error;
         
-        // Create modal
-        const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-75 z-50';
-        modal.innerHTML = `
-            <div class="bg-gray-800 p-6 rounded-lg max-w-md w-full">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold">Edit User</h3>
-                    <button class="text-gray-400 hover:text-white" id="closeEditModal">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <form id="editUserForm" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Username</label>
-                        <input type="text" id="editUsername" value="${user.username}" class="kochin-input w-full" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Password</label>
-                        <input type="password" id="editPassword" placeholder="Leave blank to keep current" class="kochin-input w-full">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Role</label>
-                        <select id="editRole" class="kochin-input w-full" required>
-                            <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
-                            <option value="staff" ${user.role === 'staff' ? 'selected' : ''}>Staff</option>
-                        </select>
-                    </div>
-                    <div class="flex justify-end space-x-3">
-                        <button type="button" id="cancelEditUser" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded">
-                            Cancel
-                        </button>
-                        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
-                            Save Changes
-                        </button>
-                    </div>
-                </form>
-            </div>
-        `;
+        // Show success message
+        alert('Guest verified successfully!');
         
-        document.body.appendChild(modal);
+        // Remove verification modal
+        document.querySelector('.fixed').remove();
         
-        // Close modal handlers
-        document.getElementById('closeEditModal').addEventListener('click', () => {
-            document.body.removeChild(modal);
-        });
-        
-        document.getElementById('cancelEditUser').addEventListener('click', () => {
-            document.body.removeChild(modal);
-        });
-        
-        // Form submission
-        document.getElementById('editUserForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const username = document.getElementById('editUsername').value;
-            const password = document.getElementById('editPassword').value;
-            const role = document.getElementById('editRole').value;
-            
-            const updates = {
-                username,
-                role
-            };
-            
-            // Only update password if provided
-            if (password) {
-                updates.password = password;
-            }
-            
-            try {
-                const { error: updateError } = await supabase
-                    .from('users')
-                    .update(updates)
-                    .eq('id', userId);
-                
-                if (updateError) throw updateError;
-                
-                document.body.removeChild(modal);
-                await loadUsers();
-                updateDataStatus('User updated successfully');
-                
-            } catch (error) {
-                console.error('Error updating user:', error);
-                alert('Failed to update user: ' + error.message);
-            }
-        });
+        // Resume scanning
+        if (qrScanner) {
+            qrScanner.resume();
+        }
         
     } catch (error) {
-        console.error('Error editing user:', error);
-        alert('Failed to edit user: ' + error.message);
-    }
-};
-
-// Delete user
-window.deleteUser = async function(userId) {
-    if (!confirm('Are you sure you want to delete this user?')) return;
-    
-    try {
-        updateDataStatus('Deleting user...');
-        
-        const { error } = await supabase
-            .from('users')
-            .delete()
-            .eq('id', userId);
-        
-        if (error) throw error;
-        
-        await loadUsers();
-        updateDataStatus('User deleted successfully');
-        
-    } catch (error) {
-        console.error('Error deleting user:', error);
-        alert('Failed to delete user: ' + error.message);
-    }
-};
-
-// Show specific tab
-function showTab(tabId) {
-    // Update active tab button
-    tabButtons.forEach(button => {
-        if (button.dataset.tab === tabId) {
-            button.classList.add('active');
-        } else {
-            button.classList.remove('active');
-        }
-    });
-    
-    // Show selected content
-    tabContents.forEach(content => {
-        if (content.id === `${tabId}Content`) {
-            content.classList.remove('hidden');
-        } else {
-            content.classList.add('hidden');
-        }
-    });
-    
-    // Special handling for verification tab
-    if (tabId === 'verification') {
-        resetQRScanner();
-    }
-}
-
-// Update amount based on entry type
-function updateAmount() {
-    const entryType = document.getElementById('entryType').value;
-    const amount = ENTRY_PRICES[entryType];
-    updateDataStatus(`Entry price: ₹${amount}`);
-}
-
-// Update data status message
-function updateDataStatus(message) {
-    if (dataStatus) {
-        dataStatus.textContent = message;
+        console.error('Error verifying guest:', error);
+        alert(error.message || 'Failed to verify guest');
     }
 }
 
 // Setup event listeners
 function setupEventListeners() {
     // Login form
-    loginForm?.addEventListener('submit', async (e) => {
+    document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
-        
+        const errorText = document.getElementById('loginError');
+
         try {
-            // Check credentials against Supabase users table
+            // Check credentials against users table
             const { data: users, error } = await supabase
                 .from('users')
                 .select('*')
                 .eq('username', username)
                 .eq('password', password);
-            
+
             if (error) throw error;
-            
             if (!users || users.length === 0) {
                 throw new Error('Invalid username or password');
             }
-            
-            const user = users[0];
-            await handleLogin(user);
+
+            // Create auth session
+            const { data: { user }, error: authError } = await supabase.auth.signInWithPassword({
+                email: `${username}@kochin.com`, // Using a dummy email
+                password: password
+            });
+
+            if (authError) throw authError;
+
+            // Store user info in session
+            sessionStorage.setItem('currentUser', JSON.stringify(user));
+            currentUser = user;
+
+            // Show main app and initialize components
+            showApp();
+            await setupNavigation();
+            await showTab('registration');
             
         } catch (error) {
             console.error('Login error:', error);
-            showLoginError(error.message || 'Login failed');
+            if (errorText) {
+                errorText.textContent = error.message || 'Invalid credentials';
+                errorText.classList.remove('hidden');
+            }
         }
     });
-    
+
     // Logout button
-    logoutBtn?.addEventListener('click', handleLogout);
-    
+    document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
+
+    // Navigation buttons
+    document.getElementById('newRegistrationBtn')?.addEventListener('click', () => showTab('registration'));
+    document.getElementById('entryVerificationBtn')?.addEventListener('click', () => showTab('verification'));
+    document.getElementById('guestListBtn')?.addEventListener('click', () => showTab('guests'));
+    document.getElementById('statsBtn')?.addEventListener('click', () => showTab('stats'));
+    document.getElementById('usersBtn')?.addEventListener('click', () => showTab('users'));
+
     // Registration form
-    registrationForm?.addEventListener('submit', async (e) => {
+    document.getElementById('registrationForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const guestData = {
-            name: document.getElementById('guestName').value,
-            mobile: document.getElementById('mobileNumber').value,
-            entryType: document.getElementById('entryType').value
-        };
+        try {
+            const formData = {
+                guest_name: document.getElementById('guestName').value,
+                club_name: document.getElementById('clubName').value,
+                mobile_number: document.getElementById('mobileNumber').value,
+                entry_type: document.getElementById('entryType').value,
+                payment_mode: document.getElementById('paymentMode').value,
+                total_amount: document.getElementById('entryType').value === 'stag' ? 2750 : 4750,
+                paid_amount: document.getElementById('paymentMode').value === 'partial' ? 
+                    Number(document.getElementById('paidAmount').value) : 
+                    (document.getElementById('entryType').value === 'stag' ? 2750 : 4750),
+                status: document.getElementById('paymentMode').value === 'partial' ? 'partially_paid' : 'paid'
+            };
+
+            // Validate required fields
+            if (!formData.guest_name || !formData.mobile_number || !formData.entry_type || !formData.payment_mode) {
+                throw new Error('Please fill in all required fields');
+            }
+
+            // Insert into Supabase
+            const { data, error } = await supabase
+                .from('guests')
+                .insert([formData])
+                .select();
+
+            if (error) throw error;
+
+            // Reset form
+            e.target.reset();
+            updateAmount();
+            document.getElementById('partialPaymentSection').classList.add('hidden');
+            document.getElementById('paidAmount').removeAttribute('required');
+            
+            // Refresh lists
+            await loadGuestList();
+            await loadStats();
+            
+            alert('Guest registered successfully!');
+            
+        } catch (error) {
+            console.error('Registration error:', error);
+            alert(error.message || 'Failed to register guest');
+        }
+    });
+
+    // Payment mode change handler
+    document.getElementById('paymentMode')?.addEventListener('change', function() {
+        const partialSection = document.getElementById('partialPaymentSection');
+        const paidAmountInput = document.getElementById('paidAmount');
         
-        await registerGuest(guestData);
+        if (this.value === 'partial') {
+            partialSection.classList.remove('hidden');
+            paidAmountInput.setAttribute('required', 'required');
+        } else {
+            partialSection.classList.add('hidden');
+            paidAmountInput.removeAttribute('required');
+        }
     });
-    
-    // QR Scanner buttons
-    startScanBtn?.addEventListener('click', initializeQRScanner);
-    stopScanBtn?.addEventListener('click', resetQRScanner);
-    
-    // Export buttons
-    document.getElementById('exportCSV')?.addEventListener('click', exportToCSV);
-    document.getElementById('exportPDF')?.addEventListener('click', exportToPDF);
-    
-    // Tab buttons
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const tabId = button.dataset.tab;
-            showTab(tabId);
-        });
-    });
-    
-    // Entry type change
+
+    // Entry type change handler
     document.getElementById('entryType')?.addEventListener('change', updateAmount);
+
+    // Download buttons
+    document.getElementById('downloadGuestsPDFBtn')?.addEventListener('click', downloadGuestsPDF);
+    document.getElementById('downloadGuestsCSVBtn')?.addEventListener('click', downloadGuestsCSV);
+    document.getElementById('downloadStatsPDFBtn')?.addEventListener('click', downloadStatsPDF);
+    document.getElementById('downloadStatsCSVBtn')?.addEventListener('click', downloadStatsCSV);
     
-    // Users management
-    document.getElementById('usersBtn')?.addEventListener('click', () => {
-        showTab('users');
-        loadUsers();
-    });
-    
-    // Add user form
-    document.getElementById('addUserForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const userData = {
-            username: document.getElementById('newUsername').value,
-            password: document.getElementById('newPassword').value,
-            role: document.getElementById('newRole').value
-        };
-        
-        const success = await addUser(userData);
-        
-        if (success) {
-            document.getElementById('addUserForm').reset();
+    // WhatsApp share buttons
+    document.addEventListener('click', async function(e) {
+        if (e.target.closest('.whatsapp-share')) {
+            const button = e.target.closest('.whatsapp-share');
+            const guestId = button.getAttribute('data-guest-id');
+            
+            try {
+                // Get guest data
+                const { data: guest, error } = await supabase
+                    .from('guests')
+                    .select('*')
+                    .eq('id', guestId)
+                    .single();
+                
+                if (error) throw error;
+                
+                // Create guest pass data for QR code
+                const qrData = JSON.stringify({
+                    id: guest.id,
+                    name: guest.guest_name,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Generate QR code
+                const qrCodeDataURL = await QRCode.toDataURL(qrData, {
+                    width: 300,
+                    margin: 2,
+                    color: {
+                        dark: '#2a0e3a',
+                        light: '#ffffff'
+                    }
+                });
+                
+                // Create a temporary div to generate the guest pass image
+                const tempDiv = document.createElement('div');
+                tempDiv.className = 'kochin-container p-6 bg-white text-[#2a0e3a]';
+                tempDiv.style.width = '600px';
+                tempDiv.style.position = 'absolute';
+                tempDiv.style.left = '-9999px';
+                tempDiv.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <h2 class="text-3xl font-bold mb-2 text-[#e83283]">KOCHIN HANGOVER</h2>
+                        <h3 class="text-xl mb-6">Guest Pass</h3>
+                        
+                        <div class="flex w-full mb-6">
+                            <div class="w-1/2 pr-4">
+                                <div class="mb-4">
+                                    <p class="text-gray-600 text-sm">Full Name</p>
+                                    <p class="text-xl font-bold">${guest.guest_name}</p>
+                                </div>
+                                <div class="mb-4">
+                                    <p class="text-gray-600 text-sm">Club Name</p>
+                                    <p class="text-xl font-bold">${guest.club_name || 'N/A'}</p>
+                                </div>
+                                <div class="mb-4">
+                                    <p class="text-gray-600 text-sm">Mobile Number</p>
+                                    <p class="text-xl font-bold">${guest.mobile_number}</p>
+                                </div>
+                                <div class="mb-4">
+                                    <p class="text-gray-600 text-sm">Entry Type</p>
+                                    <p class="text-xl font-bold">${guest.entry_type.toUpperCase()}</p>
+                                </div>
+                                <div class="mb-4">
+                                    <p class="text-gray-600 text-sm">Status</p>
+                                    <p class="text-xl font-bold ${guest.status === 'paid' ? 'text-green-600' : 'text-yellow-600'}">
+                                        ${guest.status === 'paid' ? 'PAID' : 'PARTIALLY PAID'}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="w-1/2 flex flex-col items-center justify-center">
+                                <img src="${qrCodeDataURL}" alt="QR Code" class="w-48 h-48 mb-2">
+                                <p class="text-sm text-center text-gray-600">Scan this QR code at the entrance</p>
+                            </div>
+                        </div>
+                        
+                        <div class="w-full pt-4 border-t border-gray-300 text-center">
+                            <p class="text-sm text-gray-600">Date: ${new Date().toLocaleDateString()}</p>
+                            <p class="text-sm text-gray-600 mt-1">Venue: Kochin Club, Marine Drive</p>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(tempDiv);
+                
+                // Use html2canvas to convert the div to an image
+                const canvas = await html2canvas(tempDiv);
+                const imageDataURL = canvas.toDataURL('image/png');
+                
+                // Remove the temporary div
+                document.body.removeChild(tempDiv);
+                
+                // Create WhatsApp share message
+                const message = `*KOCHIN HANGOVER - GUEST PASS*\n\n` +
+                    `*Name:* ${guest.guest_name}\n` +
+                    `*Club:* ${guest.club_name || 'N/A'}\n` +
+                    `*Mobile:* ${guest.mobile_number}\n` +
+                    `*Entry Type:* ${guest.entry_type.toUpperCase()}\n\n` +
+                    `Please show this pass at the entrance. Your QR code is attached.`;
+                
+                // Create a blob from the image data URL
+                const blob = await (await fetch(imageDataURL)).blob();
+                
+                // Create a File object from the blob
+                const file = new File([blob], 'guest-pass.png', { type: 'image/png' });
+                
+                // Create a share object
+                if (navigator.share && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({
+                            title: 'Kochin Hangover Guest Pass',
+                            text: message,
+                            files: [file]
+                        });
+                    } catch (error) {
+                        // Fallback for devices that don't support file sharing
+                        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+                    }
+                } else {
+                    // Fallback for browsers without Web Share API
+                    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+                }
+                
+            } catch (error) {
+                console.error('Error sharing guest pass:', error);
+                alert('Failed to share guest pass. Please try again.');
+            }
         }
     });
 }
 
-// Export functions
-function exportToCSV() {
+// Update amount based on entry type
+window.updateAmount = function() {
+    const entryType = document.getElementById('entryType').value;
+    const totalAmountDisplay = document.getElementById('totalAmountDisplay');
+    const paidAmountInput = document.getElementById('paidAmount');
+    const totalAmount = entryType === 'stag' ? 2750 : 4750;
+    
+    if (totalAmountDisplay) {
+        totalAmountDisplay.textContent = `/ ₹${totalAmount} total`;
+    }
+    
+    if (paidAmountInput) {
+        paidAmountInput.max = totalAmount - 100;
+    }
+}
+
+// Load statistics
+async function loadStats() {
     try {
-        const csvData = guests.map(guest => ({
-            Name: guest.name,
-            Mobile: guest.mobile,
-            'Entry Type': guest.entry_type === 'couple' ? 'Couple' : 'Stag',
-            Status: guest.verified ? 'Verified' : 'Not Verified',
-            'Registration Date': new Date(guest.created_at).toLocaleString()
-        }));
+        const { data: guests, error } = await supabase
+            .from('guests')
+            .select('*');
         
-        const csv = Papa.unparse(csvData);
+        if (error) throw error;
+        
+        // Calculate total stats
+        const stats = {
+            totalRegistrations: guests.length,
+            totalAmount: guests.reduce((sum, guest) => sum + guest.total_amount, 0),
+            paidAmount: guests.reduce((sum, guest) => sum + guest.paid_amount, 0)
+        };
+        
+        document.getElementById('totalRegistrations').textContent = stats.totalRegistrations;
+        document.getElementById('totalAmount').textContent = `₹${stats.totalAmount}`;
+        
+        // Calculate club-wise stats
+        const clubStats = {};
+        guests.forEach(guest => {
+            if (!clubStats[guest.club_name]) {
+                clubStats[guest.club_name] = {
+                    totalGuests: 0,
+                    totalAmount: 0
+                };
+            }
+            clubStats[guest.club_name].totalGuests++;
+            clubStats[guest.club_name].totalAmount += guest.total_amount;
+        });
+        
+        // Sort clubs by total guests
+        const sortedClubs = Object.entries(clubStats)
+            .sort((a, b) => b[1].totalGuests - a[1].totalGuests);
+        
+        // Update club stats table
+        const clubStatsTable = document.getElementById('clubStats');
+        if (clubStatsTable) {
+            clubStatsTable.innerHTML = sortedClubs.map(([club, stats]) => `
+                <tr class="border-t border-gray-700">
+                    <td class="py-3 px-4">${club || 'No club specified'}</td>
+                    <td class="py-3 px-4">${stats.totalGuests}</td>
+                    <td class="py-3 px-4">₹${stats.totalAmount}</td>
+                </tr>
+            `).join('');
+        }
+        
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+}
+
+// Download functions
+async function downloadGuestsPDF() {
+    try {
+        // Fetch all guests
+        const { data: guests, error } = await supabase
+            .from('guests')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        // Create PDF document
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
+        
+        // Define theme colors
+        const primaryColor = '#e83283';
+        const secondaryColor = '#34dbdb';
+        const darkColor = '#2a0e3a';
+        const accentColor = '#f7d046';
+        
+        // Add header with logo and title
+        doc.setFillColor(darkColor);
+        doc.rect(0, 0, 210, 40, 'F');
+        
+        // Add gradient effect
+        for (let i = 0; i < 20; i++) {
+            const alpha = 0.1 - (i * 0.005);
+            doc.setFillColor(232, 50, 131, alpha);
+            doc.circle(30, 20, 40 - i, 'F');
+            doc.setFillColor(52, 219, 219, alpha);
+            doc.circle(180, 20, 40 - i, 'F');
+        }
+        
+        // Add title
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(24);
+        doc.text('KOCHIN HANGOVER', 105, 20, { align: 'center' });
+        doc.setFontSize(16);
+        doc.text('Guest List', 105, 30, { align: 'center' });
+        
+        // Add date
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 37, { align: 'center' });
+        
+        // Table header
+        const startY = 50;
+        const colWidths = [10, 50, 30, 30, 30, 40];
+        const headers = ['#', 'Guest Name', 'Club', 'Entry Type', 'Amount', 'Status'];
+        
+        // Draw table header
+        doc.setFillColor(darkColor);
+        doc.rect(10, startY, 190, 10, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        
+        let xPos = 10;
+        headers.forEach((header, i) => {
+            doc.text(header, xPos + 2, startY + 7);
+            xPos += colWidths[i];
+        });
+        
+        // Draw table rows
+        let yPos = startY + 10;
+        doc.setTextColor(50, 50, 50);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        
+        guests.forEach((guest, index) => {
+            // Add new page if needed
+            if (yPos > 270) {
+                doc.addPage();
+                yPos = 20;
+                
+                // Add mini header on new pages
+                doc.setFillColor(darkColor);
+                doc.rect(10, yPos - 10, 190, 10, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12);
+                
+                xPos = 10;
+                headers.forEach((header, i) => {
+                    doc.text(header, xPos + 2, yPos - 3);
+                    xPos += colWidths[i];
+                });
+                
+                doc.setTextColor(50, 50, 50);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(10);
+            }
+            
+            // Alternating row colors
+            if (index % 2 === 0) {
+                doc.setFillColor(240, 240, 250);
+                doc.rect(10, yPos, 190, 10, 'F');
+            }
+            
+            // Row data
+            xPos = 10;
+            
+            // Row number
+            doc.text((index + 1).toString(), xPos + 2, yPos + 7);
+            xPos += colWidths[0];
+            
+            // Guest name
+            doc.text(guest.guest_name || '', xPos + 2, yPos + 7);
+            xPos += colWidths[1];
+            
+            // Club
+            doc.text(guest.club_name || 'N/A', xPos + 2, yPos + 7);
+            xPos += colWidths[2];
+            
+            // Entry type
+            doc.text(guest.entry_type || '', xPos + 2, yPos + 7);
+            xPos += colWidths[3];
+            
+            // Amount
+            doc.text(`₹${guest.paid_amount} / ₹${guest.total_amount}`, xPos + 2, yPos + 7);
+            xPos += colWidths[4];
+            
+            // Status
+            const statusColor = 
+                guest.status === 'verified' ? [0, 150, 0] :
+                guest.status === 'paid' ? [0, 100, 200] :
+                guest.status === 'partially_paid' ? [200, 150, 0] :
+                [200, 0, 0];
+            
+            doc.setTextColor(...statusColor);
+            doc.text(guest.status || 'pending', xPos + 2, yPos + 7);
+            doc.setTextColor(50, 50, 50);
+            
+            yPos += 10;
+        });
+        
+        // Add footer
+        const pageCount = doc.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            
+            // Footer rectangle
+            doc.setFillColor(darkColor);
+            doc.rect(0, 287, 210, 10, 'F');
+            
+            // Page number
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(10);
+            doc.text(`Page ${i} of ${pageCount}`, 105, 293, { align: 'center' });
+            
+            // Kochin Hangover text
+            doc.setFontSize(8);
+            doc.text('Kochin Hangover - Entry Management System', 10, 293);
+        }
+        
+        // Save the PDF
+        doc.save('kochin-hangover-guest-list.pdf');
+        
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Failed to generate PDF. Please try again.');
+    }
+}
+
+async function downloadGuestsCSV() {
+    try {
+        // Fetch all guests
+        const { data: guests, error } = await supabase
+            .from('guests')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        // Convert to CSV
+        const headers = ['Guest Name', 'Club Name', 'Mobile Number', 'Entry Type', 'Paid Amount', 'Total Amount', 'Status', 'Created At'];
+        const csvData = guests.map(guest => [
+            guest.guest_name,
+            guest.club_name || 'N/A',
+            guest.mobile_number,
+            guest.entry_type,
+            guest.paid_amount,
+            guest.total_amount,
+            guest.status,
+            new Date(guest.created_at).toLocaleString()
+        ]);
+        
+        // Use PapaParse to generate CSV
+        const csv = Papa.unparse({
+            fields: headers,
+            data: csvData
+        });
+        
+        // Create download link
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        
         link.href = url;
-        link.download = 'kochin-hangover-guests.csv';
+        link.setAttribute('download', 'kochin-hangover-guest-list.csv');
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         
-        updateDataStatus('CSV exported successfully');
     } catch (error) {
-        console.error('CSV export error:', error);
-        updateDataStatus('Failed to export CSV');
+        console.error('Error generating CSV:', error);
+        alert('Failed to generate CSV. Please try again.');
     }
 }
 
-function exportToPDF() {
+async function downloadStatsPDF() {
     try {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        // Fetch all guests
+        const { data: guests, error } = await supabase
+            .from('guests')
+            .select('*');
         
-        // Add header
-        doc.setFontSize(18);
-        doc.text('Kochin Hangover Guest List', 105, 15, { align: 'center' });
+        if (error) throw error;
+        
+        // Calculate stats
+        const stats = {
+            totalRegistrations: guests.length,
+            totalAmount: guests.reduce((sum, guest) => sum + guest.total_amount, 0),
+            paidAmount: guests.reduce((sum, guest) => sum + guest.paid_amount, 0),
+            pendingAmount: guests.reduce((sum, guest) => sum + (guest.total_amount - guest.paid_amount), 0),
+            verifiedCount: guests.filter(guest => guest.status === 'verified').length,
+            paidCount: guests.filter(guest => guest.status === 'paid').length,
+            partiallyPaidCount: guests.filter(guest => guest.status === 'partially_paid').length,
+            pendingCount: guests.filter(guest => guest.status === 'pending').length
+        };
+        
+        // Calculate club-wise stats
+        const clubStats = {};
+        guests.forEach(guest => {
+            const clubName = guest.club_name || 'No Club';
+            if (!clubStats[clubName]) {
+                clubStats[clubName] = {
+                    totalGuests: 0,
+                    totalAmount: 0,
+                    paidAmount: 0
+                };
+            }
+            clubStats[clubName].totalGuests++;
+            clubStats[clubName].totalAmount += guest.total_amount;
+            clubStats[clubName].paidAmount += guest.paid_amount;
+        });
+        
+        // Sort clubs by total guests
+        const sortedClubs = Object.entries(clubStats)
+            .sort((a, b) => b[1].totalGuests - a[1].totalGuests);
+        
+        // Create PDF document
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
+        
+        // Define theme colors
+        const primaryColor = '#e83283';
+        const secondaryColor = '#34dbdb';
+        const darkColor = '#2a0e3a';
+        const accentColor = '#f7d046';
+        
+        // Add header with logo and title
+        doc.setFillColor(darkColor);
+        doc.rect(0, 0, 210, 40, 'F');
+        
+        // Add gradient effect
+        for (let i = 0; i < 20; i++) {
+            const alpha = 0.1 - (i * 0.005);
+            doc.setFillColor(232, 50, 131, alpha);
+            doc.circle(30, 20, 40 - i, 'F');
+            doc.setFillColor(52, 219, 219, alpha);
+            doc.circle(180, 20, 40 - i, 'F');
+        }
+        
+        // Add title
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(24);
+        doc.text('KOCHIN HANGOVER', 105, 20, { align: 'center' });
+        doc.setFontSize(16);
+        doc.text('Event Statistics', 105, 30, { align: 'center' });
         
         // Add date
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 37, { align: 'center' });
+        
+        // Overall stats section
+        let yPos = 50;
+        doc.setTextColor(darkColor);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.text('Overall Statistics', 105, yPos, { align: 'center' });
+        
+        // Draw stats cards
+        yPos += 10;
+        const cardWidth = 90;
+        const cardHeight = 30;
+        const margin = 10;
+        
+        // First row of cards
+        doc.setFillColor(232, 50, 131, 0.1);
+        doc.roundedRect(margin, yPos, cardWidth, cardHeight, 3, 3, 'F');
+        doc.setFillColor(52, 219, 219, 0.1);
+        doc.roundedRect(margin + cardWidth + margin, yPos, cardWidth, cardHeight, 3, 3, 'F');
+        
+        // Card content
+        doc.setTextColor(darkColor);
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
-        doc.text(new Date().toLocaleString(), 195, 15, { align: 'right' });
+        doc.text('Total Registrations', margin + cardWidth/2, yPos + 10, { align: 'center' });
+        doc.text('Total Amount', margin + cardWidth + margin + cardWidth/2, yPos + 10, { align: 'center' });
         
-        // Add table header
+        doc.setFontSize(16);
+        doc.text(stats.totalRegistrations.toString(), margin + cardWidth/2, yPos + 20, { align: 'center' });
+        doc.text(`₹${stats.totalAmount.toLocaleString()}`, margin + cardWidth + margin + cardWidth/2, yPos + 20, { align: 'center' });
+        
+        // Second row of cards
+        yPos += cardHeight + margin;
+        doc.setFillColor(247, 208, 70, 0.1);
+        doc.roundedRect(margin, yPos, cardWidth, cardHeight, 3, 3, 'F');
+        doc.setFillColor(232, 50, 131, 0.1);
+        doc.roundedRect(margin + cardWidth + margin, yPos, cardWidth, cardHeight, 3, 3, 'F');
+        
+        // Card content
+        doc.setTextColor(darkColor);
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
-        doc.setTextColor(40, 40, 40);
+        doc.text('Collected Amount', margin + cardWidth/2, yPos + 10, { align: 'center' });
+        doc.text('Pending Amount', margin + cardWidth + margin + cardWidth/2, yPos + 10, { align: 'center' });
         
-        const headers = ['Name', 'Mobile', 'Entry Type', 'Status'];
-        let y = 25;
+        doc.setFontSize(16);
+        doc.text(`₹${stats.paidAmount.toLocaleString()}`, margin + cardWidth/2, yPos + 20, { align: 'center' });
+        doc.text(`₹${stats.pendingAmount.toLocaleString()}`, margin + cardWidth + margin + cardWidth/2, yPos + 20, { align: 'center' });
         
-        // Draw header
-        headers.forEach((header, i) => {
-            doc.text(header, 15 + (i * 45), y);
-        });
+        // Status breakdown
+        yPos += cardHeight + margin + 10;
+        doc.setTextColor(darkColor);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14);
+        doc.text('Registration Status', 105, yPos, { align: 'center' });
         
-        y += 10;
+        // Draw status chart (simple bar representation)
+        yPos += 10;
+        const chartWidth = 190;
+        const chartHeight = 30;
+        const totalCount = stats.totalRegistrations;
         
-        // Add guest rows
-        guests.forEach(guest => {
-            const row = [
-                guest.name || 'N/A',
-                guest.mobile || 'N/A',
-                guest.entry_type === 'couple' ? 'Couple' : 'Stag',
-                guest.verified ? 'Verified' : 'Not Verified'
-            ];
+        if (totalCount > 0) {
+            const verifiedWidth = (stats.verifiedCount / totalCount) * chartWidth;
+            const paidWidth = (stats.paidCount / totalCount) * chartWidth;
+            const partialWidth = (stats.partiallyPaidCount / totalCount) * chartWidth;
+            const pendingWidth = (stats.pendingCount / totalCount) * chartWidth;
             
-            row.forEach((cell, i) => {
-                doc.text(cell, 15 + (i * 45), y);
-            });
+            // Draw bars
+            let xPos = margin;
             
-            y += 10;
-            
-            // Add new page if needed
-            if (y > 280) {
-                doc.addPage();
-                y = 25;
+            if (stats.verifiedCount > 0) {
+                doc.setFillColor(0, 150, 0);
+                doc.rect(xPos, yPos, verifiedWidth, chartHeight, 'F');
+                xPos += verifiedWidth;
             }
+            
+            if (stats.paidCount > 0) {
+                doc.setFillColor(0, 100, 200);
+                doc.rect(xPos, yPos, paidWidth, chartHeight, 'F');
+                xPos += paidWidth;
+            }
+            
+            if (stats.partiallyPaidCount > 0) {
+                doc.setFillColor(200, 150, 0);
+                doc.rect(xPos, yPos, partialWidth, chartHeight, 'F');
+                xPos += partialWidth;
+            }
+            
+            if (stats.pendingCount > 0) {
+                doc.setFillColor(200, 0, 0);
+                doc.rect(xPos, yPos, pendingWidth, chartHeight, 'F');
+            }
+            
+            // Add legend
+            yPos += chartHeight + 5;
+            doc.setFontSize(10);
+            
+            let legendX = margin;
+            if (stats.verifiedCount > 0) {
+                doc.setFillColor(0, 150, 0);
+                doc.rect(legendX, yPos, 5, 5, 'F');
+                doc.text(`Verified (${stats.verifiedCount})`, legendX + 8, yPos + 4);
+                legendX += 50;
+            }
+            
+            if (stats.paidCount > 0) {
+                doc.setFillColor(0, 100, 200);
+                doc.rect(legendX, yPos, 5, 5, 'F');
+                doc.text(`Paid (${stats.paidCount})`, legendX + 8, yPos + 4);
+                legendX += 50;
+            }
+            
+            if (stats.partiallyPaidCount > 0) {
+                doc.setFillColor(200, 150, 0);
+                doc.rect(legendX, yPos, 5, 5, 'F');
+                doc.text(`Partial (${stats.partiallyPaidCount})`, legendX + 8, yPos + 4);
+                legendX += 50;
+            }
+            
+            if (stats.pendingCount > 0) {
+                doc.setFillColor(200, 0, 0);
+                doc.rect(legendX, yPos, 5, 5, 'F');
+                doc.text(`Pending (${stats.pendingCount})`, legendX + 8, yPos + 4);
+            }
+        }
+        
+        // Club-wise statistics
+        yPos += 20;
+        doc.setTextColor(darkColor);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.text('Club-wise Statistics', 105, yPos, { align: 'center' });
+        
+        // Table header
+        yPos += 10;
+        const colWidths = [80, 35, 35, 35];
+        const headers = ['Club Name', 'Guests', 'Total (₹)', 'Paid (₹)'];
+        
+        // Draw table header
+        doc.setFillColor(darkColor);
+        doc.rect(margin, yPos, chartWidth, 10, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        
+        let xPos = margin;
+        headers.forEach((header, i) => {
+            doc.text(header, xPos + 2, yPos + 7);
+            xPos += colWidths[i];
         });
         
-        doc.save('kochin-hangover-guests.pdf');
-        updateDataStatus('PDF exported successfully');
+        // Draw table rows
+        yPos += 10;
+        doc.setTextColor(50, 50, 50);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        
+        sortedClubs.forEach((club, index) => {
+            // Add new page if needed
+            if (yPos > 270) {
+                doc.addPage();
+                yPos = 20;
+                
+                // Add mini header on new pages
+                doc.setFillColor(darkColor);
+                doc.rect(10, yPos - 10, 190, 10, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12);
+                
+                xPos = 10;
+                headers.forEach((header, i) => {
+                    doc.text(header, xPos + 2, yPos - 3);
+                    xPos += colWidths[i];
+                });
+                
+                doc.setTextColor(50, 50, 50);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(10);
+            }
+            
+            // Alternating row colors
+            if (index % 2 === 0) {
+                doc.setFillColor(240, 240, 250);
+                doc.rect(margin, yPos, chartWidth, 10, 'F');
+            }
+            
+            // Row data
+            xPos = margin;
+            
+            // Club name
+            doc.text(club[0], xPos + 2, yPos + 7);
+            xPos += colWidths[0];
+            
+            // Total guests
+            doc.text(club[1].totalGuests.toString(), xPos + 2, yPos + 7);
+            xPos += colWidths[1];
+            
+            // Total amount
+            doc.text(`₹${club[1].totalAmount.toLocaleString()}`, xPos + 2, yPos + 7);
+            xPos += colWidths[2];
+            
+            // Paid amount
+            doc.text(`₹${club[1].paidAmount.toLocaleString()}`, xPos + 2, yPos + 7);
+            
+            yPos += 10;
+        });
+        
+        // Add footer
+        const pageCount = doc.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            
+            // Footer rectangle
+            doc.setFillColor(darkColor);
+            doc.rect(0, 287, 210, 10, 'F');
+            
+            // Page number
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(10);
+            doc.text(`Page ${i} of ${pageCount}`, 105, 293, { align: 'center' });
+            
+            // Kochin Hangover text
+            doc.setFontSize(8);
+            doc.text('Kochin Hangover - Entry Management System', 10, 293);
+        }
+        
+        // Save the PDF
+        doc.save('kochin-hangover-statistics.pdf');
+        
     } catch (error) {
-        console.error('PDF export error:', error);
-        updateDataStatus('Failed to export PDF');
+        console.error('Error generating PDF:', error);
+        alert('Failed to generate PDF. Please try again.');
     }
 }
 
-// Initialize when DOM is loaded
+async function downloadStatsCSV() {
+    try {
+        // Fetch all guests
+        const { data: guests, error } = await supabase
+            .from('guests')
+            .select('*');
+        
+        if (error) throw error;
+        
+        // Calculate club-wise stats
+        const clubStats = {};
+        guests.forEach(guest => {
+            const clubName = guest.club_name || 'No Club';
+            if (!clubStats[clubName]) {
+                clubStats[clubName] = {
+                    totalGuests: 0,
+                    totalAmount: 0,
+                    paidAmount: 0,
+                    pendingAmount: 0
+                };
+            }
+            clubStats[clubName].totalGuests++;
+            clubStats[clubName].totalAmount += guest.total_amount;
+            clubStats[clubName].paidAmount += guest.paid_amount;
+            clubStats[clubName].pendingAmount += (guest.total_amount - guest.paid_amount);
+        });
+        
+        // Convert to CSV
+        const headers = ['Club Name', 'Total Guests', 'Total Amount (₹)', 'Paid Amount (₹)', 'Pending Amount (₹)'];
+        const csvData = Object.entries(clubStats).map(([club, stats]) => [
+            club,
+            stats.totalGuests,
+            stats.totalAmount,
+            stats.paidAmount,
+            stats.pendingAmount
+        ]);
+        
+        // Add summary row
+        csvData.push([
+            'TOTAL',
+            guests.length,
+            guests.reduce((sum, guest) => sum + guest.total_amount, 0),
+            guests.reduce((sum, guest) => sum + guest.paid_amount, 0),
+            guests.reduce((sum, guest) => sum + (guest.total_amount - guest.paid_amount), 0)
+        ]);
+        
+        // Use PapaParse to generate CSV
+        const csv = Papa.unparse({
+            fields: headers,
+            data: csvData
+        });
+        
+        // Create download link
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'kochin-hangover-statistics.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+    } catch (error) {
+        console.error('Error generating CSV:', error);
+        alert('Failed to generate CSV. Please try again.');
+    }
+}
+
+// Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    initializeApp();
+    initializeApp().catch(error => {
+        console.error('Failed to initialize app:', error);
+        showLoginScreen();
+    });
     setupEventListeners();
 });
 
-// Make functions available globally
-window.verifyGuest = verifyGuest;
-window.deleteGuest = deleteGuest;
-window.generateQR = generateQR;
-window.verifyGuestFromQR = verifyGuestFromQR;
-window.showTab = showTab;
-window.editUser = editUser;
-window.deleteUser = deleteUser;
-window.shareGuestPass = shareGuestPass;
+// Auth state listener
+supabase.auth.onAuthStateChange((event, session) => {
+    console.log(`Auth state changed: ${event}`);
+    if (event === 'SIGNED_IN' && session?.user) {
+        currentUser = session.user;
+        sessionStorage.setItem('currentUser', JSON.stringify(session.user));
+        showApp();
+    } else if (event === 'SIGNED_OUT') {
+        currentUser = null;
+        sessionStorage.removeItem('currentUser');
+        showLoginScreen();
+    }
+});
