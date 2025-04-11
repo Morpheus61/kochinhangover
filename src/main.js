@@ -1473,11 +1473,17 @@ async function downloadGuestsPDF() {
             
             // Save the PDF
             doc.save('kochin-hangover-guest-list.pdf');
-            
-        } catch (error) {
-            console.error('Error generating PDF:', error);
-            alert('Failed to generate PDF. Please try again.');
-        }
+        };
+        
+        // Handle case where logo fails to load
+        logoImg.onerror = function() {
+            console.error('Failed to load logo image');
+            finalizePDF();
+        };
+        
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Failed to generate PDF. Please try again.');
     }
 }
 
@@ -1852,11 +1858,10 @@ async function downloadStatsPDF() {
             
             // Save the PDF
             doc.save('kochin-hangover-statistics.pdf');
-            
-        } catch (error) {
-            console.error('Error generating PDF:', error);
-            alert('Failed to generate PDF. Please try again.');
         }
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Failed to generate PDF. Please try again.');
     }
 }
 
