@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Icon Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .icon-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .icon-item {
+            text-align: center;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        h1, h2 {
+            color: #2a0e3a;
+        }
+    </style>
+</head>
+<body>
+    <h1>Kochin Hangover Icon Test</h1>
+    <p>This page tests if your icons are properly accessible. If you see all icons below, they are working correctly.</p>
+    
+    <h2>PWA Icons</h2>
+    <div class="icon-container">
+        <div class="icon-item">
+            <img src="/icons/android-chrome-192x192.png" alt="192x192 Icon" width="100">
+            <p>android-chrome-192x192.png</p>
+        </div>
+        <div class="icon-item">
+            <img src="/icons/android-chrome-512x512.png" alt="512x512 Icon" width="100">
+            <p>android-chrome-512x512.png</p>
+        </div>
+        <div class="icon-item">
+            <img src="/icons/apple-touch-icon.png" alt="Apple Touch Icon" width="100">
+            <p>apple-touch-icon.png</p>
+        </div>
+        <div class="icon-item">
+            <img src="/icons/favicon-32x32.png" alt="Favicon 32x32" width="32">
+            <p>favicon-32x32.png</p>
+        </div>
+        <div class="icon-item">
+            <img src="/icons/favicon-16x16.png" alt="Favicon 16x16" width="16">
+            <p>favicon-16x16.png</p>
+        </div>
+    </div>
+    
+    <h2>Asset Icons</h2>
+    <div class="icon-container">
+        <div class="icon-item">
+            <img src="/assets/kochin-logo.png" alt="Kochin Logo" width="100">
+            <p>assets/kochin-logo.png</p>
+        </div>
+        <div class="icon-item">
+            <img src="/assets/kochin-logo-full.png" alt="Kochin Logo Full" width="100">
+            <p>assets/kochin-logo-full.png</p>
+        </div>
+    </div>
+    
+    <h2>Inline SVG Logo (Always Works)</h2>
+    <div class="icon-container">
+        <div class="icon-item">
+            <svg width="100" height="100" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#FF6B6B" />
+                        <stop offset="50%" stop-color="#FFD166" />
+                        <stop offset="100%" stop-color="#06D6A0" />
+                    </linearGradient>
+                </defs>
+                <circle cx="256" cy="256" r="240" fill="#2a0e3a" />
+                <path d="M256 80c-97.2 0-176 78.8-176 176s78.8 176 176 176 176-78.8 176-176S353.2 80 256 80zm0 320c-79.4 0-144-64.6-144-144s64.6-144 144-144 144 64.6 144 144-64.6 144-144 144z" fill="url(#logo-gradient)" />
+                <circle cx="256" cy="256" r="112" fill="#2a0e3a" />
+                <path d="M256 176c-44.1 0-80 35.9-80 80s35.9 80 80 80 80-35.9 80-80-35.9-80-80-80zm0 128c-26.5 0-48-21.5-48-48s21.5-48 48-48 48 21.5 48 48-21.5 48-48 48z" fill="url(#logo-gradient)" />
+            </svg>
+            <p>Inline SVG Logo</p>
+        </div>
+    </div>
+    
+    <h2>Relative Path Test</h2>
+    <div class="icon-container">
+        <div class="icon-item">
+            <img src="icons/android-chrome-192x192.png" alt="192x192 Icon (Relative)" width="100">
+            <p>Relative: icons/android-chrome-192x192.png</p>
+        </div>
+        <div class="icon-item">
+            <img src="assets/kochin-logo.png" alt="Kochin Logo (Relative)" width="100">
+            <p>Relative: assets/kochin-logo.png</p>
+        </div>
+    </div>
+</body>
+</html>
