@@ -1299,7 +1299,7 @@ async function downloadGuestsPDF() {
         
         // Add logo
         const logoImg = document.createElement('img');
-        logoImg.src = 'assets/kochin-logo.png';
+        logoImg.src = 'https://i.ibb.co/kQCfDFZ/kochin-logo.png';
         
         // Function to finalize the PDF after logo is added
         function finalizePDF() {
@@ -1583,7 +1583,7 @@ async function downloadStatsPDF() {
         
         // Add logo
         const logoImg = document.createElement('img');
-        logoImg.src = 'assets/kochin-logo.png';
+        logoImg.src = 'https://i.ibb.co/kQCfDFZ/kochin-logo.png';
         
         // Function to finalize the PDF after logo is added
         function finalizePDF() {
