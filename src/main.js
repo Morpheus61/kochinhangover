@@ -1467,16 +1467,14 @@ async function downloadGuestsPDF() {
         const darkColor = '#2a0e3a';
         const accentColor = '#f7d046';
         
-        // Add header with logo and title
+        // Add header with title
         doc.setFillColor(darkColor);
         doc.rect(0, 0, 210, 40, 'F');
         
         // Add decorative elements
         doc.setFillColor(primaryColor);
-        doc.setGlobalAlpha(0.2);
         doc.circle(0, 0, 30, 'F');
         doc.circle(210, 40, 30, 'F');
-        doc.setGlobalAlpha(1);
         
         // Add title
         doc.setTextColor(255, 255, 255);
@@ -1528,10 +1526,8 @@ async function downloadGuestsPDF() {
                     docWithLogo.rect(0, 0, 210, 40, 'F');
                     
                     docWithLogo.setFillColor(primaryColor);
-                    docWithLogo.setGlobalAlpha(0.2);
                     docWithLogo.circle(0, 0, 30, 'F');
                     docWithLogo.circle(210, 40, 30, 'F');
-                    docWithLogo.setGlobalAlpha(1);
                     
                     // Add the logo
                     docWithLogo.addImage(logoDataUrl, 'PNG', 10, 5, 30, 30);
@@ -1777,16 +1773,14 @@ async function downloadStatsPDF() {
         const darkColor = '#2a0e3a';
         const accentColor = '#f7d046';
         
-        // Add header with logo and title
+        // Add header with title
         doc.setFillColor(darkColor);
         doc.rect(0, 0, 210, 40, 'F');
         
         // Add decorative elements
         doc.setFillColor(primaryColor);
-        doc.setGlobalAlpha(0.2);
         doc.circle(0, 0, 30, 'F');
         doc.circle(210, 40, 30, 'F');
-        doc.setGlobalAlpha(1);
         
         // Add title
         doc.setTextColor(255, 255, 255);
@@ -1838,10 +1832,8 @@ async function downloadStatsPDF() {
                     docWithLogo.rect(0, 0, 210, 40, 'F');
                     
                     docWithLogo.setFillColor(primaryColor);
-                    docWithLogo.setGlobalAlpha(0.2);
                     docWithLogo.circle(0, 0, 30, 'F');
                     docWithLogo.circle(210, 40, 30, 'F');
-                    docWithLogo.setGlobalAlpha(1);
                     
                     // Add the logo
                     docWithLogo.addImage(logoDataUrl, 'PNG', 10, 5, 30, 30);
