@@ -100,6 +100,24 @@ async function setupNavigation() {
     // Show/hide navigation buttons based on role
     document.getElementById('usersBtn')?.classList.toggle('hidden', !isAdmin);
     
+    // Update user role display
+    const userRoleDisplay = document.getElementById('userRoleDisplay');
+    if (userRoleDisplay) {
+        if (isAdmin) {
+            userRoleDisplay.textContent = 'Logged in as Admin';
+            userRoleDisplay.classList.add('bg-purple-700');
+            userRoleDisplay.classList.remove('bg-blue-600', 'bg-green-600');
+        } else if (isStaff) {
+            userRoleDisplay.textContent = 'Logged in as Committee Member';
+            userRoleDisplay.classList.add('bg-blue-600');
+            userRoleDisplay.classList.remove('bg-purple-700', 'bg-green-600');
+        } else if (isDoorman) {
+            userRoleDisplay.textContent = 'Logged in as Entry Checker';
+            userRoleDisplay.classList.add('bg-green-600');
+            userRoleDisplay.classList.remove('bg-purple-700', 'bg-blue-600');
+        }
+    }
+    
     // Restrict staff to only Registered Guests and Stats
     if (isStaff) {
         document.getElementById('newRegistrationBtn')?.classList.add('hidden');
@@ -137,6 +155,8 @@ async function showTab(tabId) {
         await loadStats();
     } else if (tabId === 'verification') {
         initQRScanner();
+    } else if (tabId === 'users') {
+        await loadUsers();
     }
 }
 
@@ -190,6 +210,224 @@ async function loadGuestList() {
         console.error('Error loading guest list:', error);
     }
 }
+
+// Load users list
+async function loadUsers() {
+    try {
+        const { data: users, error } = await supabase
+            .from('users')
+            .select('*');
+        
+        if (error) throw error;
+        
+        const tbody = document.getElementById('usersList');
+        if (!tbody) return;
+        
+        tbody.innerHTML = users.map(user => `
+            <tr class="border-b border-gray-700">
+                <td class="py-3 px-4">${user.username || ''}</td>
+                <td class="py-3 px-4">${user.role || ''}</td>
+                <td class="py-3 px-4">
+                    <button class="text-blue-400 hover:text-blue-600 mr-2 edit-user-btn" data-user-id="${user.id}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="text-red-400 hover:text-red-600 mr-2 delete-user-btn" data-user-id="${user.id}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+        // Attach event listeners to the edit and delete buttons
+        document.querySelectorAll('.edit-user-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const userId = this.getAttribute('data-user-id');
+                editUser(userId);
+            });
+        });
+        
+        document.querySelectorAll('.delete-user-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const userId = this.getAttribute('data-user-id');
+                deleteUser(userId);
+            });
+        });
+        
+    } catch (error) {
+        console.error('Error loading users list:', error);
+    }
+}
+
+// Add user function
+async function addUser(username, password, role) {
+    try {
+        // Check if username already exists
+        const { data: existingUsers, error: checkError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('username', username);
+        
+        if (checkError) throw checkError;
+        
+        if (existingUsers && existingUsers.length > 0) {
+            throw new Error('Username already exists');
+        }
+        
+        // Insert new user
+        const { data, error } = await supabase
+            .from('users')
+            .insert([{ username, password, role }])
+            .select();
+        
+        if (error) throw error;
+        
+        // Reload users list
+        await loadUsers();
+        
+        return data;
+    } catch (error) {
+        console.error('Error adding user:', error);
+        throw error;
+    }
+}
+
+// Edit user function
+async function editUser(userId) {
+    try {
+        // Get user data
+        const { data: user, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .single();
+        
+        if (error) throw error;
+        
+        // Create edit form modal
+        const modal = document.createElement('div');
+        modal.className = 'modal flex items-center justify-center';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold kochin-header">Edit User</h3>
+                    <button class="text-gray-300 hover:text-white close-modal-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form id="editUserForm">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Username</label>
+                            <input type="text" id="editUsername" class="kochin-input w-full" value="${user.username}" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Password</label>
+                            <input type="password" id="editPassword" class="kochin-input w-full" placeholder="Leave blank to keep current password">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Role</label>
+                            <select id="editRole" class="kochin-input w-full" required>
+                                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                                <option value="staff" ${user.role === 'staff' ? 'selected' : ''}>Staff</option>
+                                <option value="doorman" ${user.role === 'doorman' ? 'selected' : ''}>Doorman</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 flex space-x-4">
+                        <button type="submit" class="kochin-button flex-1">
+                            <i class="fas fa-save mr-2"></i> Save Changes
+                        </button>
+                        <button type="button" class="kochin-button bg-gray-600 flex-1 close-modal-btn">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Add event listener to close modal
+        modal.querySelectorAll('.close-modal-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+        });
+        
+        // Add event listener to form submit
+        document.getElementById('editUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('editUsername').value;
+            const password = document.getElementById('editPassword').value;
+            const role = document.getElementById('editRole').value;
+            
+            try {
+                // Update user
+                const updateData = { username, role };
+                
+                // Only update password if it's not empty
+                if (password) {
+                    updateData.password = password;
+                }
+                
+                const { error: updateError } = await supabase
+                    .from('users')
+                    .update(updateData)
+                    .eq('id', userId);
+                
+                if (updateError) throw updateError;
+                
+                // Remove modal
+                document.body.removeChild(modal);
+                
+                // Reload users list
+                await loadUsers();
+                
+                alert('User updated successfully');
+            } catch (error) {
+                console.error('Error updating user:', error);
+                alert('Error updating user: ' + error.message);
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error editing user:', error);
+        alert('Error editing user: ' + error.message);
+    }
+}
+
+// Delete user function
+async function deleteUser(userId) {
+    try {
+        // Confirm deletion
+        if (!confirm('Are you sure you want to delete this user?')) {
+            return;
+        }
+        
+        // Delete user
+        const { error } = await supabase
+            .from('users')
+            .delete()
+            .eq('id', userId);
+        
+        if (error) throw error;
+        
+        // Reload users list
+        await loadUsers();
+        
+        alert('User deleted successfully');
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        alert('Error deleting user: ' + error.message);
+    }
+}
+
+// Make the functions available globally
+window.editUser = editUser;
+window.deleteUser = deleteUser;
 
 // Initialize QR Scanner
 function initQRScanner() {
@@ -472,6 +710,37 @@ function setupEventListeners() {
     document.getElementById('downloadStatsPDFBtn')?.addEventListener('click', downloadStatsPDF);
     document.getElementById('downloadStatsCSVBtn')?.addEventListener('click', downloadStatsCSV);
     
+    // Add User form
+    document.getElementById('addUserForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const username = document.getElementById('createUsername').value;
+        const password = document.getElementById('createPassword').value;
+        const role = document.getElementById('createRole').value;
+        const errorText = document.getElementById('addUserError');
+        
+        try {
+            await addUser(username, password, role);
+            
+            // Reset form
+            e.target.reset();
+            
+            // Hide error message if visible
+            if (errorText) {
+                errorText.classList.add('hidden');
+            }
+            
+            alert('User added successfully!');
+            
+        } catch (error) {
+            console.error('Error adding user:', error);
+            if (errorText) {
+                errorText.textContent = error.message || 'Failed to add user';
+                errorText.classList.remove('hidden');
+            }
+        }
+    });
+    
     // WhatsApp share buttons
     document.addEventListener('click', async function(e) {
         if (e.target.closest('.whatsapp-share')) {
@@ -708,6 +977,10 @@ async function downloadGuestsPDF() {
         doc.setFillColor(darkColor);
         doc.rect(0, 0, 210, 40, 'F');
         
+        // Add curved bottom edge to header
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(0, 35, 210, 10, 5, 5, 'F');
+        
         // Add gradient effect
         for (let i = 0; i < 20; i++) {
             const alpha = 0.1 - (i * 0.005);
@@ -728,11 +1001,20 @@ async function downloadGuestsPDF() {
         // Add date
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(10);
-        doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 37, { align: 'center' });
+        const currentDate = new Date().toLocaleString('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        });
+        doc.text(`Generated: ${currentDate}`, 105, 37, { align: 'center' });
         
         // Table header
         const startY = 50;
-        const colWidths = [10, 50, 30, 30, 30, 40];
+        const colWidths = [10, 50, 30, 30, 35, 35];
         const headers = ['#', 'Guest Name', 'Club', 'Entry Type', 'Amount', 'Status'];
         
         // Draw table header
@@ -780,7 +1062,7 @@ async function downloadGuestsPDF() {
             
             // Alternating row colors
             if (index % 2 === 0) {
-                doc.setFillColor(240, 240, 250);
+                doc.setFillColor(245, 245, 255);
                 doc.rect(10, yPos, 190, 10, 'F');
             }
             
@@ -800,22 +1082,45 @@ async function downloadGuestsPDF() {
             xPos += colWidths[2];
             
             // Entry type
-            doc.text(guest.entry_type || '', xPos + 2, yPos + 7);
+            const entryTypeDisplay = guest.entry_type === 'stag' ? 'Stag' : 
+                                    guest.entry_type === 'couple' ? 'Couple' : 
+                                    guest.entry_type || '';
+            doc.text(entryTypeDisplay, xPos + 2, yPos + 7);
             xPos += colWidths[3];
             
             // Amount
-            doc.text(`₹${guest.paid_amount} / ₹${guest.total_amount}`, xPos + 2, yPos + 7);
+            // Format the amount to be more readable
+            let amountText = '';
+            if (guest.paid_amount === guest.total_amount) {
+                amountText = `₹${guest.total_amount}`;
+            } else {
+                amountText = `₹${guest.paid_amount} / ₹${guest.total_amount}`;
+            }
+            doc.text(amountText, xPos + 2, yPos + 7);
             xPos += colWidths[4];
             
             // Status
-            const statusColor = 
-                guest.status === 'verified' ? [0, 150, 0] :
-                guest.status === 'paid' ? [0, 100, 200] :
-                guest.status === 'partially_paid' ? [200, 150, 0] :
-                [200, 0, 0];
+            let statusText = '';
+            let statusColor = [];
+            
+            if (guest.status === 'verified') {
+                statusText = 'VERIFIED';
+                statusColor = [0, 150, 0]; // Green
+            } else if (guest.status === 'paid' || (guest.paid_amount === guest.total_amount)) {
+                statusText = 'PAID';
+                statusColor = [0, 100, 200]; // Blue
+            } else if (guest.status === 'partially_paid' || (guest.paid_amount > 0 && guest.paid_amount < guest.total_amount)) {
+                statusText = 'PARTIAL PAYMENT';
+                statusColor = [232, 50, 131]; // Primary color
+            } else {
+                statusText = 'PENDING';
+                statusColor = [200, 0, 0]; // Red
+            }
             
             doc.setTextColor(...statusColor);
-            doc.text(guest.status || 'pending', xPos + 2, yPos + 7);
+            doc.setFont('helvetica', 'bold');
+            doc.text(statusText, xPos + 2, yPos + 7);
+            doc.setFont('helvetica', 'normal');
             doc.setTextColor(50, 50, 50);
             
             yPos += 10;
@@ -838,6 +1143,14 @@ async function downloadGuestsPDF() {
             // Kochin Hangover text
             doc.setFontSize(8);
             doc.text('Kochin Hangover - Entry Management System', 10, 293);
+            
+            // Add decorative elements
+            doc.setFillColor(primaryColor);
+            doc.circle(200, 293, 3, 'F');
+            doc.setFillColor(secondaryColor);
+            doc.circle(195, 293, 2, 'F');
+            doc.setFillColor(accentColor);
+            doc.circle(190, 293, 1.5, 'F');
         }
         
         // Save the PDF
