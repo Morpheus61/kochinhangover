@@ -157,6 +157,31 @@ async function setupNavigation() {
 
 // Show specific tab
 async function showTab(tabId) {
+    // Get current user role
+    const { data: userRole, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', currentUser.id)
+        .single();
+
+    if (error) {
+        console.error('Error fetching user role:', error);
+        return;
+    }
+
+    const isStaff = userRole?.role === 'staff';
+    const isAdmin = userRole?.role === 'admin';
+    const isDoorman = userRole?.role === 'doorman';
+
+    // Role-based access control for tabs
+    if (isStaff && !['guests', 'stats'].includes(tabId)) {
+        // Staff can only access guests and stats tabs
+        tabId = 'guests';
+    } else if (isDoorman && !['verification', 'guests'].includes(tabId)) {
+        // Doorman can only access verification and guests tabs
+        tabId = 'verification';
+    }
+
     // Hide all tabs
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -634,7 +659,9 @@ function setupEventListeners() {
             // Show main app and initialize components
             showApp();
             await setupNavigation();
-            await showTab('registration');
+            
+            // Clear any existing hash to prevent unauthorized access
+            window.location.hash = '';
             
         } catch (error) {
             console.error('Login error:', error);
@@ -1094,46 +1121,122 @@ async function loadStats() {
         if (error) throw error;
         
         // Calculate total stats
-        const stats = {
-            totalRegistrations: guests.length,
-            totalAmount: guests.reduce((sum, guest) => sum + guest.total_amount, 0),
-            paidAmount: guests.reduce((sum, guest) => sum + guest.paid_amount, 0)
-        };
+        const totalRegistrations = guests.length;
+        const verifiedEntries = guests.filter(guest => guest.status === 'verified').length;
+        const pendingEntries = totalRegistrations - verifiedEntries;
+        const totalRevenue = guests.reduce((sum, guest) => sum + (guest.paid_amount || 0), 0);
         
-        document.getElementById('totalRegistrations').textContent = stats.totalRegistrations;
-        document.getElementById('totalAmount').textContent = `₹${stats.totalAmount}`;
+        // Update summary stats
+        document.getElementById('totalRegistrations').textContent = totalRegistrations;
+        document.getElementById('verifiedEntries').textContent = verifiedEntries;
+        document.getElementById('pendingEntries').textContent = pendingEntries;
+        document.getElementById('totalRevenue').textContent = `₹${totalRevenue}`;
         
         // Calculate club-wise stats
         const clubStats = {};
         guests.forEach(guest => {
-            if (!clubStats[guest.club_name]) {
-                clubStats[guest.club_name] = {
-                    totalGuests: 0,
-                    totalAmount: 0
+            const clubName = guest.club_name || 'No Club Specified';
+            
+            if (!clubStats[clubName]) {
+                clubStats[clubName] = {
+                    registrations: 0,
+                    totalAmount: 0,
+                    paidAmount: 0,
+                    guests: []
                 };
             }
-            clubStats[guest.club_name].totalGuests++;
-            clubStats[guest.club_name].totalAmount += guest.total_amount;
+            
+            clubStats[clubName].registrations++;
+            clubStats[clubName].totalAmount += guest.total_amount || 0;
+            clubStats[clubName].paidAmount += guest.paid_amount || 0;
+            clubStats[clubName].guests.push(guest);
         });
         
-        // Sort clubs by total guests
+        // Sort clubs by registrations (descending)
         const sortedClubs = Object.entries(clubStats)
-            .sort((a, b) => b[1].totalGuests - a[1].totalGuests);
+            .sort((a, b) => b[1].registrations - a[1].registrations);
         
         // Update club stats table
-        const clubStatsTable = document.getElementById('clubStats');
-        if (clubStatsTable) {
-            clubStatsTable.innerHTML = sortedClubs.map(([club, stats]) => `
-                <tr class="border-t border-gray-700">
-                    <td class="py-3 px-4">${club || 'No club specified'}</td>
-                    <td class="py-3 px-4">${stats.totalGuests}</td>
+        const statsTableBody = document.getElementById('statsTableBody');
+        if (statsTableBody) {
+            statsTableBody.innerHTML = sortedClubs.map(([clubName, stats], index) => `
+                <tr class="border-b border-gray-700 club-row" data-club-index="${index}">
+                    <td class="py-3 px-4">${clubName}</td>
+                    <td class="py-3 px-4">${stats.registrations}</td>
                     <td class="py-3 px-4">₹${stats.totalAmount}</td>
+                    <td class="py-3 px-4">₹${stats.paidAmount}</td>
+                    <td class="py-3 px-4">
+                        <button class="text-blue-400 hover:text-blue-600 view-club-guests">
+                            <i class="fas fa-eye"></i> View Guests
+                        </button>
+                    </td>
+                </tr>
+                <tr class="club-guests-row hidden" id="club-guests-${index}">
+                    <td colspan="5" class="py-3 px-4 bg-gray-800">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full">
+                                <thead>
+                                    <tr class="border-b border-gray-700">
+                                        <th class="py-2 px-2 text-left text-sm">Name</th>
+                                        <th class="py-2 px-2 text-left text-sm">Mobile</th>
+                                        <th class="py-2 px-2 text-left text-sm">Entry Type</th>
+                                        <th class="py-2 px-2 text-left text-sm">Status</th>
+                                        <th class="py-2 px-2 text-left text-sm">Payment</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${stats.guests.map(guest => `
+                                        <tr class="border-b border-gray-700">
+                                            <td class="py-2 px-2 text-sm">${guest.guest_name}</td>
+                                            <td class="py-2 px-2 text-sm">${guest.mobile_number}</td>
+                                            <td class="py-2 px-2 text-sm">${guest.entry_type}</td>
+                                            <td class="py-2 px-2 text-sm">
+                                                <span class="px-2 py-1 rounded-full text-xs ${
+                                                    guest.status === 'verified' ? 'bg-green-500' :
+                                                    guest.status === 'paid' ? 'bg-blue-500' :
+                                                    guest.status === 'partially_paid' ? 'bg-yellow-500' :
+                                                    'bg-red-500'
+                                                }">
+                                                    ${guest.status || 'pending'}
+                                                </span>
+                                            </td>
+                                            <td class="py-2 px-2 text-sm">₹${guest.paid_amount} / ₹${guest.total_amount}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </td>
                 </tr>
             `).join('');
+            
+            // Add event listeners to view club guests buttons
+            document.querySelectorAll('.view-club-guests').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const row = this.closest('tr');
+                    const clubIndex = row.getAttribute('data-club-index');
+                    const guestsRow = document.getElementById(`club-guests-${clubIndex}`);
+                    
+                    // Toggle the visibility of the guests row
+                    guestsRow.classList.toggle('hidden');
+                    
+                    // Update the button icon
+                    const icon = this.querySelector('i');
+                    if (guestsRow.classList.contains('hidden')) {
+                        icon.className = 'fas fa-eye';
+                        this.innerHTML = '<i class="fas fa-eye"></i> View Guests';
+                    } else {
+                        icon.className = 'fas fa-eye-slash';
+                        this.innerHTML = '<i class="fas fa-eye-slash"></i> Hide Guests';
+                    }
+                });
+            });
         }
         
     } catch (error) {
         console.error('Error loading stats:', error);
+        alert('Failed to load statistics');
     }
 }
 
@@ -1762,4 +1865,14 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoginScreen();
     });
     setupEventListeners();
+    
+    // Handle hash-based navigation with role-based security
+    window.addEventListener('hashchange', async function() {
+        if (!currentUser) return;
+        
+        const hash = window.location.hash.substring(1);
+        if (hash) {
+            await showTab(hash);
+        }
+    });
 });
