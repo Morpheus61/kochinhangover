@@ -594,41 +594,41 @@ function initQRScanner() {
 // Verify guest entry
 window.verifyGuest = async function(guestId) {
     try {
-        // First check if the guest has fully paid
-        const { data: guestCheck, error: checkError } = await supabase
+        // Get guest data
+        const { data: guest, error: getError } = await supabase
             .from('guests')
             .select('*')
             .eq('id', guestId)
             .single();
-            
-        if (checkError) throw checkError;
         
-        // Verify that guest has paid in full (Stag: 2750 and Couple: 4750)
-        const expectedAmount = guestCheck.entry_type === 'stag' ? 2750 : 4750;
+        if (getError) throw getError;
         
-        if (guestCheck.paid_amount < expectedAmount) {
-            throw new Error(`Cannot verify guest. Full payment required (₹${expectedAmount}). Current payment: ₹${guestCheck.paid_amount}`);
+        // Check if guest has paid in full
+        const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
+        const isFullyPaid = guest.paid_amount >= expectedAmount;
+        
+        if (!isFullyPaid) {
+            throw new Error('Guest has not paid in full');
         }
         
         // Update guest status to verified
-        const { data: guest, error } = await supabase
+        const { error: updateError } = await supabase
             .from('guests')
-            .update({ status: 'verified', verified_at: new Date().toISOString() })
-            .eq('id', guestId)
-            .select()
-            .single();
+            .update({ status: 'verified' })
+            .eq('id', guestId);
         
-        if (error) throw error;
+        if (updateError) throw updateError;
         
         // Show success message
-        alert('Guest verified successfully!');
+        alert('Guest entry verified successfully!');
         
-        // Remove verification modal
-        document.querySelector('.fixed').remove();
-        
-        // Resume scanning
-        if (qrScanner) {
-            qrScanner.resume();
+        // Close the modal and resume scanning
+        const modal = document.querySelector('.fixed.inset-0.flex.items-center.justify-center.bg-black.bg-opacity-50');
+        if (modal) {
+            modal.remove();
+            if (qrScanner) {
+                qrScanner.resume();
+            }
         }
         
     } catch (error) {
@@ -1135,11 +1135,24 @@ async function loadStats() {
         
         if (error) throw error;
         
+        console.log('All guests:', guests); // Debug log
+        
         // Calculate total stats
         const totalRegistrations = guests.length;
-        const verifiedEntries = guests.filter(guest => guest.status === 'verified').length;
+        
+        // Count verified entries based on full payment
+        const verifiedEntries = guests.filter(guest => {
+            const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
+            const paidAmount = parseFloat(guest.paid_amount) || 0; // Ensure paid_amount is a number
+            const isPaidInFull = paidAmount >= expectedAmount;
+            console.log(`Guest ${guest.guest_name}: paid ${paidAmount}, expected ${expectedAmount}, isPaidInFull: ${isPaidInFull}`); // Debug log
+            return isPaidInFull; // Guest has paid in full
+        }).length;
+        
+        console.log('Verified entries count:', verifiedEntries); // Debug log
+        
         const pendingEntries = totalRegistrations - verifiedEntries;
-        const totalRevenue = guests.reduce((sum, guest) => sum + (guest.paid_amount || 0), 0);
+        const totalRevenue = guests.reduce((sum, guest) => sum + (parseFloat(guest.paid_amount) || 0), 0);
         
         // Update summary stats
         document.getElementById('totalRegistrations').textContent = totalRegistrations;
@@ -1284,165 +1297,187 @@ async function downloadGuestsPDF() {
         doc.setFillColor(darkColor);
         doc.rect(0, 0, 210, 40, 'F');
         
-        // Add title
-        doc.setTextColor(255, 255, 255);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(24);
-        doc.text('KOCHIN HANGOVER', 105, 20, { align: 'center' });
-        doc.setFontSize(16);
-        doc.text('Guest List', 105, 30, { align: 'center' });
+        // Add logo
+        const logoImg = document.createElement('img');
+        logoImg.src = 'assets/kochin-logo.png';
+        logoImg.onload = function() {
+            // Once the image is loaded, add it to the PDF
+            const canvas = document.createElement('canvas');
+            canvas.width = logoImg.width;
+            canvas.height = logoImg.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(logoImg, 0, 0, logoImg.width, logoImg.height);
+            const logoDataUrl = canvas.toDataURL('image/png');
+            
+            // Add the logo to the PDF
+            doc.addImage(logoDataUrl, 'PNG', 10, 5, 30, 30);
+            
+            // Continue with the rest of the PDF generation
+            finalizePDF();
+        };
         
-        // Add date
-        doc.setFontSize(10);
-        const currentDate = new Date().toLocaleString('en-US', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: true
-        });
-        doc.text(`Generated: ${currentDate}`, 105, 37, { align: 'center' });
-        
-        // Table header
-        const startY = 50;
-        const colWidths = [10, 50, 30, 30, 40, 40];
-        const headers = ['#', 'Guest Name', 'Club', 'Entry Type', 'Amount', 'Status'];
-        
-        // Draw table header
-        doc.setFillColor(darkColor);
-        doc.rect(10, startY, 190, 10, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(12);
-        
-        let xPos = 10;
-        headers.forEach((header, i) => {
-            doc.text(header, xPos + 2, startY + 7);
-            xPos += colWidths[i];
-        });
-        
-        // Draw table rows
-        let yPos = startY + 10;
-        doc.setTextColor(50, 50, 50);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        
-        guests.forEach((guest, index) => {
-            // Add new page if needed
-            if (yPos > 270) {
-                doc.addPage();
-                yPos = 20;
-                
-                // Add mini header on new pages
-                doc.setFillColor(darkColor);
-                doc.rect(10, yPos - 10, 190, 10, 'F');
-                doc.setTextColor(255, 255, 255);
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(12);
-                
-                xPos = 10;
-                headers.forEach((header, i) => {
-                    doc.text(header, xPos + 2, yPos - 3);
-                    xPos += colWidths[i];
-                });
-                
-                doc.setTextColor(50, 50, 50);
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(10);
-            }
-            
-            // Alternating row colors
-            if (index % 2 === 0) {
-                doc.setFillColor(245, 245, 255);
-                doc.rect(10, yPos, 190, 10, 'F');
-            }
-            
-            // Row data
-            xPos = 10;
-            
-            // Row number
-            doc.text((index + 1).toString(), xPos + 2, yPos + 7);
-            xPos += colWidths[0];
-            
-            // Guest name
-            doc.text(guest.guest_name || '', xPos + 2, yPos + 7);
-            xPos += colWidths[1];
-            
-            // Club
-            doc.text(guest.club_name || 'N/A', xPos + 2, yPos + 7);
-            xPos += colWidths[2];
-            
-            // Entry type
-            const entryTypeDisplay = guest.entry_type === 'stag' ? 'Stag' : 
-                                    guest.entry_type === 'couple' ? 'Couple' : 
-                                    guest.entry_type || '';
-            doc.text(entryTypeDisplay, xPos + 2, yPos + 7);
-            xPos += colWidths[3];
-            
-            // Amount - Simplified to avoid overlap
-            let amountText = '';
-            if (guest.paid_amount === guest.total_amount) {
-                amountText = `₹${guest.total_amount}`;
-            } else {
-                amountText = `₹${guest.paid_amount}`;
-            }
-            doc.text(amountText, xPos + 2, yPos + 7);
-            xPos += colWidths[4];
-            
-            // Status
-            let statusText = '';
-            let statusColor = [];
-            
-            if (guest.status === 'verified') {
-                statusText = 'VERIFIED';
-                statusColor = [0, 150, 0]; // Green
-            } else if (guest.status === 'paid' || (guest.paid_amount === guest.total_amount)) {
-                statusText = 'PAID';
-                statusColor = [0, 100, 200]; // Blue
-            } else if (guest.status === 'partially_paid' || (guest.paid_amount > 0 && guest.paid_amount < guest.total_amount)) {
-                statusText = 'PARTIAL';
-                statusColor = [232, 50, 131]; // Primary color
-            } else {
-                statusText = 'PENDING';
-                statusColor = [200, 0, 0]; // Red
-            }
-            
-            doc.setTextColor(...statusColor);
-            doc.setFont('helvetica', 'bold');
-            doc.text(statusText, xPos + 2, yPos + 7);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(50, 50, 50);
-            
-            yPos += 10;
-        });
-        
-        // Add footer
-        const pageCount = doc.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            
-            // Footer rectangle
-            doc.setFillColor(darkColor);
-            doc.rect(0, 287, 210, 10, 'F');
-            
-            // Page number
+        // Function to finalize the PDF after logo is added
+        function finalizePDF() {
+            // Add title
             doc.setTextColor(255, 255, 255);
-            doc.setFontSize(10);
-            doc.text(`Page ${i} of ${pageCount}`, 105, 293, { align: 'center' });
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(24);
+            doc.text('KOCHIN HANGOVER', 105, 20, { align: 'center' });
+            doc.setFontSize(16);
+            doc.text('Guest List', 105, 30, { align: 'center' });
             
-            // Kochin Hangover text
-            doc.setFontSize(8);
-            doc.text('Kochin Hangover - Entry Management System', 10, 293);
+            // Add date
+            doc.setFontSize(10);
+            const currentDate = new Date().toLocaleString('en-US', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });
+            doc.text(`Generated: ${currentDate}`, 105, 37, { align: 'center' });
+            
+            // Table header
+            const startY = 50;
+            const colWidths = [10, 50, 30, 30, 40, 40];
+            const headers = ['#', 'Guest Name', 'Club', 'Entry Type', 'Amount', 'Status'];
+            
+            // Draw table header
+            doc.setFillColor(darkColor);
+            doc.rect(10, startY, 190, 10, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            
+            let xPos = 10;
+            headers.forEach((header, i) => {
+                doc.text(header, xPos + 2, startY + 7);
+                xPos += colWidths[i];
+            });
+            
+            // Draw table rows
+            let yPos = startY + 10;
+            doc.setTextColor(50, 50, 50);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            
+            guests.forEach((guest, index) => {
+                // Add new page if needed
+                if (yPos > 270) {
+                    doc.addPage();
+                    yPos = 20;
+                    
+                    // Add mini header on new pages
+                    doc.setFillColor(darkColor);
+                    doc.rect(10, yPos - 10, 190, 10, 'F');
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(12);
+                    
+                    xPos = 10;
+                    headers.forEach((header, i) => {
+                        doc.text(header, xPos + 2, yPos - 3);
+                        xPos += colWidths[i];
+                    });
+                    
+                    doc.setTextColor(50, 50, 50);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(10);
+                }
+                
+                // Alternating row colors
+                if (index % 2 === 0) {
+                    doc.setFillColor(245, 245, 255);
+                    doc.rect(10, yPos, 190, 10, 'F');
+                }
+                
+                // Row data
+                xPos = 10;
+                
+                // Row number
+                doc.text((index + 1).toString(), xPos + 2, yPos + 7);
+                xPos += colWidths[0];
+                
+                // Guest name
+                doc.text(guest.guest_name || '', xPos + 2, yPos + 7);
+                xPos += colWidths[1];
+                
+                // Club
+                doc.text(guest.club_name || 'N/A', xPos + 2, yPos + 7);
+                xPos += colWidths[2];
+                
+                // Entry type
+                const entryTypeDisplay = guest.entry_type === 'stag' ? 'Stag' : 
+                                        guest.entry_type === 'couple' ? 'Couple' : 
+                                        guest.entry_type || '';
+                doc.text(entryTypeDisplay, xPos + 2, yPos + 7);
+                xPos += colWidths[3];
+                
+                // Amount - Simplified to avoid overlap
+                let amountText = '';
+                if (guest.paid_amount === guest.total_amount) {
+                    amountText = `₹${guest.total_amount}`;
+                } else {
+                    amountText = `₹${guest.paid_amount}`;
+                }
+                doc.text(amountText, xPos + 2, yPos + 7);
+                xPos += colWidths[4];
+                
+                // Status
+                let statusText = '';
+                let statusColor = [];
+                
+                if (guest.status === 'verified') {
+                    statusText = 'VERIFIED';
+                    statusColor = [0, 150, 0]; // Green
+                } else if (guest.status === 'paid' || (guest.paid_amount === guest.total_amount)) {
+                    statusText = 'PAID';
+                    statusColor = [0, 100, 200]; // Blue
+                } else if (guest.status === 'partially_paid' || (guest.paid_amount > 0 && guest.paid_amount < guest.total_amount)) {
+                    statusText = 'PARTIAL';
+                    statusColor = [232, 50, 131]; // Primary color
+                } else {
+                    statusText = 'PENDING';
+                    statusColor = [200, 0, 0]; // Red
+                }
+                
+                doc.setTextColor(...statusColor);
+                doc.setFont('helvetica', 'bold');
+                doc.text(statusText, xPos + 2, yPos + 7);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(50, 50, 50);
+                
+                yPos += 10;
+            });
+            
+            // Add footer
+            const pageCount = doc.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                
+                // Footer rectangle
+                doc.setFillColor(darkColor);
+                doc.rect(0, 287, 210, 10, 'F');
+                
+                // Page number
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(10);
+                doc.text(`Page ${i} of ${pageCount}`, 105, 293, { align: 'center' });
+                
+                // Kochin Hangover text
+                doc.setFontSize(8);
+                doc.text('Kochin Hangover - Entry Management System', 10, 293);
+            }
+            
+            // Save the PDF
+            doc.save('kochin-hangover-guest-list.pdf');
+            
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert('Failed to generate PDF. Please try again.');
         }
-        
-        // Save the PDF
-        doc.save('kochin-hangover-guest-list.pdf');
-        
-    } catch (error) {
-        console.error('Error generating PDF:', error);
-        alert('Failed to generate PDF. Please try again.');
     }
 }
 
@@ -1545,267 +1580,283 @@ async function downloadStatsPDF() {
         doc.setFillColor(darkColor);
         doc.rect(0, 0, 210, 40, 'F');
         
-        // Add gradient effect
-        for (let i = 0; i < 20; i++) {
-            const alpha = 0.1 - (i * 0.005);
-            doc.setFillColor(232, 50, 131, alpha);
-            doc.circle(30, 20, 40 - i, 'F');
-            doc.setFillColor(52, 219, 219, alpha);
-            doc.circle(180, 20, 40 - i, 'F');
-        }
-        
-        // Add title
-        doc.setTextColor(255, 255, 255);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(24);
-        doc.text('KOCHIN HANGOVER', 105, 20, { align: 'center' });
-        doc.setFontSize(16);
-        doc.text('Event Statistics', 105, 30, { align: 'center' });
-        
-        // Add date
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(10);
-        doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 37, { align: 'center' });
-        
-        // Overall stats section
-        let yPos = 50;
-        doc.setTextColor(darkColor);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(16);
-        doc.text('Overall Statistics', 105, yPos, { align: 'center' });
-        
-        // Draw stats cards
-        yPos += 10;
-        const cardWidth = 90;
-        const cardHeight = 30;
-        const margin = 10;
-        
-        // First row of cards
-        doc.setFillColor(232, 50, 131, 0.1);
-        doc.roundedRect(margin, yPos, cardWidth, cardHeight, 3, 3, 'F');
-        doc.setFillColor(52, 219, 219, 0.1);
-        doc.roundedRect(margin + cardWidth + margin, yPos, cardWidth, cardHeight, 3, 3, 'F');
-        
-        // Card content
-        doc.setTextColor(darkColor);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(12);
-        doc.text('Total Registrations', margin + cardWidth/2, yPos + 10, { align: 'center' });
-        doc.text('Total Amount', margin + cardWidth + margin + cardWidth/2, yPos + 10, { align: 'center' });
-        
-        doc.setFontSize(16);
-        doc.text(stats.totalRegistrations.toString(), margin + cardWidth/2, yPos + 20, { align: 'center' });
-        doc.text(`₹${stats.totalAmount.toLocaleString()}`, margin + cardWidth + margin + cardWidth/2, yPos + 20, { align: 'center' });
-        
-        // Second row of cards
-        yPos += cardHeight + margin;
-        doc.setFillColor(247, 208, 70, 0.1);
-        doc.roundedRect(margin, yPos, cardWidth, cardHeight, 3, 3, 'F');
-        doc.setFillColor(232, 50, 131, 0.1);
-        doc.roundedRect(margin + cardWidth + margin, yPos, cardWidth, cardHeight, 3, 3, 'F');
-        
-        // Card content
-        doc.setTextColor(darkColor);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(12);
-        doc.text('Collected Amount', margin + cardWidth/2, yPos + 10, { align: 'center' });
-        doc.text('Pending Amount', margin + cardWidth + margin + cardWidth/2, yPos + 10, { align: 'center' });
-        
-        doc.setFontSize(16);
-        doc.text(`₹${stats.paidAmount.toLocaleString()}`, margin + cardWidth/2, yPos + 20, { align: 'center' });
-        doc.text(`₹${stats.totalAmount - stats.paidAmount}`, margin + cardWidth + margin + cardWidth/2, yPos + 20, { align: 'center' });
-        
-        // Status breakdown
-        yPos += cardHeight + margin + 10;
-        doc.setTextColor(darkColor);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(14);
-        doc.text('Registration Status', 105, yPos, { align: 'center' });
-        
-        // Draw status chart (simple bar representation)
-        yPos += 10;
-        const chartWidth = 190;
-        const chartHeight = 30;
-        const totalCount = stats.totalRegistrations;
-        
-        if (totalCount > 0) {
-            const verifiedCount = guests.filter(guest => guest.status === 'verified').length;
-            const paidCount = guests.filter(guest => guest.status === 'paid').length;
-            const partiallyPaidCount = guests.filter(guest => guest.status === 'partially_paid').length;
-            const pendingCount = totalCount - verifiedCount - paidCount - partiallyPaidCount;
+        // Add logo
+        const logoImg = document.createElement('img');
+        logoImg.src = 'assets/kochin-logo.png';
+        logoImg.onload = function() {
+            // Once the image is loaded, add it to the PDF
+            const canvas = document.createElement('canvas');
+            canvas.width = logoImg.width;
+            canvas.height = logoImg.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(logoImg, 0, 0, logoImg.width, logoImg.height);
+            const logoDataUrl = canvas.toDataURL('image/png');
             
-            const verifiedWidth = (verifiedCount / totalCount) * chartWidth;
-            const paidWidth = (paidCount / totalCount) * chartWidth;
-            const partialWidth = (partiallyPaidCount / totalCount) * chartWidth;
-            const pendingWidth = (pendingCount / totalCount) * chartWidth;
+            // Add the logo to the PDF
+            doc.addImage(logoDataUrl, 'PNG', 10, 5, 30, 30);
             
-            // Draw bars
-            let xPos = margin;
-            
-            if (verifiedCount > 0) {
-                doc.setFillColor(0, 150, 0);
-                doc.rect(xPos, yPos, verifiedWidth, chartHeight, 'F');
-                xPos += verifiedWidth;
-            }
-            
-            if (paidCount > 0) {
-                doc.setFillColor(0, 100, 200);
-                doc.rect(xPos, yPos, paidWidth, chartHeight, 'F');
-                xPos += paidWidth;
-            }
-            
-            if (partiallyPaidCount > 0) {
-                doc.setFillColor(200, 150, 0);
-                doc.rect(xPos, yPos, partialWidth, chartHeight, 'F');
-                xPos += partialWidth;
-            }
-            
-            if (pendingCount > 0) {
-                doc.setFillColor(200, 0, 0);
-                doc.rect(xPos, yPos, pendingWidth, chartHeight, 'F');
-            }
-            
-            // Add legend
-            yPos += chartHeight + 5;
-            doc.setFontSize(10);
-            
-            let legendX = margin;
-            if (verifiedCount > 0) {
-                doc.setFillColor(0, 150, 0);
-                doc.rect(legendX, yPos, 5, 5, 'F');
-                doc.text(`Verified (${verifiedCount})`, legendX + 8, yPos + 4);
-                legendX += 50;
-            }
-            
-            if (paidCount > 0) {
-                doc.setFillColor(0, 100, 200);
-                doc.rect(legendX, yPos, 5, 5, 'F');
-                doc.text(`Paid (${paidCount})`, legendX + 8, yPos + 4);
-                legendX += 50;
-            }
-            
-            if (partiallyPaidCount > 0) {
-                doc.setFillColor(200, 150, 0);
-                doc.rect(legendX, yPos, 5, 5, 'F');
-                doc.text(`Partial (${partiallyPaidCount})`, legendX + 8, yPos + 4);
-                legendX += 50;
-            }
-            
-            if (pendingCount > 0) {
-                doc.setFillColor(200, 0, 0);
-                doc.rect(legendX, yPos, 5, 5, 'F');
-                doc.text(`Pending (${pendingCount})`, legendX + 8, yPos + 4);
-            }
-        }
+            // Continue with the rest of the PDF generation
+            finalizePDF();
+        };
         
-        // Club-wise statistics
-        yPos += 20;
-        doc.setTextColor(darkColor);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(16);
-        doc.text('Club-wise Statistics', 105, yPos, { align: 'center' });
-        
-        // Table header
-        yPos += 10;
-        const colWidths = [80, 35, 35, 35];
-        const headers = ['Club Name', 'Guests', 'Total (₹)', 'Paid (₹)'];
-        
-        // Draw table header
-        doc.setFillColor(darkColor);
-        doc.rect(margin, yPos, chartWidth, 10, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(12);
-        
-        let xPos = margin;
-        headers.forEach((header, i) => {
-            doc.text(header, xPos + 2, yPos + 7);
-            xPos += colWidths[i];
-        });
-        
-        // Draw table rows
-        yPos += 10;
-        doc.setTextColor(50, 50, 50);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        
-        sortedClubs.forEach((club, index) => {
-            // Add new page if needed
-            if (yPos > 270) {
-                doc.addPage();
-                yPos = 20;
-                
-                // Add mini header on new pages
-                doc.setFillColor(darkColor);
-                doc.rect(10, yPos - 10, 190, 10, 'F');
-                doc.setTextColor(255, 255, 255);
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(12);
-                
-                xPos = 10;
-                headers.forEach((header, i) => {
-                    doc.text(header, xPos + 2, yPos - 3);
-                    xPos += colWidths[i];
-                });
-                
-                doc.setTextColor(50, 50, 50);
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(10);
-            }
+        // Function to finalize the PDF after logo is added
+        function finalizePDF() {
+            // Add title
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(24);
+            doc.text('KOCHIN HANGOVER', 105, 20, { align: 'center' });
+            doc.setFontSize(16);
+            doc.text('Event Statistics', 105, 30, { align: 'center' });
             
-            // Alternating row colors
-            if (index % 2 === 0) {
-                doc.setFillColor(240, 240, 250);
-                doc.rect(margin, yPos, chartWidth, 10, 'F');
-            }
-            
-            // Row data
-            xPos = margin;
-            
-            // Club name
-            doc.text(club[0], xPos + 2, yPos + 7);
-            xPos += colWidths[0];
-            
-            // Total guests
-            doc.text(club[1].totalGuests.toString(), xPos + 2, yPos + 7);
-            xPos += colWidths[1];
-            
-            // Total amount
-            doc.text(`₹${club[1].totalAmount.toLocaleString()}`, xPos + 2, yPos + 7);
-            xPos += colWidths[2];
-            
-            // Paid amount
-            const paidAmount = guests.filter(guest => guest.club_name === club[0] && (guest.status === 'paid' || guest.status === 'verified')).reduce((sum, guest) => sum + guest.paid_amount, 0);
-            doc.text(`₹${paidAmount.toLocaleString()}`, xPos + 2, yPos + 7);
-            
-            yPos += 10;
-        });
-        
-        // Add footer
-        const pageCount = doc.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            
-            // Footer rectangle
-            doc.setFillColor(darkColor);
-            doc.rect(0, 287, 210, 10, 'F');
-            
-            // Page number
+            // Add date
             doc.setTextColor(255, 255, 255);
             doc.setFontSize(10);
-            doc.text(`Page ${i} of ${pageCount}`, 105, 293, { align: 'center' });
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 37, { align: 'center' });
             
-            // Kochin Hangover text
-            doc.setFontSize(8);
-            doc.text('Kochin Hangover - Entry Management System', 10, 293);
+            // Overall stats section
+            let yPos = 50;
+            doc.setTextColor(darkColor);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.text('Overall Statistics', 105, yPos, { align: 'center' });
+            
+            // Draw stats cards
+            yPos += 10;
+            const cardWidth = 90;
+            const cardHeight = 30;
+            const margin = 10;
+            
+            // First row of cards
+            doc.setFillColor(232, 50, 131, 0.1);
+            doc.roundedRect(margin, yPos, cardWidth, cardHeight, 3, 3, 'F');
+            doc.setFillColor(52, 219, 219, 0.1);
+            doc.roundedRect(margin + cardWidth + margin, yPos, cardWidth, cardHeight, 3, 3, 'F');
+            
+            // Card content
+            doc.setTextColor(darkColor);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.text('Total Registrations', margin + cardWidth/2, yPos + 10, { align: 'center' });
+            doc.text('Total Amount', margin + cardWidth + margin + cardWidth/2, yPos + 10, { align: 'center' });
+            
+            doc.setFontSize(16);
+            doc.text(stats.totalRegistrations.toString(), margin + cardWidth/2, yPos + 20, { align: 'center' });
+            doc.text(`₹${stats.totalAmount.toLocaleString()}`, margin + cardWidth + margin + cardWidth/2, yPos + 20, { align: 'center' });
+            
+            // Second row of cards
+            yPos += cardHeight + margin;
+            doc.setFillColor(247, 208, 70, 0.1);
+            doc.roundedRect(margin, yPos, cardWidth, cardHeight, 3, 3, 'F');
+            doc.setFillColor(232, 50, 131, 0.1);
+            doc.roundedRect(margin + cardWidth + margin, yPos, cardWidth, cardHeight, 3, 3, 'F');
+            
+            // Card content
+            doc.setTextColor(darkColor);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.text('Collected Amount', margin + cardWidth/2, yPos + 10, { align: 'center' });
+            doc.text('Pending Amount', margin + cardWidth + margin + cardWidth/2, yPos + 10, { align: 'center' });
+            
+            doc.setFontSize(16);
+            doc.text(`₹${stats.paidAmount.toLocaleString()}`, margin + cardWidth/2, yPos + 20, { align: 'center' });
+            doc.text(`₹${stats.totalAmount - stats.paidAmount}`, margin + cardWidth + margin + cardWidth/2, yPos + 20, { align: 'center' });
+            
+            // Status breakdown
+            yPos += cardHeight + margin + 10;
+            doc.setTextColor(darkColor);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.text('Registration Status', 105, yPos, { align: 'center' });
+            
+            // Draw status chart (simple bar representation)
+            yPos += 10;
+            const chartWidth = 190;
+            const chartHeight = 30;
+            const totalCount = stats.totalRegistrations;
+            
+            if (totalCount > 0) {
+                const verifiedCount = guests.filter(guest => {
+                    const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
+                    return guest.paid_amount >= expectedAmount; // Guest has paid in full
+                }).length;
+                const paidCount = guests.filter(guest => guest.status === 'paid').length;
+                const partiallyPaidCount = guests.filter(guest => guest.status === 'partially_paid').length;
+                const pendingCount = totalCount - verifiedCount - paidCount - partiallyPaidCount;
+                
+                const verifiedWidth = (verifiedCount / totalCount) * chartWidth;
+                const paidWidth = (paidCount / totalCount) * chartWidth;
+                const partialWidth = (partiallyPaidCount / totalCount) * chartWidth;
+                const pendingWidth = (pendingCount / totalCount) * chartWidth;
+                
+                // Draw bars
+                let xPos = margin;
+                
+                if (verifiedCount > 0) {
+                    doc.setFillColor(0, 150, 0);
+                    doc.rect(xPos, yPos, verifiedWidth, chartHeight, 'F');
+                    xPos += verifiedWidth;
+                }
+                
+                if (paidCount > 0) {
+                    doc.setFillColor(0, 100, 200);
+                    doc.rect(xPos, yPos, paidWidth, chartHeight, 'F');
+                    xPos += paidWidth;
+                }
+                
+                if (partiallyPaidCount > 0) {
+                    doc.setFillColor(200, 150, 0);
+                    doc.rect(xPos, yPos, partialWidth, chartHeight, 'F');
+                    xPos += partialWidth;
+                }
+                
+                if (pendingCount > 0) {
+                    doc.setFillColor(200, 0, 0);
+                    doc.rect(xPos, yPos, pendingWidth, chartHeight, 'F');
+                }
+                
+                // Add legend
+                yPos += chartHeight + 5;
+                doc.setFontSize(10);
+                
+                let legendX = margin;
+                if (verifiedCount > 0) {
+                    doc.setFillColor(0, 150, 0);
+                    doc.rect(legendX, yPos, 5, 5, 'F');
+                    doc.text(`Verified (${verifiedCount})`, legendX + 8, yPos + 4);
+                    legendX += 50;
+                }
+                
+                if (paidCount > 0) {
+                    doc.setFillColor(0, 100, 200);
+                    doc.rect(legendX, yPos, 5, 5, 'F');
+                    doc.text(`Paid (${paidCount})`, legendX + 8, yPos + 4);
+                    legendX += 50;
+                }
+                
+                if (partiallyPaidCount > 0) {
+                    doc.setFillColor(200, 150, 0);
+                    doc.rect(legendX, yPos, 5, 5, 'F');
+                    doc.text(`Partial (${partiallyPaidCount})`, legendX + 8, yPos + 4);
+                    legendX += 50;
+                }
+                
+                if (pendingCount > 0) {
+                    doc.setFillColor(200, 0, 0);
+                    doc.rect(legendX, yPos, 5, 5, 'F');
+                    doc.text(`Pending (${pendingCount})`, legendX + 8, yPos + 4);
+                }
+            }
+            
+            // Club-wise statistics
+            yPos += 20;
+            doc.setTextColor(darkColor);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.text('Club-wise Statistics', 105, yPos, { align: 'center' });
+            
+            // Table header
+            yPos += 10;
+            const colWidths = [80, 35, 35, 35];
+            const headers = ['Club Name', 'Guests', 'Total (₹)', 'Paid (₹)'];
+            
+            // Draw table header
+            doc.setFillColor(darkColor);
+            doc.rect(margin, yPos, chartWidth, 10, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            
+            let xPos = margin;
+            headers.forEach((header, i) => {
+                doc.text(header, xPos + 2, yPos + 7);
+                xPos += colWidths[i];
+            });
+            
+            // Draw table rows
+            yPos += 10;
+            doc.setTextColor(50, 50, 50);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            
+            sortedClubs.forEach((club, index) => {
+                // Add new page if needed
+                if (yPos > 270) {
+                    doc.addPage();
+                    yPos = 20;
+                    
+                    // Add mini header on new pages
+                    doc.setFillColor(darkColor);
+                    doc.rect(10, yPos - 10, 190, 10, 'F');
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(12);
+                    
+                    xPos = 10;
+                    headers.forEach((header, i) => {
+                        doc.text(header, xPos + 2, yPos - 3);
+                        xPos += colWidths[i];
+                    });
+                    
+                    doc.setTextColor(50, 50, 50);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(10);
+                }
+                
+                // Alternating row colors
+                if (index % 2 === 0) {
+                    doc.setFillColor(240, 240, 250);
+                    doc.rect(margin, yPos, chartWidth, 10, 'F');
+                }
+                
+                // Row data
+                xPos = margin;
+                
+                // Club name
+                doc.text(club[0], xPos + 2, yPos + 7);
+                xPos += colWidths[0];
+                
+                // Total guests
+                doc.text(club[1].totalGuests.toString(), xPos + 2, yPos + 7);
+                xPos += colWidths[1];
+                
+                // Total amount
+                doc.text(`₹${club[1].totalAmount.toLocaleString()}`, xPos + 2, yPos + 7);
+                xPos += colWidths[2];
+                
+                // Paid amount
+                const paidAmount = guests.filter(guest => guest.club_name === club[0] && (guest.status === 'paid' || guest.status === 'verified')).reduce((sum, guest) => sum + guest.paid_amount, 0);
+                doc.text(`₹${paidAmount.toLocaleString()}`, xPos + 2, yPos + 7);
+                
+                yPos += 10;
+            });
+            
+            // Add footer
+            const pageCount = doc.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                
+                // Footer rectangle
+                doc.setFillColor(darkColor);
+                doc.rect(0, 287, 210, 10, 'F');
+                
+                // Page number
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(10);
+                doc.text(`Page ${i} of ${pageCount}`, 105, 293, { align: 'center' });
+                
+                // Kochin Hangover text
+                doc.setFontSize(8);
+                doc.text('Kochin Hangover - Entry Management System', 10, 293);
+            }
+            
+            // Save the PDF
+            doc.save('kochin-hangover-statistics.pdf');
+            
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert('Failed to generate PDF. Please try again.');
         }
-        
-        // Save the PDF
-        doc.save('kochin-hangover-statistics.pdf');
-        
-    } catch (error) {
-        console.error('Error generating PDF:', error);
-        alert('Failed to generate PDF. Please try again.');
     }
 }
 
