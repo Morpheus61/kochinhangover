@@ -623,7 +623,7 @@ window.verifyGuest = async function(guestId) {
         alert('Guest entry verified successfully!');
         
         // Close the modal and resume scanning
-        const modal = document.querySelector('.fixed.inset-0.flex.items-center.justify-center.bg-black.bg-opacity-50');
+        const modal = document.querySelector('.fixed.inset-0.flex.items-center.justify-center.z-50');
         if (modal) {
             modal.remove();
             if (qrScanner) {
@@ -1293,28 +1293,13 @@ async function downloadGuestsPDF() {
         const darkColor = '#2a0e3a';
         const accentColor = '#f7d046';
         
-        // Add header
+        // Add header with logo and title
         doc.setFillColor(darkColor);
         doc.rect(0, 0, 210, 40, 'F');
         
         // Add logo
         const logoImg = document.createElement('img');
         logoImg.src = 'assets/kochin-logo.png';
-        logoImg.onload = function() {
-            // Once the image is loaded, add it to the PDF
-            const canvas = document.createElement('canvas');
-            canvas.width = logoImg.width;
-            canvas.height = logoImg.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(logoImg, 0, 0, logoImg.width, logoImg.height);
-            const logoDataUrl = canvas.toDataURL('image/png');
-            
-            // Add the logo to the PDF
-            doc.addImage(logoDataUrl, 'PNG', 10, 5, 30, 30);
-            
-            // Continue with the rest of the PDF generation
-            finalizePDF();
-        };
         
         // Function to finalize the PDF after logo is added
         function finalizePDF() {
@@ -1327,17 +1312,9 @@ async function downloadGuestsPDF() {
             doc.text('Guest List', 105, 30, { align: 'center' });
             
             // Add date
+            doc.setTextColor(255, 255, 255);
             doc.setFontSize(10);
-            const currentDate = new Date().toLocaleString('en-US', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: true
-            });
-            doc.text(`Generated: ${currentDate}`, 105, 37, { align: 'center' });
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 37, { align: 'center' });
             
             // Table header
             const startY = 50;
@@ -1473,11 +1450,35 @@ async function downloadGuestsPDF() {
             
             // Save the PDF
             doc.save('kochin-hangover-guest-list.pdf');
-            
-        } catch (error) {
-            console.error('Error generating PDF:', error);
-            alert('Failed to generate PDF. Please try again.');
         }
+        
+        // Handle logo loading
+        logoImg.onload = function() {
+            // Once the image is loaded, add it to the PDF
+            const canvas = document.createElement('canvas');
+            canvas.width = logoImg.width;
+            canvas.height = logoImg.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(logoImg, 0, 0, logoImg.width, logoImg.height);
+            const logoDataUrl = canvas.toDataURL('image/png');
+            
+            // Add the logo to the PDF
+            doc.addImage(logoDataUrl, 'PNG', 10, 5, 30, 30);
+            
+            // Continue with the rest of the PDF generation
+            finalizePDF();
+        };
+        
+        // Handle error if image loading fails
+        logoImg.onerror = function() {
+            console.error('Error loading logo image');
+            // Continue with PDF generation without the logo
+            finalizePDF();
+        };
+        
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Failed to generate PDF. Please try again.');
     }
 }
 
@@ -1583,21 +1584,6 @@ async function downloadStatsPDF() {
         // Add logo
         const logoImg = document.createElement('img');
         logoImg.src = 'assets/kochin-logo.png';
-        logoImg.onload = function() {
-            // Once the image is loaded, add it to the PDF
-            const canvas = document.createElement('canvas');
-            canvas.width = logoImg.width;
-            canvas.height = logoImg.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(logoImg, 0, 0, logoImg.width, logoImg.height);
-            const logoDataUrl = canvas.toDataURL('image/png');
-            
-            // Add the logo to the PDF
-            doc.addImage(logoDataUrl, 'PNG', 10, 5, 30, 30);
-            
-            // Continue with the rest of the PDF generation
-            finalizePDF();
-        };
         
         // Function to finalize the PDF after logo is added
         function finalizePDF() {
@@ -1852,11 +1838,35 @@ async function downloadStatsPDF() {
             
             // Save the PDF
             doc.save('kochin-hangover-statistics.pdf');
-            
-        } catch (error) {
-            console.error('Error generating PDF:', error);
-            alert('Failed to generate PDF. Please try again.');
         }
+        
+        // Handle logo loading
+        logoImg.onload = function() {
+            // Once the image is loaded, add it to the PDF
+            const canvas = document.createElement('canvas');
+            canvas.width = logoImg.width;
+            canvas.height = logoImg.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(logoImg, 0, 0, logoImg.width, logoImg.height);
+            const logoDataUrl = canvas.toDataURL('image/png');
+            
+            // Add the logo to the PDF
+            doc.addImage(logoDataUrl, 'PNG', 10, 5, 30, 30);
+            
+            // Continue with the rest of the PDF generation
+            finalizePDF();
+        };
+        
+        // Handle error if image loading fails
+        logoImg.onerror = function() {
+            console.error('Error loading logo image');
+            // Continue with PDF generation without the logo
+            finalizePDF();
+        };
+        
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Failed to generate PDF. Please try again.');
     }
 }
 
