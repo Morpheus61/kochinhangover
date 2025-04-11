@@ -1000,6 +1000,20 @@ function setupEventListeners() {
     // Guest search input
     const searchInput = document.getElementById('guestSearchInput');
     if (searchInput) {
+        // Prevent password managers from interfering
+        searchInput.setAttribute('autocomplete', 'off');
+        searchInput.setAttribute('data-lpignore', 'true');
+        searchInput.setAttribute('data-form-type', 'search');
+        
+        // Force browser to recognize this is not a login field
+        setTimeout(() => {
+            // Clear any auto-filled value
+            searchInput.value = '';
+            // Re-apply attributes that might have been overridden
+            searchInput.setAttribute('autocomplete', 'off');
+            searchInput.setAttribute('data-lpignore', 'true');
+        }, 500);
+        
         // Remove existing event listener to prevent duplicates
         const newSearchInput = searchInput.cloneNode(true);
         searchInput.parentNode.replaceChild(newSearchInput, searchInput);
