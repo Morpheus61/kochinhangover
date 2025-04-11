@@ -203,7 +203,7 @@ async function showTab(tabId) {
 }
 
 // Load guest list
-async function loadGuestList() {
+async function loadGuestList(searchTerm = '') {
     try {
         const { data: guests, error } = await supabase
             .from('guests')
@@ -215,23 +215,38 @@ async function loadGuestList() {
         const tbody = document.getElementById('guestListTableBody');
         if (!tbody) return;
         
-        tbody.innerHTML = guests.map(guest => `
+        // Get current user role
+        const { data: userRole, error: roleError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', currentUser.id)
+            .single();
+        
+        if (roleError) throw roleError;
+        
+        const isAdmin = userRole?.role === 'admin';
+        
+        // Filter guests based on search term if provided
+        let filteredGuests = guests;
+        if (searchTerm && searchTerm.trim() !== '') {
+            const term = searchTerm.toLowerCase().trim();
+            filteredGuests = guests.filter(guest => 
+                (guest.guest_name && guest.guest_name.toLowerCase().includes(term)) || 
+                (guest.club_name && guest.club_name.toLowerCase().includes(term))
+            );
+        }
+        
+        tbody.innerHTML = filteredGuests.map(guest => `
             <tr class="border-b border-gray-700">
                 <td class="py-3 px-4">${guest.guest_name || ''}</td>
                 <td class="py-3 px-4">${guest.club_name || ''}</td>
                 <td class="py-3 px-4">${guest.entry_type || ''}</td>
-                <td class="py-3 px-4">₹${guest.paid_amount} / ₹${guest.total_amount}</td>
+                <td class="py-3 px-4">Rs.${guest.paid_amount} / Rs.${guest.total_amount}</td>
                 <td class="py-3 px-4">
-                    <span class="px-2 py-1 rounded-full text-xs ${
-                        guest.status === 'verified' ? 'bg-green-500' :
-                        guest.status === 'paid' ? 'bg-blue-500' :
-                        guest.status === 'partially_paid' ? 'bg-yellow-500' :
-                        'bg-red-500'
-                    }">
-                        ${guest.status || 'pending'}
-                    </span>
+                    ${getStatusBadge(guest)}
                 </td>
                 <td class="py-3 px-4">
+                    ${isAdmin ? `
                     <button class="text-blue-400 hover:text-blue-600 mr-2" onclick="editGuest('${guest.id}')">
                         <i class="fas fa-edit"></i>
                     </button>
@@ -241,16 +256,83 @@ async function loadGuestList() {
                     <button class="whatsapp-share text-green-400 hover:text-green-600" data-guest-id="${guest.id}">
                         <i class="fab fa-whatsapp"></i>
                     </button>
+                    ` : ''}
                 </td>
             </tr>
         `).join('');
 
+        // Calculate totals
+        const totalRegistrations = filteredGuests.length;
+        const totalPax = filteredGuests.reduce((sum, guest) => {
+            return sum + (guest.entry_type === 'couple' ? 2 : 1);
+        }, 0);
+
+        // Count verified guests (actual attendance)
+        const verifiedGuests = filteredGuests.filter(guest => guest.status === 'verified').length;
+        const verifiedPax = filteredGuests.filter(guest => guest.status === 'verified')
+            .reduce((sum, guest) => sum + (guest.entry_type === 'couple' ? 2 : 1), 0);
+
+        // Add total row
+        tbody.innerHTML += `
+            <tr class="border-t-2 border-pink-500 bg-purple-900 bg-opacity-30 font-bold">
+                <td class="py-3 px-4" colspan="2">Total</td>
+                <td class="py-3 px-4">${totalRegistrations} Registrations</td>
+                <td class="py-3 px-4" colspan="3">${totalPax} PAX (Headcount)</td>
+            </tr>
+            <tr class="bg-green-900 bg-opacity-30 font-bold">
+                <td class="py-3 px-4" colspan="2">Verified (Arrived)</td>
+                <td class="py-3 px-4">${verifiedGuests} Guests</td>
+                <td class="py-3 px-4" colspan="3">${verifiedPax} PAX (Headcount)</td>
+            </tr>
+        `;
+        
         // Re-attach event listeners
         setupEventListeners();
         
     } catch (error) {
         console.error('Error loading guest list:', error);
     }
+}
+
+// Helper function to generate status badge with enhanced information
+function getStatusBadge(guest) {
+    // Check if guest has paid in full
+    const expectedAmount = ENTRY_PRICES[guest.entry_type] || 0;
+    const isFullyPaid = parseFloat(guest.paid_amount) >= expectedAmount;
+    
+    // Determine status color and text
+    let statusColor = '';
+    let statusText = '';
+    let verifiedIcon = '';
+    
+    if (guest.status === 'verified') {
+        // Guest has been verified (arrived at event)
+        verifiedIcon = '<i class="fas fa-check-circle mr-1"></i>';
+        
+        if (isFullyPaid) {
+            // Fully paid and verified
+            statusColor = 'bg-green-500';
+            statusText = 'VERIFIED (PAID)';
+        } else {
+            // Partially paid but verified
+            statusColor = 'bg-yellow-500';
+            statusText = 'VERIFIED (PARTIAL)';
+        }
+    } else if (guest.status === 'paid' || isFullyPaid) {
+        // Fully paid but not verified
+        statusColor = 'bg-blue-500';
+        statusText = 'PAID';
+    } else if (guest.status === 'partially_paid') {
+        // Partially paid
+        statusColor = 'bg-yellow-500';
+        statusText = 'PARTIAL';
+    } else {
+        // Pending
+        statusColor = 'bg-red-500';
+        statusText = 'PENDING';
+    }
+    
+    return `<span class="px-2 py-1 rounded-full text-xs ${statusColor}">${verifiedIcon}${statusText}</span>`;
 }
 
 // Load users list
@@ -308,7 +390,7 @@ async function addUser(username, password, role) {
             .from('users')
             .select('id')
             .eq('username', username);
-        
+
         if (checkError) throw checkError;
         
         if (existingUsers && existingUsers.length > 0) {
@@ -570,10 +652,17 @@ async function editGuest(guestId) {
                     club_name: clubName,
                     mobile_number: mobileNumber,
                     entry_type: entryType,
-                    status: status,
                     paid_amount: paidAmount,
                     total_amount: totalAmount
                 };
+                
+                // Auto-update status to "Paid" if full amount is paid based on entry type
+                const expectedAmount = ENTRY_PRICES[entryType] || 0;
+                if (paidAmount >= expectedAmount) {
+                    updateData.status = 'paid';
+                } else {
+                    updateData.status = status;
+                }
                 
                 const { error: updateError } = await supabase
                     .from('guests')
@@ -768,30 +857,67 @@ window.verifyGuest = async function(guestId) {
         if (getError) throw getError;
         
         // Check if guest has paid in full
-        const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
+        const expectedAmount = ENTRY_PRICES[guest.entry_type] || 0;
         const isFullyPaid = guest.paid_amount >= expectedAmount;
         
-        if (!isFullyPaid) {
+        // For doorman login, allow entry for paid guests (change status from "paid" to "verified")
+        // Get current user role
+        const { data: userRole, error: roleError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', currentUser.id)
+            .single();
+        
+        if (roleError) throw roleError;
+        
+        const isDoorman = userRole?.role === 'doorman';
+        
+        // If doorman is scanning, allow verification of paid guests
+        if (isDoorman && guest.status === 'paid') {
+            // Update guest status to verified
+            const { error: updateError } = await supabase
+                .from('guests')
+                .update({ status: 'verified' })
+                .eq('id', guestId);
+            
+            if (updateError) throw updateError;
+            
+            // Show success message
+            alert('Guest entry verified successfully!');
+            
+            // Close the modal and resume scanning
+            const modal = document.querySelector('.fixed.inset-0.flex.items-center.justify-center.z-50');
+            if (modal) {
+                modal.remove();
+                if (qrScanner) {
+                    qrScanner.resume();
+                }
+            }
+        }
+        // If not doorman or guest not paid, check payment status
+        else if (!isFullyPaid) {
             throw new Error('Guest has not paid in full');
         }
-        
-        // Update guest status to verified
-        const { error: updateError } = await supabase
-            .from('guests')
-            .update({ status: 'verified' })
-            .eq('id', guestId);
-        
-        if (updateError) throw updateError;
-        
-        // Show success message
-        alert('Guest entry verified successfully!');
-        
-        // Close the modal and resume scanning
-        const modal = document.querySelector('.fixed.inset-0.flex.items-center.justify-center.z-50');
-        if (modal) {
-            modal.remove();
-            if (qrScanner) {
-                qrScanner.resume();
+        // Otherwise, proceed with verification
+        else {
+            // Update guest status to verified
+            const { error: updateError } = await supabase
+                .from('guests')
+                .update({ status: 'verified' })
+                .eq('id', guestId);
+            
+            if (updateError) throw updateError;
+            
+            // Show success message
+            alert('Guest entry verified successfully!');
+            
+            // Close the modal and resume scanning
+            const modal = document.querySelector('.fixed.inset-0.flex.items-center.justify-center.z-50');
+            if (modal) {
+                modal.remove();
+                if (qrScanner) {
+                    qrScanner.resume();
+                }
             }
         }
         
@@ -855,11 +981,32 @@ function setupEventListeners() {
     document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
 
     // Navigation buttons
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tabId = this.getAttribute('data-tab');
+            showTab(tabId);
+        });
+    });
+    
+    // Individual navigation buttons (for backward compatibility)
     document.getElementById('newRegistrationBtn')?.addEventListener('click', () => showTab('registration'));
     document.getElementById('entryVerificationBtn')?.addEventListener('click', () => showTab('verification'));
     document.getElementById('guestListBtn')?.addEventListener('click', () => showTab('guests'));
     document.getElementById('statsBtn')?.addEventListener('click', () => showTab('stats'));
     document.getElementById('usersBtn')?.addEventListener('click', () => showTab('users'));
+
+    // Guest search input
+    const searchInput = document.getElementById('guestSearchInput');
+    if (searchInput) {
+        // Remove existing event listener to prevent duplicates
+        const newSearchInput = searchInput.cloneNode(true);
+        searchInput.parentNode.replaceChild(newSearchInput, searchInput);
+        
+        // Add event listener to the new element
+        newSearchInput.addEventListener('input', function() {
+            loadGuestList(this.value);
+        });
+    }
 
     // Registration form
     document.getElementById('registrationForm')?.addEventListener('submit', async (e) => {
@@ -1317,24 +1464,29 @@ async function loadStats() {
         }
         
         // Calculate total stats
-        const totalRegistrations = guests.length;
+        const totalGuests = guests.length;
         
         // Count verified entries based on full payment
         const verifiedEntries = guests.filter(guest => {
-            const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
-            const paidAmount = parseFloat(guest.paid_amount) || 0; // Ensure paid_amount is a number
-            const isPaidInFull = paidAmount >= expectedAmount;
+            const expectedAmount = ENTRY_PRICES[guest.entry_type] || 0;
+            const isPaidInFull = parseFloat(guest.paid_amount) >= expectedAmount;
             return isPaidInFull; // Guest has paid in full
         }).length;
         
-        const pendingEntries = totalRegistrations - verifiedEntries;
+        const pendingEntries = totalGuests - verifiedEntries;
         const totalRevenue = guests.reduce((sum, guest) => sum + (parseFloat(guest.paid_amount) || 0), 0);
         
+        // Calculate total PAX (headcount)
+        const totalPax = guests.reduce((sum, guest) => {
+            return sum + (guest.entry_type === 'couple' ? 2 : 1);
+        }, 0);
+
         // Update summary stats
-        document.getElementById('totalRegistrations').textContent = totalRegistrations;
+        document.getElementById('totalRegistrations').textContent = totalGuests;
         document.getElementById('verifiedEntries').textContent = verifiedEntries;
         document.getElementById('pendingEntries').textContent = pendingEntries;
-        document.getElementById('totalRevenue').textContent = `₹${totalRevenue}`;
+        document.getElementById('totalRevenue').textContent = `Rs.${totalRevenue}`;
+        document.getElementById('totalPax').textContent = totalPax;
         
         // Calculate club-wise stats
         const clubStats = {};
@@ -1367,8 +1519,8 @@ async function loadStats() {
                 <tr class="border-b border-gray-700 club-row" data-club-index="${index}">
                     <td class="py-3 px-4">${clubName}</td>
                     <td class="py-3 px-4">${stats.registrations}</td>
-                    <td class="py-3 px-4">₹${stats.totalAmount}</td>
-                    <td class="py-3 px-4">₹${stats.paidAmount}</td>
+                    <td class="py-3 px-4">Rs.${stats.totalAmount}</td>
+                    <td class="py-3 px-4">Rs.${stats.paidAmount}</td>
                     <td class="py-3 px-4">
                         <button class="text-blue-400 hover:text-blue-600 view-club-guests">
                             <i class="fas fa-eye"></i> View Guests
@@ -1404,7 +1556,7 @@ async function loadStats() {
                                                     ${guest.status || 'pending'}
                                                 </span>
                                             </td>
-                                            <td class="py-2 px-2 text-sm">₹${guest.paid_amount} / ₹${guest.total_amount}</td>
+                                            <td class="py-2 px-2 text-sm">Rs.${guest.paid_amount} / Rs.${guest.total_amount}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -1555,7 +1707,8 @@ async function downloadGuestsPDF() {
             xPos += colWidths[2];
             
             // Amount - only show amount received
-            doc.text(`₹${guest.paid_amount || 0}`, xPos + 2, yPos);
+            const amountText = 'Rs.' + (guest.paid_amount || 0);
+            doc.text(amountText, xPos + 2, yPos);
             xPos += colWidths[3];
             
             // Status with colored background
@@ -1563,15 +1716,19 @@ async function downloadGuestsPDF() {
             let statusText;
             
             if (guest.status === 'verified') {
+                // Guest has been verified (arrived at event)
                 statusColor = '#4ade80'; // green
                 statusText = 'VERIFIED';
             } else if (guest.status === 'paid') {
+                // Fully paid but not verified
                 statusColor = '#3b82f6'; // blue
                 statusText = 'PAID';
             } else if (guest.status === 'partially_paid') {
+                // Partially paid
                 statusColor = '#f59e0b'; // yellow
                 statusText = 'PARTIAL';
             } else {
+                // Pending
                 statusColor = '#ef4444'; // red
                 statusText = 'PENDING';
             }
@@ -1607,6 +1764,38 @@ async function downloadGuestsPDF() {
                 yPos = 30;
             }
         });
+        
+        // Calculate totals
+        const totalRegistrations = guests.length;
+        const totalPax = guests.reduce((sum, guest) => {
+            return sum + (guest.entry_type === 'couple' ? 2 : 1);
+        }, 0);
+
+        // Add total row with highlight
+        doc.setFillColor(primaryColor);
+        doc.rect(10, yPos - 5, 190, 15, 'F');
+        
+        // Add border at the top
+        doc.setDrawColor(primaryColor);
+        doc.setLineWidth(1);
+        doc.line(10, yPos - 5, 200, yPos - 5);
+        
+        // Add total text
+        doc.setTextColor(255, 255, 255); // Change text color to white
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        
+        // Total label
+        xPos = 10;
+        doc.text('TOTAL', xPos + 2, yPos + 2);
+        
+        // Total registrations
+        xPos = 80;
+        doc.text(`${totalRegistrations} Registrations`, xPos + 2, yPos + 2);
+        
+        // Total PAX
+        xPos = 150;
+        doc.text(`${totalPax} PAX (Headcount)`, xPos + 2, yPos + 2);
         
         // Add footer
         const footerY = 280;
@@ -1680,286 +1869,277 @@ async function downloadStatsPDF() {
             .from('guests')
             .select('*');
         
-        if (error) {
-            console.error('Error fetching guests for stats:', error);
-            alert('Error generating stats PDF: ' + error.message);
-            return;
-        }
+        if (error) throw error;
         
-        // Create a new jsPDF instance
+        // Import jsPDF
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
         
-        // Define theme colors
-        const primaryColor = '#e83283';
-        const darkColor = '#2a0e3a';
+        // Create a new document
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
         
-        // Simple header with brand colors
-        doc.setFillColor(darkColor);
-        doc.rect(0, 0, 210, 40, 'F');
+        // Define colors
+        const primaryColor = [232, 50, 131]; // Pink
+        const secondaryColor = [52, 219, 219]; // Teal
+        const darkColor = [42, 14, 58]; // Dark Purple
         
-        // Add title
-        doc.setTextColor(255, 255, 255);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(24);
-        doc.text('KOCHIN HANGOVER', 105, 20, { align: 'center' });
+        // Add logo if available
+        const logo = new Image();
+        logo.src = '/icons/android-chrome-192x192.png';
         
-        doc.setFontSize(16);
-        doc.text('Event Statistics', 105, 30, { align: 'center' });
-        
-        // Add generation date
-        const now = new Date();
-        const formattedDate = now.toLocaleDateString('en-US', { 
-            day: '2-digit', 
-            month: '2-digit', 
-            year: '2-digit', 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            hour12: true 
-        }).replace(',', '');
-        
-        doc.setFontSize(10);
-        doc.text(`Generated: ${formattedDate}`, 105, 37, { align: 'center' });
-        
-        // Calculate statistics
+        // Calculate stats
         const totalGuests = guests.length;
-        let totalRevenue = 0;
-        let verifiedEntries = 0;
-        let pendingEntries = 0;
-        let stagEntries = 0;
-        let coupleEntries = 0;
         
-        guests.forEach(guest => {
-            totalRevenue += Number(guest.paid_amount || 0);
+        // Count verified entries based on full payment
+        const verifiedEntries = guests.filter(guest => {
+            const expectedAmount = ENTRY_PRICES[guest.entry_type] || 0;
+            const isPaidInFull = parseFloat(guest.paid_amount) >= expectedAmount;
+            return isPaidInFull;
+        }).length;
+        
+        const pendingEntries = totalGuests - verifiedEntries;
+        const totalRevenue = guests.reduce((sum, guest) => sum + (parseFloat(guest.paid_amount) || 0), 0);
+        
+        // Count entry types
+        const stagEntries = guests.filter(guest => guest.entry_type === 'stag').length;
+        const coupleEntries = guests.filter(guest => guest.entry_type === 'couple').length;
+        
+        // Calculate total PAX (headcount)
+        const totalPax = guests.reduce((sum, guest) => {
+            return sum + (guest.entry_type === 'couple' ? 2 : 1);
+        }, 0);
+        
+        // Function to finalize PDF
+        const finalizePDF = () => {
+            // Add header
+            doc.setFillColor(...primaryColor);
+            doc.rect(0, 0, 210, 20, 'F');
             
-            // Count verified entries based on payment amount
-            const expectedAmount = Number(guest.total_amount || 0);
-            const amountPaid = Number(guest.paid_amount || 0);
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.text('Kochin Hangover - Event Statistics', 105, 12, { align: 'center' });
             
-            if (amountPaid >= expectedAmount) {
-                verifiedEntries++;
-            } else {
-                pendingEntries++;
-            }
+            // Add footer
+            doc.setFillColor(...darkColor);
+            doc.rect(0, 287, 210, 10, 'F');
             
-            // Count entry types
-            if (guest.entry_type === 'stag') {
-                stagEntries++;
-            } else if (guest.entry_type === 'couple') {
-                coupleEntries++;
-            }
-        });
-        
-        // Add overall stats section
-        let yPos = 50;
-        doc.setTextColor(darkColor);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(16);
-        doc.text('Overall Statistics', 105, yPos, { align: 'center' });
-        
-        // Draw stats cards
-        yPos += 10;
-        const cardWidth = 90;
-        const cardHeight = 30;
-        const margin = 10;
-        
-        // First row of cards - simple styling
-        doc.setFillColor(245, 245, 245);
-        doc.rect(margin, yPos, cardWidth, cardHeight, 'F');
-        doc.setFillColor(245, 245, 245);
-        doc.rect(margin + cardWidth + margin, yPos, cardWidth, cardHeight, 'F');
-        
-        // Card content
-        doc.setTextColor(primaryColor);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(12);
-        doc.text('Total Registrations', margin + cardWidth/2, yPos + 10, { align: 'center' });
-        doc.text('Total Revenue', margin + cardWidth + margin + cardWidth/2, yPos + 10, { align: 'center' });
-        
-        doc.setFontSize(16);
-        doc.setTextColor(darkColor);
-        doc.text(totalGuests.toString(), margin + cardWidth/2, yPos + 20, { align: 'center' });
-        const revenueText = `₹${totalRevenue.toLocaleString()}`;
-        doc.text(revenueText, margin + cardWidth + margin + cardWidth/2, yPos + 20, { align: 'center' });
-        
-        // Second row of cards - simple styling
-        yPos += cardHeight + margin;
-        doc.setFillColor(245, 245, 245);
-        doc.rect(margin, yPos, cardWidth, cardHeight, 'F');
-        doc.setFillColor(245, 245, 245);
-        doc.rect(margin + cardWidth + margin, yPos, cardWidth, cardHeight, 'F');
-        
-        // Card content
-        doc.setTextColor(primaryColor);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(12);
-        doc.text('Verified Entries', margin + cardWidth/2, yPos + 10, { align: 'center' });
-        doc.text('Pending Entries', margin + cardWidth + margin + cardWidth/2, yPos + 10, { align: 'center' });
-        
-        doc.setFontSize(16);
-        doc.setTextColor(darkColor);
-        doc.text(verifiedEntries.toString(), margin + cardWidth/2, yPos + 20, { align: 'center' });
-        doc.text(pendingEntries.toString(), margin + cardWidth + margin + cardWidth/2, yPos + 20, { align: 'center' });
-        
-        // Entry type distribution
-        yPos += cardHeight + margin + 10;
-        doc.setTextColor(darkColor);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(14);
-        doc.text('Entry Type Distribution', 105, yPos, { align: 'center' });
-        
-        // Simple table for entry types
-        yPos += 10;
-        doc.setFillColor(primaryColor);
-        doc.rect(50, yPos, 110, 10, 'F');
-        
-        doc.setTextColor(255, 255, 255);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.text('Entry Type', 70, yPos + 7);
-        doc.text('Count', 140, yPos + 7);
-        
-        // Stag row
-        yPos += 10;
-        doc.setFillColor(245, 245, 245);
-        doc.rect(50, yPos, 110, 10, 'F');
-        doc.setTextColor(darkColor);
-        doc.text('Stag', 70, yPos + 7);
-        doc.text(stagEntries.toString(), 140, yPos + 7);
-        
-        // Couple row
-        yPos += 10;
-        doc.setFillColor(235, 235, 235);
-        doc.rect(50, yPos, 110, 10, 'F');
-        doc.setTextColor(darkColor);
-        doc.text('Couple', 70, yPos + 7);
-        doc.text(coupleEntries.toString(), 140, yPos + 7);
-        
-        // Add club-wise statistics
-        yPos += 30;
-        doc.setTextColor(darkColor);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(14);
-        doc.text('Club-wise Statistics', 105, yPos, { align: 'center' });
-        yPos += 10;
-        
-        // Create a table for club statistics
-        const clubStats = {};
-        guests.forEach(guest => {
-            const clubName = guest.club_name || 'No Club';
-            if (!clubStats[clubName]) {
-                clubStats[clubName] = {
-                    totalGuests: 0,
-                    paidAmount: 0,
-                    stag: 0,
-                    couple: 0
-                };
-            }
-            clubStats[clubName].totalGuests++;
-            clubStats[clubName].paidAmount += Number(guest.paid_amount || 0);
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.text('May 3rd, 2025 - Casino Hotel, Wellington Island, Kochi', 105, 293, { align: 'center' });
             
-            if (guest.entry_type === 'stag') {
-                clubStats[clubName].stag++;
-            } else if (guest.entry_type === 'couple') {
-                clubStats[clubName].couple++;
-            }
-        });
-        
-        // Table headers
-        const clubHeaders = ['Club', 'Guests', 'Stag', 'Couple', 'Amount (₹)'];
-        const clubColWidths = [80, 25, 25, 25, 35];
-        
-        // Add table header background
-        doc.setFillColor(primaryColor);
-        doc.rect(10, yPos - 6, 190, 10, 'F');
-        
-        // Add header text
-        doc.setTextColor(255, 255, 255);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        
-        let xPos = 10;
-        clubHeaders.forEach((header, i) => {
-            doc.text(header, xPos + 2, yPos);
-            xPos += clubColWidths[i];
-        });
-        
-        // Draw table rows
-        yPos += 10;
-        doc.setTextColor(darkColor);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        
-        let rowIndex = 0;
-        for (const [club, stats] of Object.entries(clubStats)) {
-            // Add row background
-            if (rowIndex % 2 === 0) {
-                doc.setFillColor(245, 245, 245);
-            } else {
-                doc.setFillColor(235, 235, 235);
-            }
-            doc.rect(10, yPos - 5, 190, 10, 'F');
+            // Add overall stats section
+            let yPos = 50;
+            doc.setTextColor(darkColor);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.text('Overall Statistics', 105, yPos, { align: 'center' });
             
-            // Add row data
-            xPos = 10;
-            
-            // Club name
-            doc.text(club, xPos + 2, yPos);
-            xPos += clubColWidths[0];
-            
-            // Total guests
-            doc.text(stats.totalGuests.toString(), xPos + 2, yPos);
-            xPos += clubColWidths[1];
-            
-            // Stag count
-            doc.text(stats.stag.toString(), xPos + 2, yPos);
-            xPos += clubColWidths[2];
-            
-            // Couple count
-            doc.text(stats.couple.toString(), xPos + 2, yPos);
-            xPos += clubColWidths[3];
-            
-            // Amount - only show amount received
-            const amountText = `₹${stats.paidAmount.toLocaleString()}`;
-            doc.text(amountText, xPos + 2, yPos);
-            
+            // Draw stats cards
             yPos += 10;
-            rowIndex++;
+            const cardWidth = 90;
+            const cardHeight = 30;
+            const margin = 10;
             
-            // Add a new page if needed
-            if (yPos > 250) {
-                doc.addPage();
+            // First row of cards - simple styling
+            doc.setFillColor(primaryColor);
+            doc.rect(margin, yPos, cardWidth, cardHeight, 'F');
+            doc.setFillColor(primaryColor);
+            doc.rect(margin + cardWidth + margin, yPos, cardWidth, cardHeight, 'F');
+            
+            // Card content
+            doc.setTextColor(255, 255, 255); // Change text color to white
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.text('Total Registrations', margin + cardWidth/2, yPos + 10, { align: 'center' });
+            doc.text('Total Revenue', margin + cardWidth + margin + cardWidth/2, yPos + 10, { align: 'center' });
+            
+            doc.setFontSize(16);
+            doc.setTextColor(darkColor);
+            doc.text(totalGuests.toString(), margin + cardWidth/2, yPos + 20, { align: 'center' });
+            const revenueText = `Rs.${totalRevenue.toLocaleString()}`;
+            doc.text(revenueText, margin + cardWidth + margin + cardWidth/2, yPos + 20, { align: 'center' });
+            
+            // Second row of cards - simple styling
+            yPos += cardHeight + margin;
+            doc.setFillColor(245, 245, 245);
+            doc.rect(margin, yPos, cardWidth, cardHeight, 'F');
+            doc.setFillColor(235, 235, 235);
+            doc.rect(margin + cardWidth + margin, yPos, cardWidth, cardHeight, 'F');
+            
+            // Card content
+            doc.setTextColor(255, 255, 255); // Change text color to white
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.text('Verified Entries', margin + cardWidth/2, yPos + 10, { align: 'center' });
+            doc.text('Pending Entries', margin + cardWidth + margin + cardWidth/2, yPos + 10, { align: 'center' });
+            
+            doc.setFontSize(16);
+            doc.setTextColor(darkColor);
+            doc.text(verifiedEntries.toString(), margin + cardWidth/2, yPos + 20, { align: 'center' });
+            doc.text(pendingEntries.toString(), margin + cardWidth + margin + cardWidth/2, yPos + 20, { align: 'center' });
+            
+            // Third row - PAX count card
+            yPos += cardHeight + margin;
+            doc.setFillColor(245, 245, 245);
+            doc.rect(margin, yPos, cardWidth * 2 + margin, cardHeight, 'F');
+            
+            // PAX card content
+            doc.setTextColor(255, 255, 255); // Change text color to white
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.text('Total PAX (Headcount)', 105, yPos + 10, { align: 'center' });
+            
+            doc.setFontSize(16);
+            doc.setTextColor(darkColor);
+            doc.text(totalPax.toString(), 105, yPos + 20, { align: 'center' });
+            
+            // Entry type distribution
+            yPos += cardHeight + margin + 10;
+            doc.setTextColor(darkColor);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.text('Entry Type Distribution', 105, yPos, { align: 'center' });
+            
+            // Simple table for entry types
+            yPos += 10;
+            doc.setFillColor(primaryColor);
+            doc.rect(50, yPos, 110, 10, 'F');
+            
+            doc.setTextColor(255, 255, 255); // Change text color to white
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.text('Entry Type', 70, yPos + 7);
+            doc.text('Count', 140, yPos + 7);
+            
+            // Stag row
+            yPos += 10;
+            doc.setFillColor(245, 245, 245);
+            doc.rect(50, yPos, 110, 10, 'F');
+            doc.setTextColor(darkColor);
+            doc.text('Stag', 70, yPos + 7);
+            doc.text(stagEntries.toString(), 140, yPos + 7);
+            
+            // Couple row
+            yPos += 10;
+            doc.setFillColor(235, 235, 235);
+            doc.rect(50, yPos, 110, 10, 'F');
+            doc.setTextColor(darkColor);
+            doc.text('Couple', 70, yPos + 7);
+            doc.text(coupleEntries.toString(), 140, yPos + 7);
+            
+            // Add club-wise statistics
+            yPos += 30;
+            doc.setTextColor(darkColor);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.text('Club-wise Statistics', 105, yPos, { align: 'center' });
+            yPos += 10;
+            
+            // Create a table for club statistics
+            const clubStats = {};
+            guests.forEach(guest => {
+                const clubName = guest.club_name || 'No Club';
                 
-                // Add header to new page
-                doc.setFillColor(darkColor);
-                doc.rect(0, 0, 210, 20, 'F');
+                if (!clubStats[clubName]) {
+                    clubStats[clubName] = {
+                        count: 0,
+                        totalAmount: 0,
+                        paidAmount: 0
+                    };
+                }
                 
-                // Add title to new page
-                doc.setTextColor(255, 255, 255);
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(16);
-                doc.text('KOCHIN HANGOVER - Statistics (Continued)', 105, 15, { align: 'center' });
+                clubStats[clubName].count++;
+                clubStats[clubName].totalAmount += guest.total_amount || 0;
+                clubStats[clubName].paidAmount += guest.paid_amount || 0;
+            });
+            
+            // Sort clubs by count (descending)
+            const sortedClubs = Object.entries(clubStats)
+                .sort((a, b) => b[1].count - a[1].count);
+            
+            // Define column widths
+            const clubColWidths = [80, 30, 40, 40];
+            const clubHeaders = ['Club', 'Count', 'Total Amount', 'Paid Amount'];
+            
+            // Add table header background
+            doc.setFillColor(primaryColor);
+            doc.rect(10, yPos - 6, 190, 10, 'F');
+            
+            // Add header text
+            doc.setTextColor(255, 255, 255); // Change text color to white
+            doc.setFontSize(10);
+            
+            let xPos = 10;
+            clubHeaders.forEach((header, i) => {
+                doc.text(header, xPos + 2, yPos);
+                xPos += clubColWidths[i];
+            });
+            
+            // Add table rows
+            yPos += 10;
+            doc.setTextColor(darkColor);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            
+            // Limit to top 15 clubs to avoid overflow
+            const topClubs = sortedClubs.slice(0, 15);
+            
+            topClubs.forEach((club, index) => {
+                const [clubName, stats] = club;
                 
-                // Reset for new page
-                yPos = 30;
+                // Alternate row colors
+                if (index % 2 === 0) {
+                    doc.setFillColor(245, 245, 245);
+                } else {
+                    doc.setFillColor(235, 235, 235);
+                }
+                doc.rect(10, yPos - 6, 190, 10, 'F');
+                
+                // Add row data
+                xPos = 10;
+                doc.text(clubName.substring(0, 35), xPos + 2, yPos);
+                xPos += clubColWidths[0];
+                
+                doc.text(stats.count.toString(), xPos + 2, yPos);
+                xPos += clubColWidths[1];
+                
+                doc.text(`Rs.${stats.totalAmount.toLocaleString()}`, xPos + 2, yPos);
+                xPos += clubColWidths[2];
+                
+                doc.text(`Rs.${stats.paidAmount.toLocaleString()}`, xPos + 2, yPos);
+                
+                yPos += 10;
+            });
+            
+            // Save the document
+            doc.save('KochinHangover_Statistics.pdf');
+        };
+        
+        // Try to add logo
+        logo.onload = function() {
+            try {
+                // Add logo to the header
+                doc.addImage(logo, 'PNG', 10, 2, 16, 16);
+                finalizePDF();
+            } catch (error) {
+                console.error('Error adding logo to PDF:', error);
+                finalizePDF(); // Fallback to no logo
             }
-        }
+        };
         
-        // Add footer
-        const footerY = 280;
-        doc.setDrawColor(primaryColor);
-        doc.setLineWidth(0.5);
-        doc.line(10, footerY, 200, footerY);
+        logo.onerror = function() {
+            console.warn('Logo not found, generating PDF without logo');
+            finalizePDF(); // Fallback to no logo
+        };
         
-        doc.setFontSize(8);
-        doc.setTextColor(darkColor);
-        doc.text('Kochin Hangover - May 3rd, 2025 - Casino Hotel, Wellington Island, Kochi', 105, footerY + 5, { align: 'center' });
-        
-        // Save the PDF
-        doc.save('kochin-hangover-statistics.pdf');
     } catch (error) {
-        console.error('Error generating statistics PDF:', error);
-        alert('Failed to generate statistics PDF: ' + error.message);
+        console.error('Error generating stats PDF:', error);
+        alert('Failed to generate PDF: ' + error.message);
     }
 }
 
@@ -1980,21 +2160,30 @@ async function downloadStatsCSV() {
         const clubStats = {};
         guests.forEach(guest => {
             const clubName = guest.club_name || 'No Club';
+            
             if (!clubStats[clubName]) {
                 clubStats[clubName] = {
-                    totalGuests: 0,
+                    count: 0,
+                    totalAmount: 0,
                     paidAmount: 0
                 };
             }
-            clubStats[clubName].totalGuests++;
-            clubStats[clubName].paidAmount += Number(guest.paid_amount || 0);
+            
+            clubStats[clubName].count++;
+            clubStats[clubName].totalAmount += guest.total_amount || 0;
+            clubStats[clubName].paidAmount += guest.paid_amount || 0;
         });
         
+        // Sort clubs by count (descending)
+        const sortedClubs = Object.entries(clubStats)
+            .sort((a, b) => b[1].count - a[1].count);
+        
         // Convert to CSV
-        const headers = ['Club Name', 'Total Guests', 'Paid Amount (₹)'];
-        const csvData = Object.entries(clubStats).map(([club, stats]) => [
+        const headers = ['Club Name', 'Count', 'Total Amount', 'Paid Amount'];
+        const csvData = sortedClubs.map(([club, stats]) => [
             club,
-            stats.totalGuests,
+            stats.count,
+            stats.totalAmount,
             stats.paidAmount
         ]);
         
@@ -2002,6 +2191,7 @@ async function downloadStatsCSV() {
         csvData.push([
             'TOTAL',
             guests.length,
+            guests.reduce((sum, guest) => sum + guest.total_amount, 0),
             guests.reduce((sum, guest) => sum + guest.paid_amount, 0)
         ]);
         
