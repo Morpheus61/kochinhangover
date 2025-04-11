@@ -478,6 +478,18 @@ function initQRScanner() {
         qrScanner = null;
     }
 
+    // Get the QR scanner container element
+    const qrScannerContainer = document.getElementById('qrScanner');
+    
+    // If the container doesn't exist, return early
+    if (!qrScannerContainer) {
+        console.error('QR Scanner container not found');
+        return;
+    }
+    
+    // Clear any existing content
+    qrScannerContainer.innerHTML = '<div id="qr-reader"></div>';
+
     qrScanner = new Html5QrcodeScanner(
         "qr-reader", 
         {
@@ -570,9 +582,12 @@ function initQRScanner() {
             qrScanner.pause();
             
         } catch (error) {
-            console.error('Error verifying guest:', error);
-            alert(error.message || 'Failed to verify guest');
+            console.error('QR code verification error:', error);
+            alert('Error verifying QR code: ' + error.message);
+            qrScanner.resume();
         }
+    }, (error) => {
+        console.error('QR scanner error:', error);
     });
 }
 
@@ -618,7 +633,7 @@ window.verifyGuest = async function(guestId) {
         
     } catch (error) {
         console.error('Error verifying guest:', error);
-        alert(error.message || 'Failed to verify guest');
+        alert('Error verifying guest: ' + error.message);
     }
 }
 
@@ -1209,7 +1224,7 @@ async function loadStats() {
                     </td>
                 </tr>
             `).join('');
-            
+
             // Add event listeners to view club guests buttons
             document.querySelectorAll('.view-club-guests').forEach(button => {
                 button.addEventListener('click', function(e) {
