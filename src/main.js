@@ -196,7 +196,21 @@ async function showTab(tabId) {
     } else if (tabId === 'stats') {
         await loadStats();
     } else if (tabId === 'verification') {
-        initQRScanner();
+        const hasPermission = await checkCameraPermissions();
+        if (hasPermission) {
+            initQRScanner();
+        } else {
+            document.getElementById('qrScanner').innerHTML = `
+                <div class="text-center p-8">
+                    <i class="fas fa-video-slash text-4xl mb-4 text-red-400"></i>
+                    <h3 class="text-xl font-bold mb-2">Camera Access Required</h3>
+                    <p class="mb-4">Please enable camera permissions to scan QR codes.</p>
+                    <button onclick="showTab('verification')" class="kochin-button">
+                        Retry
+                    </button>
+                </div>
+            `;
+        }
     } else if (tabId === 'users') {
         await loadUsers();
     }
@@ -730,8 +744,8 @@ window.editGuest = editGuest;
 window.deleteGuest = deleteGuest;
 
 // Initialize QR Scanner
-function initQRScanner() {
-    // First, ensure any existing scanner is properly stopped and cleared
+async function initQRScanner() {
+    // Clear any existing scanner first
     if (qrScanner) {
         try {
             qrScanner.clear();
@@ -748,7 +762,7 @@ function initQRScanner() {
                 video.remove();
             });
         } catch (e) {
-            console.error('Error cleaning up previous scanner:', e);
+            console.error('Error clearing previous scanner:', e);
         }
     }
 
@@ -761,11 +775,10 @@ function initQRScanner() {
         return;
     }
     
-    // Clear any existing content
-    qrScannerContainer.innerHTML = '<div id="qr-reader"></div>';
+    // Clear and recreate the container
+    qrScannerContainer.innerHTML = '<div id="qr-reader" style="width:100%"></div>';
 
-    // Create new scanner with a slight delay to ensure DOM is ready
-    setTimeout(() => {
+    try {
         qrScanner = new Html5QrcodeScanner(
             "qr-reader", 
             {
@@ -776,155 +789,214 @@ function initQRScanner() {
                 showZoomSliderIfSupported: true,
                 defaultZoomValueIfSupported: 2,
                 formatsToSupport: [ 
-                    Html5QrcodeSupportedFormats.QR_CODE,
-                    Html5QrcodeSupportedFormats.DATA_MATRIX,
-                    Html5QrcodeSupportedFormats.AZTEC
+                    Html5QrcodeSupportedFormats.QR_CODE
                 ],
                 experimentalFeatures: {
                     useBarCodeDetectorIfSupported: true
                 }
-            }
+            },
+            /* verbose= */ true // Enable verbose logging
         );
         
-        qrScanner.render(async (decodedText) => {
-            try {
-                console.log('QR Code detected, raw text:', decodedText);
-                
-                // Validate decodedText before attempting to parse
-                if (!decodedText || typeof decodedText !== 'string' || decodedText.trim() === '') {
-                    throw new Error('Empty or invalid QR code');
-                }
-                
-                // For debugging - log the exact QR code content
-                console.log('QR Code content (length ' + decodedText.length + '):', JSON.stringify(decodedText));
-                
-                // Try to parse the QR code data with detailed error handling
-                let guestData;
-                try {
-                    guestData = JSON.parse(decodedText);
-                    console.log('Successfully parsed QR data:', guestData);
-                } catch (parseError) {
-                    console.error('Failed to parse QR code JSON:', parseError);
-                    
-                    // Check if the QR code might be a URL or other non-JSON format
-                    if (decodedText.includes('http') || decodedText.includes('www')) {
-                        throw new Error('QR code contains a URL, not guest data');
-                    }
-                    
-                    // Try to detect if it's a malformed JSON
-                    if (decodedText.includes('{') && decodedText.includes('}')) {
-                        throw new Error('Malformed JSON in QR code');
-                    }
-                    
-                    throw new Error('Invalid QR code format - not JSON data');
-                }
-                
-                // Validate the parsed data
-                if (!guestData) {
-                    throw new Error('Empty QR code data');
-                }
-                
-                if (!guestData.id) {
-                    console.error('Missing ID in QR data:', guestData);
-                    throw new Error('Missing guest ID in QR code');
-                }
-                
-                // Get the latest guest data from Supabase
-                console.log('Fetching guest with ID:', guestData.id);
-                
-                const { data: guest, error } = await supabase
-                    .from('guests')
-                    .select('*')
-                    .eq('id', guestData.id)
-                    .single();
-                
-                if (error) throw error;
-                
-                if (!guest) {
-                    throw new Error('Guest not found');
-                }
-                
-                // Calculate expected amount and payment status
-                const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
-                const isFullyPaid = parseFloat(guest.paid_amount) >= expectedAmount;
-                
-                // Show verification result modal
-                const modal = document.createElement('div');
-                modal.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4';
-                modal.innerHTML = `
-                    <div class="bg-[#2a0e3a] p-6 rounded-lg max-w-md w-full">
-                        <div class="text-center mb-6">
-                            <i class="fas ${isFullyPaid ? 'fa-check-circle text-green-400' : 'fa-exclamation-triangle text-yellow-400'} text-5xl"></i>
-                            <h3 class="text-2xl font-bold mt-4 ${isFullyPaid ? 'text-green-400' : 'text-yellow-400'}">
-                                ${isFullyPaid ? 'VERIFIED' : 'PAYMENT PENDING'}
-                            </h3>
-                        </div>
-                        
-                        <div class="space-y-4 mb-6">
-                            <div class="flex justify-between">
-                                <span class="text-gray-300">Full Name</span>
-                                <span class="font-bold">${guest.guest_name}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-300">Club Name</span>
-                                <span class="font-bold">${guest.club_name || 'N/A'}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-300">Entry Type</span>
-                                <span class="font-bold">${guest.entry_type.toUpperCase()}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-300">Payment Status</span>
-                                <span class="font-bold ${isFullyPaid ? 'text-green-400' : 'text-yellow-400'}">
-                                    ${isFullyPaid ? 'PAID IN FULL' : 'PARTIAL PAYMENT'}
-                                </span>
-                            </div>
-                            ${!isFullyPaid ? `
-                            <div class="flex justify-between">
-                                <span class="text-gray-300">Amount Due</span>
-                                <span class="font-bold text-red-400">₹${expectedAmount - guest.paid_amount}</span>
-                            </div>
-                            ` : ''}
-                        </div>
-                        
-                        <div class="flex space-x-4">
-                            ${isFullyPaid ? 
-                                `<button onclick="verifyGuest('${guest.id}')" class="kochin-button flex-1 bg-green-600">
-                                    <i class="fas fa-check mr-2"></i> Allow Entry
-                                </button>` : 
-                                `<button class="kochin-button bg-yellow-600 flex-1 cursor-not-allowed" disabled>
-                                    <i class="fas fa-ban mr-2"></i> Entry Denied
-                                </button>`
-                            }
-                            <button onclick="this.closest('.fixed').remove(); qrScanner.resume();" class="kochin-button bg-gray-700 flex-1">
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                `;
-                
-                document.body.appendChild(modal);
-                qrScanner.pause();
-                
-            } catch (error) {
-                console.error('QR code processing error:', error);
-                // Ensure we always have a valid error message string
-                const errorMessage = error && typeof error.message === 'string' ? error.message : 'Unknown error';
-                alert('Error processing QR code: ' + errorMessage);
-                
-                // Add a delay before resuming to prevent rapid scanning of the same invalid code
-                setTimeout(() => {
-                    if (qrScanner) {
-                        qrScanner.resume();
-                    }
-                }, 1000);
+        qrScanner.render(onScanSuccess, onScanError);
+        
+        // Add debug information to help diagnose issues
+        addDebugInfo();
+    } catch (error) {
+        console.error('Scanner initialization failed:', error);
+        qrScannerContainer.innerHTML = `
+            <div class="error-message">
+                <p>Failed to initialize scanner: ${error.message}</p>
+                <button onclick="initQRScanner()" class="kochin-button">
+                    Retry Scanner Initialization
+                </button>
+            </div>
+        `;
+    }
+}
+
+// Separate success handler with better error handling
+async function onScanSuccess(decodedText) {
+    try {
+        console.log('QR Code detected:', decodedText);
+        
+        if (!decodedText?.trim()) {
+            throw new Error('Empty QR code content');
+        }
+
+        // For debugging - log the exact QR code content
+        console.log('QR Code content (length ' + decodedText.length + '):', JSON.stringify(decodedText));
+        
+        let guestData;
+        try {
+            guestData = JSON.parse(decodedText);
+            console.log('Successfully parsed QR data:', guestData);
+        } catch (parseError) {
+            console.error('Failed to parse QR code JSON:', parseError);
+            
+            // Check if the QR code might be a URL or other non-JSON format
+            if (decodedText.includes('http') || decodedText.includes('www')) {
+                throw new Error('QR code contains a URL, not guest data');
             }
-        }, (errorMessage) => {
-            // This is the error callback from the scanner itself
-            console.log('QR Scanner error:', errorMessage);
-            // We don't need to alert here as this is just for scanning errors, not processing errors
-        });
-    }, 300);
+            
+            // Try to detect if it's a malformed JSON
+            if (decodedText.includes('{') && decodedText.includes('}')) {
+                throw new Error('Malformed JSON in QR code');
+            }
+            
+            throw new Error('Invalid QR code format - please scan a valid guest pass');
+        }
+        
+        // Validate the parsed data
+        if (!guestData) {
+            throw new Error('Empty QR code data');
+        }
+        
+        if (!guestData.id) {
+            console.error('Missing ID in QR data:', guestData);
+            throw new Error('Missing guest ID in QR code');
+        }
+        
+        // Get the latest guest data from Supabase
+        console.log('Fetching guest with ID:', guestData.id);
+        
+        const { data: guest, error } = await supabase
+            .from('guests')
+            .select('*')
+            .eq('id', guestData.id)
+            .single();
+        
+        if (error) throw error;
+        
+        if (!guest) {
+            throw new Error('Guest not found');
+        }
+        
+        // Calculate expected amount and payment status
+        const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
+        const isFullyPaid = parseFloat(guest.paid_amount) >= expectedAmount;
+        
+        // Show verification result modal
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4';
+        modal.innerHTML = `
+            <div class="bg-[#2a0e3a] p-6 rounded-lg max-w-md w-full">
+                <div class="text-center mb-6">
+                    <i class="fas ${isFullyPaid ? 'fa-check-circle text-green-400' : 'fa-exclamation-triangle text-yellow-400'} text-5xl"></i>
+                    <h3 class="text-2xl font-bold mt-4 ${isFullyPaid ? 'text-green-400' : 'text-yellow-400'}">
+                        ${isFullyPaid ? 'VERIFIED' : 'PAYMENT PENDING'}
+                    </h3>
+                </div>
+                
+                <div class="space-y-4 mb-6">
+                    <div class="flex justify-between">
+                        <span class="text-gray-300">Full Name</span>
+                        <span class="font-bold">${guest.guest_name}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-300">Club Name</span>
+                        <span class="font-bold">${guest.club_name || 'N/A'}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-300">Entry Type</span>
+                        <span class="font-bold">${guest.entry_type.toUpperCase()}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-300">Payment Status</span>
+                        <span class="font-bold ${isFullyPaid ? 'text-green-400' : 'text-yellow-400'}">
+                            ${isFullyPaid ? 'PAID IN FULL' : 'PARTIAL PAYMENT'}
+                        </span>
+                    </div>
+                    ${!isFullyPaid ? `
+                    <div class="flex justify-between">
+                        <span class="text-gray-300">Amount Due</span>
+                        <span class="font-bold text-red-400">₹${expectedAmount - guest.paid_amount}</span>
+                    </div>
+                    ` : ''}
+                </div>
+                
+                <div class="flex space-x-4">
+                    ${isFullyPaid ? 
+                        `<button onclick="verifyGuest('${guest.id}')" class="kochin-button flex-1 bg-green-600">
+                            <i class="fas fa-check mr-2"></i> Allow Entry
+                        </button>` : 
+                        `<button class="kochin-button bg-yellow-600 flex-1 cursor-not-allowed" disabled>
+                            <i class="fas fa-ban mr-2"></i> Entry Denied
+                        </button>`
+                    }
+                    <button onclick="this.closest('.fixed').remove(); qrScanner.resume();" class="kochin-button bg-gray-700 flex-1">
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        qrScanner.pause();
+        
+    } catch (error) {
+        console.error('QR code processing error:', error);
+        // Use the showErrorModal function instead of alert
+        showErrorModal(error.message || 'Unknown error');
+        
+        // Add a delay before resuming to prevent rapid scanning of the same invalid code
+        setTimeout(() => {
+            if (qrScanner) {
+                qrScanner.resume();
+            }
+        }, 2000);
+    }
+}
+
+// Separate error handler
+function onScanError(errorMessage) {
+    console.log('Scanner error:', errorMessage);
+    // Don't show alerts for normal scanning errors
+}
+
+// Helper function to show errors
+function showErrorModal(message) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50';
+    modal.innerHTML = `
+        <div class="bg-[#2a0e3a] p-6 rounded-lg max-w-md w-full">
+            <div class="text-center mb-4">
+                <i class="fas fa-exclamation-triangle text-red-400 text-4xl mb-2"></i>
+                <h3 class="text-xl font-bold">Scanning Error</h3>
+            </div>
+            <p class="mb-6 text-center">${message}</p>
+            <button onclick="this.closest('.fixed').remove()" class="kochin-button w-full">
+                OK
+            </button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+// Add debugging information
+function addDebugInfo() {
+    const debugInfo = document.createElement('div');
+    debugInfo.id = 'qrDebugInfo';
+    debugInfo.className = 'text-xs text-gray-400 mt-4 p-2 bg-gray-800 rounded';
+    debugInfo.innerHTML = `
+        <h4 class="font-bold mb-1">Scanner Debug Info</h4>
+        <div>Browser: ${navigator.userAgent}</div>
+        <div>Supports camera: ${!!navigator.mediaDevices}</div>
+        <div>Supports QR scanning: ${!!window.Html5QrcodeScanner}</div>
+    `;
+    document.getElementById('qrScanner').appendChild(debugInfo);
+}
+
+// Request camera permissions before initializing scanner
+async function checkCameraPermissions() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach(track => track.stop());
+        return true;
+    } catch (error) {
+        console.error('Camera permission denied:', error);
+        return false;
+    }
 }
 
 // Verify guest entry
@@ -1670,8 +1742,7 @@ async function loadStats() {
 
             // Add event listeners to view club guests buttons
             document.querySelectorAll('.view-club-guests').forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
+                button.addEventListener('click', function() {
                     const row = this.closest('tr');
                     const clubIndex = row.getAttribute('data-club-index');
                     const guestsRow = document.getElementById(`club-guests-${clubIndex}`);
