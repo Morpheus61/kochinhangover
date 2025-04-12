@@ -735,7 +735,7 @@ function initQRScanner() {
             qrScanner = null;
             
             // Additional cleanup for any leftover video elements
-            const videoElements = document.querySelectorAll('#qr-reader video');
+            const videoElements = document.querySelectorAll('#qr-reader video, #qr-reader canvas');
             videoElements.forEach(video => {
                 if (video.srcObject) {
                     const tracks = video.srcObject.getTracks();
@@ -2177,7 +2177,7 @@ async function downloadStatsPDF() {
         doc.setFont('helvetica', 'normal');
         doc.text('KOCHIN HANGOVER - Event Management System', 105, 288, { align: 'center' });
         doc.setFontSize(8);
-        doc.text('© 2025 Angels 153. All rights reserved.', 105, 293, { align: 'center' });
+        doc.text('ï¿½ 2025 Angels 153. All rights reserved.', 105, 293, { align: 'center' });
         
         // Save the PDF
         doc.save('kochin-hangover-stats.pdf');
