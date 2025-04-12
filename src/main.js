@@ -256,7 +256,7 @@ async function loadGuestList(searchTerm = '') {
             <tr class="border-b border-gray-700">
                 <td class="py-3 px-4">${guest.guest_name || ''}</td>
                 <td class="py-3 px-4">${guest.club_name || ''}</td>
-                <td class="py-3 px-4">${guest.entry_type === 'stag' ? 'Stag' : 'Couple'}${guest.has_room_booking ? ' + Room' : ''}</td>
+                <td class="py-3 px-4">${guest.entry_type === 'stag' ? 'Stag' : 'Couple'}${safeGetGuestProperty(guest, 'has_room_booking', false) ? ' + Room' : ''}</td>
                 <td class="py-3 px-4">${formatPaymentDisplay(guest)}</td>
                 <td class="py-3 px-4">
                     ${getStatusBadge(guest)}
@@ -355,7 +355,19 @@ function getStatusBadge(guest) {
 function formatPaymentDisplay(guest) {
     const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
     const paidAmount = guest.paid_amount || 0;
+    const roomBookingAmount = safeGetGuestProperty(guest, 'room_booking_amount', 0) || 0;
     
+    // If there's a room booking, show both amounts separately
+    if (roomBookingAmount > 0) {
+        // For fully paid registration
+        if (paidAmount >= expectedAmount) {
+            return `Rs.${paidAmount} + Rs.${roomBookingAmount}`;
+        }
+        // For partially paid registration
+        return `Rs.${paidAmount}/Rs.${expectedAmount} + Rs.${roomBookingAmount}`;
+    }
+    
+    // No room booking, just show registration amount
     // For fully paid guests, only show the amount received
     if (paidAmount >= expectedAmount) {
         return `Rs.${paidAmount}`;
@@ -363,6 +375,16 @@ function formatPaymentDisplay(guest) {
     
     // For partially paid guests, show the format: paid/total
     return `Rs.${paidAmount}/Rs.${expectedAmount}`;
+}
+
+// Helper function to safely access guest properties with fallbacks for missing columns
+function safeGetGuestProperty(guest, property, defaultValue) {
+    // If the property exists on the guest object, return it
+    if (guest && property in guest) {
+        return guest[property];
+    }
+    // Otherwise return the default value
+    return defaultValue;
 }
 
 // Load users list
@@ -646,13 +668,13 @@ async function editGuest(guestId) {
                         <div>
                             <label class="block text-sm font-medium mb-1">Room Booking</label>
                             <select id="editRoomBooking" class="kochin-input w-full">
-                                <option value="no" ${!guest.has_room_booking ? 'selected' : ''}>No Room Booking</option>
-                                <option value="yes" ${guest.has_room_booking ? 'selected' : ''}>Room Booking</option>
+                                <option value="no" ${!safeGetGuestProperty(guest, 'has_room_booking', false) ? 'selected' : ''}>No Room Booking</option>
+                                <option value="yes" ${safeGetGuestProperty(guest, 'has_room_booking', false) ? 'selected' : ''}>Room Booking</option>
                             </select>
                         </div>
-                        <div id="editRoomBookingSection" class="${!guest.has_room_booking ? 'hidden' : ''}">
+                        <div id="editRoomBookingSection" class="${!safeGetGuestProperty(guest, 'has_room_booking', false) ? 'hidden' : ''}">
                             <label class="block text-sm font-medium mb-1">Room Booking Amount (₹)</label>
-                            <input type="number" id="editRoomBookingAmount" class="kochin-input w-full" value="${guest.room_booking_amount || 0}" min="0">
+                            <input type="number" id="editRoomBookingAmount" class="kochin-input w-full" value="${safeGetGuestProperty(guest, 'room_booking_amount', 0) || 0}" min="0">
                             <p class="text-xs text-gray-400 mt-1">Enter the amount received for room booking.</p>
                         </div>
                     </div>
@@ -689,8 +711,21 @@ async function editGuest(guestId) {
             const status = document.getElementById('editStatus').value;
             const paidAmount = Number(document.getElementById('editPaidAmount').value);
             const totalAmount = Number(document.getElementById('editTotalAmount').value);
-            const roomBooking = document.getElementById('editRoomBooking').value;
-            const roomBookingAmount = roomBooking === 'yes' ? Number(document.getElementById('editRoomBookingAmount').value) : 0;
+            
+            // Safely get room booking fields
+            let roomBooking = 'no';
+            let roomBookingAmount = 0;
+            
+            const roomBookingSelect = document.getElementById('editRoomBooking');
+            if (roomBookingSelect) {
+                roomBooking = roomBookingSelect.value;
+                if (roomBooking === 'yes') {
+                    const roomBookingAmountInput = document.getElementById('editRoomBookingAmount');
+                    if (roomBookingAmountInput) {
+                        roomBookingAmount = Number(roomBookingAmountInput.value) || 0;
+                    }
+                }
+            }
             
             try {
                 // Update guest
@@ -1250,17 +1285,27 @@ function setupEventListeners() {
                 paid_amount: document.getElementById('paymentMode').value === 'partial' ? 
                     Number(document.getElementById('paidAmount').value) : 
                     (document.getElementById('entryType').value === 'stag' ? 2750 : 4750),
-                status: document.getElementById('paymentMode').value === 'partial' ? 'partially_paid' : 'paid',
-                has_room_booking: document.getElementById('roomBooking').value === 'yes',
-                room_booking_amount: document.getElementById('roomBooking').value === 'yes' ? 
-                    Number(document.getElementById('roomBookingAmount').value) : 0
+                status: document.getElementById('paymentMode').value === 'partial' ? 'partially_paid' : 'paid'
             };
 
+            // Add room booking fields if they exist in the form
+            const roomBookingSelect = document.getElementById('roomBooking');
+            if (roomBookingSelect) {
+                formData.has_room_booking = roomBookingSelect.value === 'yes';
+                
+                if (formData.has_room_booking) {
+                    const roomBookingAmountInput = document.getElementById('roomBookingAmount');
+                    if (roomBookingAmountInput) {
+                        formData.room_booking_amount = Number(roomBookingAmountInput.value) || 0;
+                    }
+                }
+            }
+            
             // Validate required fields
             if (!formData.guest_name || !formData.mobile_number || !formData.entry_type || !formData.payment_mode) {
                 throw new Error('Please fill in all required fields');
             }
-
+            
             // Insert into Supabase
             const { data, error } = await supabase
                 .from('guests')
@@ -1494,7 +1539,7 @@ function setupEventListeners() {
                                 
                                 <div style="margin-bottom: 15px;">
                                     <p style="font-size: 14px; margin: 0; color: #f7d046;">Entry Type</p>
-                                    <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0;">${guest.entry_type === 'stag' ? 'STAG' : 'COUPLE'}${guest.has_room_booking ? ' + ROOM' : ''}</p>
+                                    <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0;">${guest.entry_type === 'stag' ? 'STAG' : 'COUPLE'}${safeGetGuestProperty(guest, 'has_room_booking', false) ? ' + ROOM' : ''}</p>
                                 </div>
                                 
                                 <div style="margin-bottom: 15px;">
@@ -1584,7 +1629,7 @@ function setupEventListeners() {
 Name: ${guest.guest_name}
 Club: ${guest.club_name || ''}
 Mobile: ${guest.mobile_number}
-Entry Type: ${guest.entry_type === 'stag' ? 'STAG' : 'COUPLE'}${guest.has_room_booking ? ' + ROOM' : ''}${formatWhatsAppPaymentInfo(guest)}
+Entry Type: ${guest.entry_type === 'stag' ? 'STAG' : 'COUPLE'}${safeGetGuestProperty(guest, 'has_room_booking', false) ? ' + ROOM' : ''}${formatWhatsAppPaymentInfo(guest)}
 
 Please show this pass at the entrance.`;
                 
@@ -1717,7 +1762,7 @@ async function loadStats() {
         
         const pendingEntries = totalGuests - verifiedEntries;
         const registrationRevenue = guests.reduce((sum, guest) => sum + (parseFloat(guest.paid_amount) || 0), 0);
-        const roomBookingRevenue = guests.reduce((sum, guest) => sum + (guest.has_room_booking ? (parseFloat(guest.room_booking_amount) || 0) : 0), 0);
+        const roomBookingRevenue = guests.reduce((sum, guest) => sum + (safeGetGuestProperty(guest, 'has_room_booking', false) ? (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0) : 0), 0);
         const totalRevenue = registrationRevenue + roomBookingRevenue;
         
         // Calculate total PAX (headcount)
@@ -1791,7 +1836,7 @@ async function loadStats() {
                                         <tr class="border-b border-gray-700">
                                             <td class="py-2 px-2 text-sm">${guest.guest_name}</td>
                                             <td class="py-2 px-2 text-sm">${guest.mobile_number}</td>
-                                            <td class="py-2 px-2 text-sm">${guest.entry_type === 'stag' ? 'Stag' : 'Couple'}${guest.has_room_booking ? ' + Room' : ''}</td>
+                                            <td class="py-2 px-2 text-sm">${guest.entry_type === 'stag' ? 'Stag' : 'Couple'}${safeGetGuestProperty(guest, 'has_room_booking', false) ? ' + Room' : ''}</td>
                                             <td class="py-2 px-2 text-sm">
                                                 <span class="px-2 py-1 rounded-full text-xs ${
                                                     guest.status === 'verified' ? 'bg-green-500' :
@@ -1948,13 +1993,31 @@ async function downloadGuestsPDF() {
             
             // Entry type
             const entryType = guest.entry_type === 'stag' ? 'Stag' : 'Couple';
-            doc.text(`${entryType}${guest.has_room_booking ? ' + Room' : ''}`, xPos + 2, yPos);
+            doc.text(`${entryType}${safeGetGuestProperty(guest, 'has_room_booking', false) ? ' + Room' : ''}`, xPos + 2, yPos);
             xPos += colWidths[2];
             
             // Amount - only show amount received
             const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
             const paidAmount = guest.paid_amount || 0;
-            const amountText = paidAmount >= expectedAmount ? `Rs.${paidAmount}` : `Rs.${paidAmount}/Rs.${expectedAmount}`;
+            const roomBookingAmount = safeGetGuestProperty(guest, 'room_booking_amount', 0) || 0;
+            
+            let amountText;
+            if (roomBookingAmount > 0) {
+                // If there's a room booking, show both amounts separately
+                if (paidAmount >= expectedAmount) {
+                    amountText = `Rs.${paidAmount} + Rs.${roomBookingAmount}`;
+                } else {
+                    amountText = `Rs.${paidAmount}/Rs.${expectedAmount} + Rs.${roomBookingAmount}`;
+                }
+            } else {
+                // No room booking, just show registration amount
+                if (paidAmount >= expectedAmount) {
+                    amountText = `Rs.${paidAmount}`;
+                } else {
+                    amountText = `Rs.${paidAmount}/Rs.${expectedAmount}`;
+                }
+            }
+            
             doc.text(amountText, xPos + 2, yPos);
             xPos += colWidths[3];
             
@@ -2033,7 +2096,9 @@ async function downloadGuestsPDF() {
         }).length;
         
         const pendingEntries = totalGuests - verifiedEntries;
-        const totalRevenue = guests.reduce((sum, guest) => sum + (parseFloat(guest.paid_amount) || 0), 0);
+        const registrationRevenue = guests.reduce((sum, guest) => sum + (parseFloat(guest.paid_amount) || 0), 0);
+        const roomBookingRevenue = guests.reduce((sum, guest) => sum + (safeGetGuestProperty(guest, 'has_room_booking', false) ? (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0) : 0), 0);
+        const totalRevenue = registrationRevenue + roomBookingRevenue;
         
         // Calculate total PAX (headcount)
         const totalPax = guests.reduce((sum, guest) => {
@@ -2235,8 +2300,8 @@ async function downloadStatsPDF() {
         
         // Third row of cards
         addCard('Registration Revenue', `Rs.${statsRevenue}`, 10, yPos, 55, 35);
-        addCard('Room Booking Revenue', `Rs.${guests.reduce((sum, guest) => sum + (guest.has_room_booking ? (parseFloat(guest.room_booking_amount) || 0) : 0), 0)}`, 75, yPos, 55, 35);
-        addCard('Total Revenue', `Rs.${statsRevenue + guests.reduce((sum, guest) => sum + (guest.has_room_booking ? (parseFloat(guest.room_booking_amount) || 0) : 0), 0)}`, 140, yPos, 55, 35);
+        addCard('Room Booking Revenue', `Rs.${guests.reduce((sum, guest) => sum + (safeGetGuestProperty(guest, 'has_room_booking', false) ? (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0) : 0), 0)}`, 75, yPos, 55, 35);
+        addCard('Total Revenue', `Rs.${statsRevenue + guests.reduce((sum, guest) => sum + (safeGetGuestProperty(guest, 'has_room_booking', false) ? (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0) : 0), 0)}`, 140, yPos, 55, 35);
         
         yPos += 45;
         
@@ -2351,13 +2416,13 @@ async function downloadStatsPDF() {
             doc.setFontSize(10);
             
             topClubs.forEach((club, index) => {
-                const stats = clubStats[club];
-                
                 // Alternating row background
                 if (index % 2 === 0) {
                     doc.setFillColor(245, 245, 245);
-                    doc.rect(10, yPos - 5, 190, 10, 'F');
+                } else {
+                    doc.setFillColor(235, 235, 235);
                 }
+                doc.rect(10, yPos - 5, 190, 10, 'F');
                 
                 // Club name (truncate if too long)
                 const clubName = club.length > 25 ? club.substring(0, 22) + '...' : club;
@@ -2366,13 +2431,13 @@ async function downloadStatsPDF() {
                 
                 // Registration count
                 doc.setFont('helvetica', 'bold');
-                doc.text(stats.count.toString(), 110, yPos);
+                doc.text(clubStats[club].count.toString(), 110, yPos);
                 
                 // Revenue collected
-                doc.text(`Rs.${stats.paidAmount}`, 150, yPos);
+                doc.text(`Rs.${clubStats[club].paidAmount}`, 150, yPos);
                 
                 // Pending amount
-                const pendingAmount = stats.totalAmount - stats.paidAmount;
+                const pendingAmount = clubStats[club].totalAmount - clubStats[club].paidAmount;
                 doc.text(`Rs.${pendingAmount}`, 180, yPos);
                 
                 yPos += 10;
