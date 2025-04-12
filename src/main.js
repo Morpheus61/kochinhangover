@@ -857,7 +857,8 @@ function initQRScanner() {
                 
             } catch (error) {
                 console.error('QR code processing error:', error);
-                alert('Error processing QR code: ' + error.message);
+                const errorMessage = error && typeof error.message === 'string' ? error.message : 'Unknown error';
+                alert('Error processing QR code: ' + errorMessage);
                 qrScanner.resume();
             }
         });
