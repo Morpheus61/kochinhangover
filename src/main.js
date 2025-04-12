@@ -777,10 +777,35 @@ function initQRScanner() {
         
         qrScanner.render(async (decodedText) => {
             try {
-                // Parse the QR code data
-                const guestData = JSON.parse(decodedText);
+                console.log('QR Code detected, raw text:', decodedText);
+                
+                // Validate decodedText before attempting to parse
+                if (!decodedText || typeof decodedText !== 'string' || decodedText.trim() === '') {
+                    throw new Error('Empty or invalid QR code');
+                }
+                
+                // Parse the QR code data with error handling
+                let guestData;
+                try {
+                    guestData = JSON.parse(decodedText);
+                } catch (parseError) {
+                    console.error('Failed to parse QR code JSON:', parseError);
+                    throw new Error('Invalid QR code format');
+                }
+                
+                // Validate the parsed data
+                if (!guestData) {
+                    throw new Error('Empty QR code data');
+                }
+                
+                if (!guestData.id) {
+                    console.error('Missing ID in QR data:', guestData);
+                    throw new Error('Missing guest ID in QR code');
+                }
                 
                 // Get the latest guest data from Supabase
+                console.log('Fetching guest with ID:', guestData.id);
+                
                 const { data: guest, error } = await supabase
                     .from('guests')
                     .select('*')
@@ -857,10 +882,21 @@ function initQRScanner() {
                 
             } catch (error) {
                 console.error('QR code processing error:', error);
+                // Ensure we always have a valid error message string
                 const errorMessage = error && typeof error.message === 'string' ? error.message : 'Unknown error';
                 alert('Error processing QR code: ' + errorMessage);
-                qrScanner.resume();
+                
+                // Add a delay before resuming to prevent rapid scanning of the same invalid code
+                setTimeout(() => {
+                    if (qrScanner) {
+                        qrScanner.resume();
+                    }
+                }, 1000);
             }
+        }, (errorMessage) => {
+            // This is the error callback from the scanner itself
+            console.log('QR Scanner error:', errorMessage);
+            // We don't need to alert here as this is just for scanning errors, not processing errors
         });
     }, 300);
 }
@@ -1492,6 +1528,7 @@ window.updateAmount = function() {
 // Load statistics
 async function loadStats() {
     try {
+        // Fetch all guests
         const { data: guests, error } = await supabase
             .from('guests')
             .select('*');
@@ -1872,6 +1909,8 @@ async function downloadGuestsPDF() {
         xPos = 150;
         doc.text(`${totalPax} PAX (Headcount)`, xPos + 2, yPos + 2);
         
+        yPos += 15;
+        
         // Save the PDF
         doc.save('kochin-hangover-guest-list.pdf');
         
@@ -1984,7 +2023,7 @@ async function downloadStatsPDF() {
         // Calculate verified PAX (headcount)
         const verifiedPax = guests.filter(guest => guest.status === 'verified')
             .reduce((sum, guest) => sum + (guest.entry_type === 'couple' ? 2 : 1), 0);
-        
+
         // Calculate revenue
         const statsRevenue = guests.reduce((sum, guest) => sum + Number(guest.paid_amount || 0), 0);
         const expectedRevenue = guests.reduce((sum, guest) => sum + Number(guest.total_amount || 0), 0);
