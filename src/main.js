@@ -1,6 +1,6 @@
 // Initialize Supabase client
 import { createClient } from '@supabase/supabase-js';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import QRCode from 'qrcode';
 
 const supabaseUrl = 'https://rcedawlruorpkzzrvkqn.supabase.co';
@@ -492,7 +492,10 @@ async function editUser(userId) {
             
             try {
                 // Update user
-                const updateData = { username, role };
+                const updateData = {
+                    username,
+                    role
+                };
                 
                 // Only update password if it's not empty
                 if (password) {
@@ -771,7 +774,15 @@ function initQRScanner() {
                 aspectRatio: 1.0,
                 showTorchButtonIfSupported: true,
                 showZoomSliderIfSupported: true,
-                defaultZoomValueIfSupported: 2
+                defaultZoomValueIfSupported: 2,
+                formatsToSupport: [ 
+                    Html5QrcodeSupportedFormats.QR_CODE,
+                    Html5QrcodeSupportedFormats.DATA_MATRIX,
+                    Html5QrcodeSupportedFormats.AZTEC
+                ],
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: true
+                }
             }
         );
         
@@ -784,13 +795,28 @@ function initQRScanner() {
                     throw new Error('Empty or invalid QR code');
                 }
                 
-                // Parse the QR code data with error handling
+                // For debugging - log the exact QR code content
+                console.log('QR Code content (length ' + decodedText.length + '):', JSON.stringify(decodedText));
+                
+                // Try to parse the QR code data with detailed error handling
                 let guestData;
                 try {
                     guestData = JSON.parse(decodedText);
+                    console.log('Successfully parsed QR data:', guestData);
                 } catch (parseError) {
                     console.error('Failed to parse QR code JSON:', parseError);
-                    throw new Error('Invalid QR code format');
+                    
+                    // Check if the QR code might be a URL or other non-JSON format
+                    if (decodedText.includes('http') || decodedText.includes('www')) {
+                        throw new Error('QR code contains a URL, not guest data');
+                    }
+                    
+                    // Try to detect if it's a malformed JSON
+                    if (decodedText.includes('{') && decodedText.includes('}')) {
+                        throw new Error('Malformed JSON in QR code');
+                    }
+                    
+                    throw new Error('Invalid QR code format - not JSON data');
                 }
                 
                 // Validate the parsed data
@@ -820,7 +846,7 @@ function initQRScanner() {
                 
                 // Calculate expected amount and payment status
                 const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
-                const isFullyPaid = guest.paid_amount >= expectedAmount;
+                const isFullyPaid = parseFloat(guest.paid_amount) >= expectedAmount;
                 
                 // Show verification result modal
                 const modal = document.createElement('div');
@@ -1446,10 +1472,10 @@ function setupEventListeners() {
                             <li class="mb-2">Find and select the downloaded guest pass image</li>
                         </ol>
                         <div class="flex justify-between">
-                            <button id="continueToWhatsAppBtn" class="kochin-button bg-green-600">
+                            <button id="continueToWhatsAppBtn" class="kochin-button flex-1 bg-green-600">
                                 <i class="fab fa-whatsapp mr-2"></i> Continue to WhatsApp
                             </button>
-                            <button id="closeShareModalBtn" class="kochin-button bg-gray-600">
+                            <button id="closeShareModalBtn" class="kochin-button bg-gray-600 flex-1">
                                 Close
                             </button>
                         </div>
