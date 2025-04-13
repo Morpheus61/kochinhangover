@@ -963,7 +963,8 @@ async function onScanSuccess(decodedText) {
         console.log('QR Code detected:', decodedText);
         
         if (!decodedText?.trim()) {
-            throw new Error('Empty QR code content');
+            console.log('Empty QR code content - ignoring');
+            return; // Just ignore empty scans instead of showing an error
         }
 
         // For debugging - log the exact QR code content
@@ -976,27 +977,27 @@ async function onScanSuccess(decodedText) {
         } catch (parseError) {
             console.error('Failed to parse QR code JSON:', parseError);
             
-            // Check if the QR code might be a URL or other non-JSON format
+            // Silently ignore common non-guest QR codes without showing errors
             if (decodedText.includes('http') || decodedText.includes('www')) {
-                throw new Error('QR code contains a URL, not guest data');
+                console.log('Ignoring URL QR code');
+                return;
             }
             
-            // Try to detect if it's a malformed JSON
+            // Silently ignore malformed JSON without showing errors
             if (decodedText.includes('{') && decodedText.includes('}')) {
-                throw new Error('Malformed JSON in QR code');
+                console.log('Ignoring malformed JSON QR code');
+                return;
             }
             
-            throw new Error('Invalid QR code format - please scan a valid guest pass');
+            // Silently ignore other invalid formats without showing errors
+            console.log('Ignoring invalid QR code format');
+            return;
         }
         
-        // Validate the parsed data
-        if (!guestData) {
-            throw new Error('Empty QR code data');
-        }
-        
-        if (!guestData.id) {
-            console.error('Missing ID in QR data:', guestData);
-            throw new Error('Missing guest ID in QR code');
+        // Validate the parsed data silently without showing errors
+        if (!guestData || !guestData.id) {
+            console.log('Invalid guest data in QR code - ignoring');
+            return;
         }
         
         // Get the latest guest data from Supabase
@@ -1008,10 +1009,14 @@ async function onScanSuccess(decodedText) {
             .eq('id', guestData.id)
             .single();
         
-        if (error) throw error;
+        if (error) {
+            console.error('Supabase error:', error);
+            return; // Silently ignore database errors
+        }
         
         if (!guest) {
-            throw new Error('Guest not found');
+            console.log('Guest not found - ignoring');
+            return; // Silently ignore missing guests
         }
         
         // Calculate expected amount and payment status
@@ -1078,26 +1083,46 @@ async function onScanSuccess(decodedText) {
         
     } catch (error) {
         console.error('QR code processing error:', error);
-        // Use the showErrorModal function instead of alert
-        showErrorModal(error.message || 'Unknown error');
+        // Only show errors for critical issues, not for normal scanning operations
+        if (error.message && (
+            error.message.includes('permission') || 
+            error.message.includes('camera') ||
+            error.message.includes('hardware')
+        )) {
+            showErrorModal(error.message);
+        } else {
+            // Just log other errors without showing a modal
+            console.log('Non-critical scanning error (ignored):', error.message);
+        }
         
-        // Add a delay before resuming to prevent rapid scanning of the same invalid code
+        // Resume scanning after a short delay
         setTimeout(() => {
             if (qrScanner) {
                 qrScanner.resume();
             }
-        }, 2000);
+        }, 500);
     }
 }
 
 // Separate error handler
 function onScanError(errorMessage) {
     console.log('Scanner error:', errorMessage);
-    // Don't show alerts for normal scanning errors
+    // Don't show any error modal for normal scanning errors
+    // These errors are expected during normal scanning operation
 }
 
 // Helper function to show errors
 function showErrorModal(message) {
+    // Skip showing errors for common scanning messages that aren't actual errors
+    if (message === 'Unknown error' || 
+        message.includes('No QR code found') || 
+        message.includes('scanning ongoing') ||
+        message.toLowerCase().includes('qr code format') ||
+        message.toLowerCase().includes('not found')) {
+        console.log('Ignoring non-critical scanning message:', message);
+        return;
+    }
+    
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75';
     modal.innerHTML = `
@@ -1932,6 +1957,7 @@ async function downloadGuestsPDF() {
         doc.setFontSize(24);
         doc.text('KOCHIN HANGOVER', 105, 20, { align: 'center' });
         
+        doc.setTextColor(100, 100, 100);
         doc.setFontSize(16);
         doc.text('Guest List', 105, 30, { align: 'center' });
         
