@@ -2671,12 +2671,20 @@ function formatWhatsAppPaymentInfo(guest) {
     const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
     const paidAmount = guest.paid_amount || 0;
     const pendingAmount = expectedAmount - paidAmount;
+    const hasRoomBooking = safeGetGuestProperty(guest, 'has_room_booking', false);
+    const roomBookingAmount = safeGetGuestProperty(guest, 'room_booking_amount', 0) || 0;
     
-    // If fully paid, only show Payment Received
-    if (paidAmount >= expectedAmount) {
-        return `\nPayment Received : ₹${paidAmount}`;
-    } 
+    let message = `\nPayment Received : ₹${paidAmount}`;
     
-    // If partially paid, show both Payment Received and Payment Pending
-    return `\nPayment Received : ₹${paidAmount}\nPayment Pending : ₹${pendingAmount}`;
+    // Only show Payment Pending for guests who have not paid in full
+    if (paidAmount < expectedAmount) {
+        message += `\nPayment Pending : ₹${pendingAmount}`;
+    }
+    
+    // Add room booking amount for guests who have room booking
+    if (hasRoomBooking && roomBookingAmount > 0) {
+        message += `\nPayment Received for Room Booking : ₹${roomBookingAmount}`;
+    }
+    
+    return message;
 }
