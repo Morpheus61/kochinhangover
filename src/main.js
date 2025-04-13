@@ -1194,42 +1194,59 @@ function setupEventListeners() {
     // Guest search input
     const searchInput = document.getElementById('guestSearchInput');
     if (searchInput) {
-        // Prevent password managers from interfering
+        // Clear any existing search input and set up fresh event listeners
+        searchInput.value = '';
+        
+        // Set attributes to prevent password managers from interfering
         searchInput.setAttribute('autocomplete', 'off');
         searchInput.setAttribute('data-lpignore', 'true');
         searchInput.setAttribute('data-form-type', 'search');
         
-        // Force browser to recognize this is not a login field
-        setTimeout(() => {
-            // Clear any auto-filled value
-            searchInput.value = '';
-            // Re-apply attributes that might have been overridden
-            searchInput.setAttribute('autocomplete', 'off');
-            searchInput.setAttribute('data-lpignore', 'true');
-        }, 500);
-        
-        // Remove existing event listener to prevent duplicates
-        const newSearchInput = searchInput.cloneNode(true);
-        searchInput.parentNode.replaceChild(newSearchInput, searchInput);
-        
-        // Add event listener with debounce to prevent excessive filtering
-        let debounceTimer;
-        newSearchInput.addEventListener('input', function() {
-            const currentSearchValue = this.value;
-            const searchInputElement = this; // Store reference to the search input
+        // Add a click handler to ensure focus is maintained
+        searchInput.addEventListener('click', function(e) {
+            // Prevent event bubbling
+            e.stopPropagation();
             
+            // Ensure the input maintains focus
+            this.focus();
+        });
+        
+        // Add debounced input handler for search functionality
+        let debounceTimer;
+        searchInput.addEventListener('input', function(e) {
+            // Store the current value and cursor position
+            const searchValue = this.value;
+            
+            // Clear any existing timeout
             clearTimeout(debounceTimer);
+            
+            // Set a new timeout for the search
             debounceTimer = setTimeout(async () => {
-                // Load the guest list with the search term
-                await loadGuestList(currentSearchValue);
-                
-                // After the guest list is loaded, restore focus to the search input
-                searchInputElement.focus();
-                
-                // Restore the cursor position to the end of the text
-                const textLength = searchInputElement.value.length;
-                searchInputElement.setSelectionRange(textLength, textLength);
-            }, 300); // 300ms debounce delay
+                try {
+                    // Perform the search
+                    await loadGuestList(searchValue);
+                    
+                    // After list is updated, ensure the search input still has the correct value
+                    // (in case it was modified during the loadGuestList operation)
+                    if (this.value !== searchValue) {
+                        this.value = searchValue;
+                    }
+                    
+                    // Ensure the input has focus
+                    this.focus();
+                    
+                    // Place cursor at the end
+                    this.setSelectionRange(searchValue.length, searchValue.length);
+                } catch (error) {
+                    console.error('Error during search:', error);
+                }
+            }, 300);
+        });
+        
+        // Prevent the form from being submitted when Enter is pressed
+        document.getElementById('searchForm')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            return false;
         });
     }
 

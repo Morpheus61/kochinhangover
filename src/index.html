@@ -540,7 +540,10 @@
                             <input type="text" style="display:none" name="fakeusernameremembered">
                             <input type="password" style="display:none" name="fakepasswordremembered">
                             
-                            <div class="relative">
+                            <div class="relative flex items-center">
+                                <div class="absolute left-3 text-gray-500 pointer-events-none z-10">
+                                    <i class="fas fa-search"></i>
+                                </div>
                                 <input type="search" 
                                        id="guestSearchInput" 
                                        class="kochin-input w-full pl-10" 
@@ -552,9 +555,6 @@
                                        data-form-type="search" 
                                        data-lpignore="true"
                                        aria-label="Search guests">
-                                <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none">
-                                    <i class="fas fa-search"></i>
-                                </div>
                             </div>
                         </form>
                     </div>
