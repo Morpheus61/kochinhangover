@@ -302,8 +302,22 @@ async function loadGuestList(searchTerm = '') {
             </tr>
         `;
         
-        // Re-attach event listeners
-        setupEventListeners();
+        // Re-attach event listeners for WhatsApp sharing
+        document.querySelectorAll('.whatsapp-share').forEach(button => {
+            button.addEventListener('click', function() {
+                const guestId = this.getAttribute('data-guest-id');
+                if (guestId) {
+                    showWhatsAppShareModal(guestId);
+                }
+            });
+        });
+        
+        // Preserve search input focus and value
+        const searchInput = document.getElementById('guestSearchInput');
+        if (searchInput && document.activeElement !== searchInput) {
+            // Only focus if it wasn't already focused (to avoid cursor jumping)
+            searchInput.focus();
+        }
         
     } catch (error) {
         console.error('Error loading guest list:', error);
@@ -1191,10 +1205,10 @@ function setupEventListeners() {
     document.getElementById('statsBtn')?.addEventListener('click', () => showTab('stats'));
     document.getElementById('usersBtn')?.addEventListener('click', () => showTab('users'));
 
-    // Guest search input
+    // Guest search input - simplified implementation
     const searchInput = document.getElementById('guestSearchInput');
     if (searchInput) {
-        // Clear any existing search input and set up fresh event listeners
+        // Clear any existing search input
         searchInput.value = '';
         
         // Set attributes to prevent password managers from interfering
@@ -1202,54 +1216,17 @@ function setupEventListeners() {
         searchInput.setAttribute('data-lpignore', 'true');
         searchInput.setAttribute('data-form-type', 'search');
         
-        // Add a click handler to ensure focus is maintained
-        searchInput.addEventListener('click', function(e) {
-            // Prevent event bubbling
-            e.stopPropagation();
-            
-            // Ensure the input maintains focus
-            this.focus();
-        });
-        
-        // Add debounced input handler for search functionality
-        let debounceTimer;
-        searchInput.addEventListener('input', function(e) {
-            // Store the current value and cursor position
+        // Simple input handler without cloning or complex focus management
+        searchInput.addEventListener('input', function() {
             const searchValue = this.value;
             
-            // Clear any existing timeout
-            clearTimeout(debounceTimer);
-            
-            // Set a new timeout for the search
-            debounceTimer = setTimeout(async () => {
-                try {
-                    // Perform the search
-                    await loadGuestList(searchValue);
-                    
-                    // After list is updated, ensure the search input still has the correct value
-                    // (in case it was modified during the loadGuestList operation)
-                    if (this.value !== searchValue) {
-                        this.value = searchValue;
-                    }
-                    
-                    // Ensure the input has focus
-                    this.focus();
-                    
-                    // Place cursor at the end
-                    this.setSelectionRange(searchValue.length, searchValue.length);
-                } catch (error) {
-                    console.error('Error during search:', error);
-                }
-            }, 300);
-        });
-        
-        // Prevent the form from being submitted when Enter is pressed
-        document.getElementById('searchForm')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            return false;
+            // Use requestAnimationFrame to ensure UI updates before search
+            requestAnimationFrame(() => {
+                loadGuestList(searchValue);
+            });
         });
     }
-
+    
     // Registration form
     document.getElementById('registrationForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -2264,7 +2241,6 @@ async function downloadStatsPDF() {
             
             doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
             doc.setFontSize(12);
-            doc.setFont('helvetica', 'normal');
             doc.text(title, x + width/2, y + 10, { align: 'center' });
             
             doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);

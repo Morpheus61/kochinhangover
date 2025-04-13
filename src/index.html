@@ -540,13 +540,10 @@
                             <input type="text" style="display:none" name="fakeusernameremembered">
                             <input type="password" style="display:none" name="fakepasswordremembered">
                             
-                            <div class="relative flex items-center">
-                                <div class="absolute left-4 text-gray-500 pointer-events-none z-10">
-                                    <i class="fas fa-search"></i>
-                                </div>
+                            <div class="relative">
                                 <input type="search" 
                                        id="guestSearchInput" 
-                                       class="kochin-input w-full pl-16" 
+                                       class="kochin-input w-full" 
                                        placeholder="Search by guest name or club..." 
                                        autocomplete="off" 
                                        autocorrect="off" 
@@ -554,7 +551,11 @@
                                        spellcheck="false" 
                                        data-form-type="search" 
                                        data-lpignore="true"
-                                       aria-label="Search guests">
+                                       aria-label="Search guests"
+                                       style="padding-left: 40px;">
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                    <i class="fas fa-search text-gray-500"></i>
+                                </div>
                             </div>
                         </form>
                     </div>
