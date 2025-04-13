@@ -1169,6 +1169,13 @@ async function checkCameraPermissions() {
 // Verify guest entry
 window.verifyGuest = async function(guestId) {
     try {
+        if (!guestId) {
+            console.error('Missing guest ID in verifyGuest function');
+            return;
+        }
+
+        console.log('Verifying guest with ID:', guestId);
+        
         // Get guest data
         const { data: guest, error: getError } = await supabase
             .from('guests')
@@ -1176,7 +1183,19 @@ window.verifyGuest = async function(guestId) {
             .eq('id', guestId)
             .single();
         
-        if (getError) throw getError;
+        if (getError) {
+            console.error('Error fetching guest data:', getError);
+            // Handle the error silently without showing an alert
+            return;
+        }
+        
+        if (!guest) {
+            console.error('Guest not found with ID:', guestId);
+            // Handle the error silently without showing an alert
+            return;
+        }
+        
+        console.log('Successfully fetched guest data:', guest);
         
         // Update guest status to verified regardless of user role
         // This ensures the status is always updated when a valid QR code is scanned
@@ -1185,30 +1204,60 @@ window.verifyGuest = async function(guestId) {
             .update({ status: 'verified' })
             .eq('id', guestId);
         
-        if (updateError) throw updateError;
+        if (updateError) {
+            console.error('Error updating guest status:', updateError);
+            // Handle the error silently without showing an alert
+            return;
+        }
         
-        // Show success message
-        alert('Guest entry verified successfully!');
+        console.log('Successfully updated guest status to verified');
         
-        // Close the modal and resume scanning
-        const modal = document.querySelector('.fixed');
-        if (modal) {
-            modal.remove();
+        // Show success message without using alert
+        const successModal = document.createElement('div');
+        successModal.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75';
+        successModal.innerHTML = `
+            <div class="bg-[#2a0e3a] p-6 rounded-lg max-w-md w-full">
+                <div class="text-center mb-4">
+                    <i class="fas fa-check-circle text-green-400 text-4xl mb-2"></i>
+                    <h3 class="text-xl font-bold text-green-400">Success</h3>
+                </div>
+                <p class="mb-6 text-center">Guest entry verified successfully!</p>
+                <button onclick="this.closest('.fixed').remove(); if(qrScanner) qrScanner.resume();" class="kochin-button w-full bg-green-600">
+                    OK
+                </button>
+            </div>
+        `;
+        
+        // Close any existing modals first
+        const existingModals = document.querySelectorAll('.fixed');
+        existingModals.forEach(modal => modal.remove());
+        
+        // Show the success modal
+        document.body.appendChild(successModal);
+        
+        // Resume scanning after a delay
+        setTimeout(() => {
             if (qrScanner) {
                 qrScanner.resume();
             }
-        }
-        
-        // Refresh the guest list if we're on the guests tab
-        if (!document.getElementById('guests').classList.contains('hidden')) {
-            await loadGuestList();
-        }
+        }, 3000); // Give the user 3 seconds to see the success message
         
     } catch (error) {
-        console.error('Error verifying guest:', error);
-        alert('Error verifying guest: ' + error.message);
+        console.error('Error in verifyGuest function:', error);
+        
+        // Handle the error silently without showing an alert
+        // Close any existing modals
+        const modal = document.querySelector('.fixed');
+        if (modal) {
+            modal.remove();
+        }
+        
+        // Resume scanning
+        if (qrScanner) {
+            qrScanner.resume();
+        }
     }
-}
+};
 
 // Setup event listeners
 function setupEventListeners() {
@@ -1361,7 +1410,7 @@ function setupEventListeners() {
             document.getElementById('roomBookingSection').classList.add('hidden');
             document.getElementById('roomBookingAmount').removeAttribute('required');
             
-            // Refresh lists
+            // Reload lists
             await loadGuestList();
             await loadStats();
             
