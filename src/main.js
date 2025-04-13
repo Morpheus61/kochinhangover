@@ -182,6 +182,31 @@ async function showTab(tabId) {
         tabId = 'verification';
     }
 
+    // Clean up QR scanner if we're switching away from verification tab
+    if (qrScanner && tabId !== 'verification') {
+        console.log('Cleaning up QR scanner when switching tabs');
+        try {
+            // Stop the scanner
+            qrScanner.clear();
+            qrScanner = null;
+            
+            // Stop all video streams
+            const videoElements = document.querySelectorAll('video');
+            videoElements.forEach(video => {
+                if (video.srcObject) {
+                    const tracks = video.srcObject.getTracks();
+                    tracks.forEach(track => track.stop());
+                    video.srcObject = null;
+                }
+            });
+            
+            // Remove any scanner-related elements
+            document.querySelectorAll('.html5-qrcode-element').forEach(el => el.remove());
+        } catch (e) {
+            console.error('Error cleaning up QR scanner during tab switch:', e);
+        }
+    }
+
     // Hide all tabs
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -211,9 +236,12 @@ async function showTab(tabId) {
                 </div>
             `;
         }
-    } else if (tabId === 'users') {
+    } else if (tabId === 'users' && isAdmin) {
         await loadUsers();
     }
+
+    // Update URL hash for navigation
+    window.location.hash = tabId;
 }
 
 // Load guest list
@@ -839,25 +867,44 @@ window.deleteGuest = deleteGuest;
 
 // Initialize QR Scanner
 async function initQRScanner() {
-    // Clear any existing scanner first
+    console.log('Initializing QR scanner...');
+    
+    // First, ensure we completely stop and remove any existing scanner
     if (qrScanner) {
         try {
+            console.log('Clearing existing scanner instance');
             qrScanner.clear();
             qrScanner = null;
-            
-            // Additional cleanup for any leftover video elements
-            const videoElements = document.querySelectorAll('#qr-reader video, #qr-reader canvas');
-            videoElements.forEach(video => {
-                if (video.srcObject) {
-                    const tracks = video.srcObject.getTracks();
-                    tracks.forEach(track => track.stop());
-                    video.srcObject = null;
-                }
-                video.remove();
-            });
         } catch (e) {
-            console.error('Error clearing previous scanner:', e);
+            console.error('Error clearing previous scanner instance:', e);
         }
+    }
+    
+    // Additional thorough cleanup for any leftover elements
+    try {
+        // Stop all video streams
+        const videoElements = document.querySelectorAll('video');
+        videoElements.forEach(video => {
+            if (video.srcObject) {
+                const tracks = video.srcObject.getTracks();
+                tracks.forEach(track => {
+                    console.log('Stopping video track:', track.id);
+                    track.stop();
+                });
+                video.srcObject = null;
+            }
+        });
+        
+        // Remove any existing scanner elements completely
+        const qrReaderElement = document.getElementById('qr-reader');
+        if (qrReaderElement) {
+            qrReaderElement.remove();
+        }
+        
+        // Remove any other scanner-related elements that might be left behind
+        document.querySelectorAll('.html5-qrcode-element').forEach(el => el.remove());
+    } catch (e) {
+        console.error('Error during thorough cleanup:', e);
     }
 
     // Get the QR scanner container element
@@ -869,44 +916,45 @@ async function initQRScanner() {
         return;
     }
     
-    // Clear and recreate the container
+    // Clear any existing content
     qrScannerContainer.innerHTML = '<div id="qr-reader" style="width:100%"></div>';
 
-    try {
-        qrScanner = new Html5QrcodeScanner(
-            "qr-reader", 
-            {
-                fps: 10,
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0,
-                showTorchButtonIfSupported: true,
-                showZoomSliderIfSupported: true,
-                defaultZoomValueIfSupported: 2,
-                formatsToSupport: [ 
-                    Html5QrcodeSupportedFormats.QR_CODE
-                ],
-                experimentalFeatures: {
-                    useBarCodeDetectorIfSupported: true
-                }
-            },
-            /* verbose= */ true // Enable verbose logging
-        );
-        
-        qrScanner.render(onScanSuccess, onScanError);
-        
-        // Add debug information to help diagnose issues
-        addDebugInfo();
-    } catch (error) {
-        console.error('Scanner initialization failed:', error);
-        qrScannerContainer.innerHTML = `
-            <div class="error-message">
-                <p>Failed to initialize scanner: ${error.message}</p>
-                <button onclick="initQRScanner()" class="kochin-button">
-                    Retry Scanner Initialization
-                </button>
-            </div>
-        `;
-    }
+    // Create new scanner with a slight delay to ensure DOM is ready
+    setTimeout(() => {
+        try {
+            console.log('Creating new scanner instance');
+            qrScanner = new Html5QrcodeScanner(
+                "qr-reader", 
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0,
+                    showTorchButtonIfSupported: true,
+                    showZoomSliderIfSupported: true,
+                    defaultZoomValueIfSupported: 2,
+                    formatsToSupport: [ 
+                        Html5QrcodeSupportedFormats.QR_CODE
+                    ]
+                },
+                /* verbose= */ false // Disable verbose logging
+            );
+            
+            // Render the scanner with our success and error handlers
+            qrScanner.render(onScanSuccess, onScanError);
+            
+            console.log('QR scanner initialized successfully');
+        } catch (error) {
+            console.error('Scanner initialization failed:', error);
+            qrScannerContainer.innerHTML = `
+                <div class="error-message p-4 bg-red-800 rounded-lg text-center">
+                    <p class="mb-4">Failed to initialize scanner: ${error.message}</p>
+                    <button onclick="initQRScanner()" class="kochin-button">
+                        Retry Scanner Initialization
+                    </button>
+                </div>
+            `;
+        }
+    }, 300); // Delay to ensure DOM is ready
 }
 
 // Separate success handler with better error handling
