@@ -1220,17 +1220,15 @@ function setupEventListeners() {
             
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(async () => {
-                // Save the current cursor position
-                const cursorPosition = searchInputElement.selectionStart;
-                
                 // Load the guest list with the search term
                 await loadGuestList(currentSearchValue);
                 
                 // After the guest list is loaded, restore focus to the search input
                 searchInputElement.focus();
                 
-                // Restore the cursor position
-                searchInputElement.setSelectionRange(cursorPosition, cursorPosition);
+                // Restore the cursor position to the end of the text
+                const textLength = searchInputElement.value.length;
+                searchInputElement.setSelectionRange(textLength, textLength);
             }, 300); // 300ms debounce delay
         });
     }
