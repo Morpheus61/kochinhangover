@@ -1,4 +1,4 @@
-﻿// Initialize Supabase client
+// Initialize Supabase client
 import { createClient } from '@supabase/supabase-js';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import QRCode from 'qrcode';
@@ -2176,8 +2176,6 @@ async function downloadStatsPDF() {
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.text('KOCHIN HANGOVER - Event Management System', 105, 288, { align: 'center' });
-        doc.setFontSize(8);
-        doc.text('© 2025 Angels 153. All rights reserved.', 105, 293, { align: 'center' });
         
         // Save the PDF
         doc.save('kochin-hangover-stats.pdf');
