@@ -1215,9 +1215,22 @@ function setupEventListeners() {
         // Add event listener with debounce to prevent excessive filtering
         let debounceTimer;
         newSearchInput.addEventListener('input', function() {
+            const currentSearchValue = this.value;
+            const searchInputElement = this; // Store reference to the search input
+            
             clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                loadGuestList(this.value);
+            debounceTimer = setTimeout(async () => {
+                // Save the current cursor position
+                const cursorPosition = searchInputElement.selectionStart;
+                
+                // Load the guest list with the search term
+                await loadGuestList(currentSearchValue);
+                
+                // After the guest list is loaded, restore focus to the search input
+                searchInputElement.focus();
+                
+                // Restore the cursor position
+                searchInputElement.setSelectionRange(cursorPosition, cursorPosition);
             }, 300); // 300ms debounce delay
         });
     }
@@ -2329,8 +2342,8 @@ async function downloadStatsPDF() {
             }
             
             clubStats[clubName].count++;
-            clubStats[clubName].totalAmount += Number(guest.total_amount || 0);
-            clubStats[clubName].paidAmount += Number(guest.paid_amount || 0);
+            clubStats[clubName].totalAmount += guest.total_amount || 0;
+            clubStats[clubName].paidAmount += guest.paid_amount || 0;
         });
         
         // Sort clubs by count (descending)
@@ -2412,8 +2425,6 @@ async function downloadStatsPDF() {
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.text('KOCHIN HANGOVER - Event Management System', 105, 288, { align: 'center' });
-        doc.setFontSize(8);
-        doc.text('� 2025 Angels 153. All rights reserved.', 105, 293, { align: 'center' });
         
         // Save the PDF
         doc.save('kochin-hangover-stats.pdf');
