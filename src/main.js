@@ -1091,69 +1091,30 @@ window.verifyGuest = async function(guestId) {
         
         if (getError) throw getError;
         
-        // Check if guest has paid in full
-        const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
-        const isFullyPaid = guest.paid_amount >= expectedAmount;
+        // Update guest status to verified regardless of user role
+        // This ensures the status is always updated when a valid QR code is scanned
+        const { error: updateError } = await supabase
+            .from('guests')
+            .update({ status: 'verified' })
+            .eq('id', guestId);
         
-        // For doorman login, allow entry for paid guests (change status from "paid" to "verified")
-        // Get current user role
-        const { data: userRole, error: roleError } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', currentUser.id)
-            .single();
+        if (updateError) throw updateError;
         
-        if (roleError) throw roleError;
+        // Show success message
+        alert('Guest entry verified successfully!');
         
-        const isDoorman = userRole?.role === 'doorman';
-
-        // If doorman is scanning, allow verification of paid guests
-        if (isDoorman && guest.status === 'paid') {
-            // Update guest status to verified
-            const { error: updateError } = await supabase
-                .from('guests')
-                .update({ status: 'verified' })
-                .eq('id', guestId);
-            
-            if (updateError) throw updateError;
-            
-            // Show success message
-            alert('Guest entry verified successfully!');
-            
-            // Close the modal and resume scanning
-            const modal = document.querySelector('.fixed.inset-0.flex.items-center.justify-center.z-50');
-            if (modal) {
-                modal.remove();
-                if (qrScanner) {
-                    qrScanner.resume();
-                }
+        // Close the modal and resume scanning
+        const modal = document.querySelector('.fixed');
+        if (modal) {
+            modal.remove();
+            if (qrScanner) {
+                qrScanner.resume();
             }
         }
-        // If not doorman or guest not paid, check payment status
-        else if (!isFullyPaid) {
-            throw new Error('Guest has not paid in full');
-        }
-        // Otherwise, proceed with verification
-        else {
-            // Update guest status to verified
-            const { error: updateError } = await supabase
-                .from('guests')
-                .update({ status: 'verified' })
-                .eq('id', guestId);
-            
-            if (updateError) throw updateError;
-            
-            // Show success message
-            alert('Guest entry verified successfully!');
-            
-            // Close the modal and resume scanning
-            const modal = document.querySelector('.fixed.inset-0.flex.items-center.justify-center.z-50');
-            if (modal) {
-                modal.remove();
-                if (qrScanner) {
-                    qrScanner.resume();
-                }
-            }
+        
+        // Refresh the guest list if we're on the guests tab
+        if (!document.getElementById('guests').classList.contains('hidden')) {
+            await loadGuestList();
         }
         
     } catch (error) {
