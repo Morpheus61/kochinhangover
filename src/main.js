@@ -697,9 +697,9 @@ async function editGuest(guestId) {
         
         // Create edit form modal
         const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75';
+        modal.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75 overflow-y-auto';
         modal.innerHTML = `
-            <div class="kochin-container p-6 max-w-md mx-auto">
+            <div class="kochin-container p-6 max-w-md mx-auto my-4 sm:my-8">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-xl font-bold kochin-header">Edit Guest</h3>
                     <button class="text-gray-300 hover:text-white close-modal-btn">
@@ -707,7 +707,7 @@ async function editGuest(guestId) {
                     </button>
                 </div>
                 
-                <form id="editGuestForm">
+                <form id="editGuestForm" class="max-h-[70vh] overflow-y-auto pr-2">
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium mb-1">Name</label>
@@ -758,7 +758,7 @@ async function editGuest(guestId) {
                         </div>
                     </div>
                     
-                    <div class="mt-6 flex space-x-4">
+                    <div class="mt-6 flex space-x-4 sticky bottom-0 bg-[#2a0e3a] py-4">
                         <button type="submit" class="kochin-button flex-1">
                             <i class="fas fa-save mr-2"></i> Save Changes
                         </button>
