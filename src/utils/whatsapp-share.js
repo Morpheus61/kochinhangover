@@ -158,17 +158,8 @@ export const initWhatsAppShare = () => {
                         // Mobile handling with native app only
                         const whatsappUrl = `whatsapp://send?phone=${whatsappNumber}&text=${messageEncoded}`;
                         
-                        if (/Android/i.test(navigator.userAgent)) {
-                            // For Android, use iframe approach
-                            const iframe = document.createElement('iframe');
-                            iframe.style.display = 'none';
-                            iframe.src = whatsappUrl;
-                            document.body.appendChild(iframe);
-                            setTimeout(() => document.body.removeChild(iframe), 100);
-                        } else {
-                            // For iOS, use direct href
-                            window.location.href = whatsappUrl;
-                        }
+                        // Direct app opening without browser fallback
+                        window.location.href = whatsappUrl;
                     } else {
                         // Desktop handling - open WhatsApp Web directly
                         window.open(`https://web.whatsapp.com/send?phone=${whatsappNumber}&text=${messageEncoded}`, '_blank');

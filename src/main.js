@@ -283,13 +283,22 @@ async function loadGuestList(searchTerm = '') {
         const isAdmin = userRole?.role === 'admin';
         const isDoorman = userRole?.role === 'doorman';
 
-        // Update table headers based on role
-        const tableHeaders = document.querySelectorAll('#guestListTable thead th');
-        tableHeaders.forEach(header => {
-            if (header.textContent.trim() === 'Payment') {
-                header.style.display = isDoorman ? 'none' : '';
-            }
+        // Hide download buttons and payment column for doorman
+        const downloadButtons = document.querySelectorAll('#downloadGuestsPDFBtn, #downloadGuestsCSVBtn, #downloadStatsPDFBtn, #downloadStatsCSVBtn');
+        downloadButtons.forEach(button => {
+            button.style.display = isDoorman ? 'none' : '';
         });
+
+        // Update table headers based on role
+        const paymentHeader = document.getElementById('paymentHeader');
+        const paymentCells = document.querySelectorAll('.payment-column');
+        if (isDoorman) {
+            paymentHeader.style.display = 'none';
+            paymentCells.forEach(cell => cell.style.display = 'none');
+        } else {
+            paymentHeader.style.display = '';
+            paymentCells.forEach(cell => cell.style.display = '');
+        }
         
         // Filter guests based on search term if provided
         let filteredGuests = guests;
@@ -308,7 +317,7 @@ async function loadGuestList(searchTerm = '') {
                 <td class="py-3 px-4">${guest.guest_name || ''}</td>
                 <td class="py-3 px-4">${guest.club_name || ''}</td>
                 <td class="py-3 px-4">${guest.entry_type === 'stag' ? 'Stag' : 'Couple'}${safeGetGuestProperty(guest, 'has_room_booking', false) ? ' + Room' : ''}</td>
-                ${!isDoorman ? `<td class="py-3 px-4">${formatPaymentDisplay(guest)}</td>` : ''}
+                ${!isDoorman ? `<td class="py-3 px-4 payment-column">${formatPaymentDisplay(guest)}</td>` : ''}
                 <td class="py-3 px-4">
                     ${getStatusBadge(guest)}
                 </td>
@@ -1895,17 +1904,11 @@ Please show this pass at the entrance.`;
                     
                     if (isMobile) {
                         const whatsappUrl = `whatsapp://send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`;
-                        
-                        // Approach 2: More robust with timeout
-                        const openAppTimeout = setTimeout(() => {
-                            window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank');
-                        }, 250);
-                        
+                        // Direct app opening without browser fallback
                         window.location.href = whatsappUrl;
                     } else {
-                        // For desktop, use wa.me format which works better for message insertion
-                        // This ensures the pre-formatted message appears in the selected guest's chat
-                        window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank');
+                        // Desktop handling - open WhatsApp Web directly
+                        window.open(`https://web.whatsapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`, '_blank');
                     }
                 };
                 
@@ -2092,6 +2095,19 @@ async function loadStats() {
 // Download functions
 async function downloadGuestsPDF() {
     try {
+        // Check user role first
+        const { data: userRole, error: roleError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', currentUser.id)
+            .single();
+        
+        if (roleError) throw roleError;
+        if (userRole?.role === 'doorman') {
+            alert('Access denied. You do not have permission to download guest lists.');
+            return;
+        }
+
         // Fetch all guests
         const { data: guests, error } = await supabase
             .from('guests')
@@ -2351,17 +2367,46 @@ async function downloadGuestsPDF() {
         
         yPos += 15;
         
+        // Add total rows with white background and dark text
+        doc.setFillColor(255, 255, 255);
+        doc.rect(10, yPos - 5, 190, 20, 'F');
+        doc.setTextColor(darkColor);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Total Registrations: ${totalGuests}`, 12, yPos + 5);
+        doc.text(`Total PAX: ${totalPax}`, 100, yPos + 5);
+
+        // Add verified entries row with light green background
+        yPos += 15;
+        doc.setFillColor(220, 255, 220);
+        doc.rect(10, yPos - 5, 190, 20, 'F');
+        doc.setTextColor(darkColor);
+        doc.text(`Verified (Arrived): ${verifiedEntries} Guests`, 12, yPos + 5);
+        doc.text(`Verified PAX: ${verifiedPax}`, 100, yPos + 5);
+
         // Save the PDF
         doc.save('kochin-hangover-guest-list.pdf');
         
     } catch (error) {
         console.error('Error generating PDF:', error);
-        alert('Failed to generate PDF: ' + error.message);
+        alert('Failed to generate PDF');
     }
 }
 
 async function downloadGuestsCSV() {
     try {
+        // Check user role first
+        const { data: userRole, error: roleError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', currentUser.id)
+            .single();
+        
+        if (roleError) throw roleError;
+        if (userRole?.role === 'doorman') {
+            alert('Access denied. You do not have permission to download guest lists.');
+            return;
+        }
+
         // Fetch all guests
         const { data: guests, error } = await supabase
             .from('guests')
@@ -2410,6 +2455,19 @@ async function downloadGuestsCSV() {
 
 async function downloadStatsPDF() {
     try {
+        // Check user role first
+        const { data: userRole, error: roleError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', currentUser.id)
+            .single();
+        
+        if (roleError) throw roleError;
+        if (userRole?.role === 'doorman') {
+            alert('Access denied. You do not have permission to download statistics.');
+            return;
+        }
+
         // Fetch the latest stats
         const { data: guests, error } = await supabase
             .from('guests')
@@ -2472,40 +2530,46 @@ async function downloadStatsPDF() {
         // Start y position for content
         let yPos = 50;
         
-        // Add summary cards
-        function addCard(title, value, x, y, width, height) {
-            doc.setFillColor(245, 245, 245);
-            doc.roundedRect(x, y, width, height, 3, 3, 'F');
+        // Function to add a card with better visibility
+        function addCard(title, value, x, y, width, height = 30) {
+            // Use white background for all cards
+            doc.setFillColor(255, 255, 255);
+            doc.rect(x, y, width, height, 'F');
             
-            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-            doc.setFontSize(12);
-            doc.text(title, x + width/2, y + 10, { align: 'center' });
-            
-            doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-            doc.setFontSize(20);
+            // Add dark text for better visibility
+            doc.setTextColor(darkColor);
             doc.setFont('helvetica', 'bold');
-            doc.text(value.toString(), x + width/2, y + 25, { align: 'center' });
+            doc.setFontSize(12);
+            doc.text(title, x + 5, y + 12);
+            
+            doc.setFontSize(14);
+            doc.text(value, x + 5, y + 25);
         }
-        
-        // First row of cards
-        addCard('Total Registrations', totalGuests, 10, yPos, 55, 35);
-        addCard('Total PAX (Headcount)', totalPax, 75, yPos, 55, 35);
-        addCard('Verified PAX', verifiedPax, 140, yPos, 55, 35);
-        
-        yPos += 45;
-        
-        // Second row of cards
-        addCard('Stag Entries', stagCount, 10, yPos, 55, 35);
-        addCard('Couple Entries', coupleCount, 75, yPos, 55, 35);
-        addCard('Verified Entries', verifiedCount, 140, yPos, 55, 35);
-        
-        yPos += 45;
-        
-        // Third row of cards
-        addCard('Registration Revenue', `Rs.${statsRevenue}`, 10, yPos, 55, 35);
-        addCard('Room Booking Revenue', `Rs.${guests.reduce((sum, guest) => sum + (safeGetGuestProperty(guest, 'has_room_booking', false) ? (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0) : 0), 0)}`, 75, yPos, 55, 35);
-        addCard('Total Revenue', `Rs.${statsRevenue + guests.reduce((sum, guest) => sum + (safeGetGuestProperty(guest, 'has_room_booking', false) ? (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0) : 0), 0)}`, 140, yPos, 55, 35);
-        
+
+        // Add statistics cards with reduced height and better visibility
+        const cardWidth = 90;
+        const cardHeight = 30;
+        const margin = 10;
+        let startY = 40;
+
+        // First row
+        addCard('Total Registrations', totalGuests.toString(), margin, startY, cardWidth, cardHeight);
+        addCard('Verified Entries', verifiedEntries.toString(), margin + cardWidth + 10, startY, cardWidth, cardHeight);
+
+        // Second row
+        startY += cardHeight + 10;
+        addCard('Pending Entries', pendingEntries.toString(), margin, startY, cardWidth, cardHeight);
+        addCard('Total Revenue', `₹${totalRevenue}`, margin + cardWidth + 10, startY, cardWidth, cardHeight);
+
+        // Third row
+        startY += cardHeight + 10;
+        addCard('Registration Revenue', `₹${registrationRevenue}`, margin, startY, cardWidth, cardHeight);
+        addCard('Room Booking Revenue', `₹${roomBookingRevenue}`, margin + cardWidth + 10, startY, cardWidth, cardHeight);
+
+        // Fourth row - Full width card
+        startY += cardHeight + 10;
+        addCard('Total PAX (Headcount)', totalPax.toString(), margin, startY, cardWidth * 2 + 10, cardHeight);
+
         yPos += 45;
         
         // Add status breakdown section
@@ -2660,12 +2724,25 @@ async function downloadStatsPDF() {
         
     } catch (error) {
         console.error('Error generating stats PDF:', error);
-        alert('Error generating stats PDF: ' + error.message);
+        alert('Failed to generate statistics PDF');
     }
 }
 
 async function downloadStatsCSV() {
     try {
+        // Check user role first
+        const { data: userRole, error: roleError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', currentUser.id)
+            .single();
+        
+        if (roleError) throw roleError;
+        if (userRole?.role === 'doorman') {
+            alert('Access denied. You do not have permission to download statistics.');
+            return;
+        }
+
         // Fetch all guests
         const { data: guests, error } = await supabase
             .from('guests')
