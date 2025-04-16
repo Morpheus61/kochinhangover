@@ -683,7 +683,7 @@ async function deleteUser(userId) {
     }
 }
 
-// Edit guest function
+// Edit guest function - CORRECTED VERSION
 async function editGuest(guestId) {
     try {
         // Get guest data
@@ -697,9 +697,9 @@ async function editGuest(guestId) {
         
         // Create edit form modal
         const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75 overflow-y-auto';
+        modal.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75';
         modal.innerHTML = `
-            <div class="kochin-container p-6 max-w-md mx-auto my-4 sm:my-8">
+            <div class="kochin-container p-6 max-w-md mx-auto">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-xl font-bold kochin-header">Edit Guest</h3>
                     <button class="text-gray-300 hover:text-white close-modal-btn">
@@ -707,7 +707,7 @@ async function editGuest(guestId) {
                     </button>
                 </div>
                 
-                <form id="editGuestForm" class="max-h-[70vh] overflow-y-auto pr-2">
+                <form id="editGuestForm">
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium mb-1">Name</label>
@@ -731,34 +731,34 @@ async function editGuest(guestId) {
                         <div>
                             <label class="block text-sm font-medium mb-1">Status</label>
                             <select id="editStatus" class="kochin-input w-full" required>
-                                <option value="paid" ${guest.status === 'paid' ? 'selected' : ''}>Paid</option>
+                                <option value="pending" ${guest.status === 'pending' ? 'selected' : ''}>Pending</option>
                                 <option value="partially_paid" ${guest.status === 'partially_paid' ? 'selected' : ''}>Partially Paid</option>
+                                <option value="paid" ${guest.status === 'paid' ? 'selected' : ''}>Paid</option>
                                 <option value="verified" ${guest.status === 'verified' ? 'selected' : ''}>Verified</option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Paid Amount (₹)</label>
-                            <input type="number" id="editPaidAmount" class="kochin-input w-full" value="${guest.paid_amount}" min="0" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Total Amount (₹)</label>
-                            <input type="number" id="editTotalAmount" class="kochin-input w-full" value="${guest.total_amount}" min="0" required>
+                            <input type="number" id="editPaidAmount" class="kochin-input w-full" value="${guest.paid_amount || 0}" min="0" step="100" required>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Room Booking</label>
-                            <select id="editRoomBooking" class="kochin-input w-full">
-                                <option value="no" ${!safeGetGuestProperty(guest, 'has_room_booking', false) ? 'selected' : ''}>No Room Booking</option>
-                                <option value="yes" ${safeGetGuestProperty(guest, 'has_room_booking', false) ? 'selected' : ''}>Room Booking</option>
+                            <select id="editHasRoomBooking" class="kochin-input w-full" required>
+                                <option value="false" ${!guest.has_room_booking ? 'selected' : ''}>No Room Booking</option>
+                                <option value="true" ${guest.has_room_booking ? 'selected' : ''}>With Room Booking</option>
                             </select>
                         </div>
-                        <div id="editRoomBookingSection" class="${!safeGetGuestProperty(guest, 'has_room_booking', false) ? 'hidden' : ''}">
+                        <div id="roomBookingAmountContainer" class="${guest.has_room_booking ? '' : 'hidden'}">
                             <label class="block text-sm font-medium mb-1">Room Booking Amount (₹)</label>
-                            <input type="number" id="editRoomBookingAmount" class="kochin-input w-full" value="${safeGetGuestProperty(guest, 'room_booking_amount', 0) || 0}" min="0">
-                            <p class="text-xs text-gray-400 mt-1">Enter the amount received for room booking.</p>
+                            <input type="number" id="editRoomBookingAmount" class="kochin-input w-full" value="${guest.room_booking_amount || 0}" min="0" step="100">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Notes</label>
+                            <textarea id="editNotes" class="kochin-input w-full">${guest.notes || ''}</textarea>
                         </div>
                     </div>
                     
-                    <div class="mt-6 flex space-x-4 sticky bottom-0 bg-[#2a0e3a] py-4">
+                    <div class="mt-6 flex space-x-4">
                         <button type="submit" class="kochin-button flex-1">
                             <i class="fas fa-save mr-2"></i> Save Changes
                         </button>
@@ -778,55 +778,84 @@ async function editGuest(guestId) {
                 document.body.removeChild(modal);
             });
         });
+
+        // Add event listener for room booking toggle
+        document.getElementById('editHasRoomBooking').addEventListener('change', function() {
+            const roomBookingAmountContainer = document.getElementById('roomBookingAmountContainer');
+            if (this.value === 'true') {
+                roomBookingAmountContainer.classList.remove('hidden');
+            } else {
+                roomBookingAmountContainer.classList.add('hidden');
+            }
+        });
         
         // Add event listener to form submit
         document.getElementById('editGuestForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const guestName = document.getElementById('editGuestName').value;
-            const clubName = document.getElementById('editClubName').value;
-            const mobileNumber = document.getElementById('editMobileNumber').value;
+            const guestName = document.getElementById('editGuestName').value.trim();
+            const clubName = document.getElementById('editClubName').value.trim();
+            const mobileNumber = document.getElementById('editMobileNumber').value.trim();
             const entryType = document.getElementById('editEntryType').value;
             const status = document.getElementById('editStatus').value;
-            const paidAmount = Number(document.getElementById('editPaidAmount').value);
-            const totalAmount = Number(document.getElementById('editTotalAmount').value);
+            const paidAmount = parseFloat(document.getElementById('editPaidAmount').value) || 0;
+            const hasRoomBooking = document.getElementById('editHasRoomBooking').value === 'true';
+            const roomBookingAmount = hasRoomBooking ? (parseFloat(document.getElementById('editRoomBookingAmount').value) || 0) : 0;
+            const notes = document.getElementById('editNotes').value.trim();
             
-            // Safely get room booking fields
-            let roomBooking = 'no';
-            let roomBookingAmount = 0;
+            // Validate inputs
+            if (!guestName) {
+                alert('Please enter guest name');
+                return;
+            }
             
-            const roomBookingSelect = document.getElementById('editRoomBooking');
-            if (roomBookingSelect) {
-                roomBooking = roomBookingSelect.value;
-                if (roomBooking === 'yes') {
-                    const roomBookingAmountInput = document.getElementById('editRoomBookingAmount');
-                    if (roomBookingAmountInput) {
-                        roomBookingAmount = Number(roomBookingAmountInput.value) || 0;
-                    }
-                }
+            if (!mobileNumber || !/^\d{10}$/.test(mobileNumber)) {
+                alert('Please enter a valid 10-digit mobile number');
+                return;
+            }
+            
+            if (paidAmount < 0) {
+                alert('Paid amount cannot be negative');
+                return;
+            }
+            
+            if (hasRoomBooking && roomBookingAmount < 0) {
+                alert('Room booking amount cannot be negative');
+                return;
             }
             
             try {
-                // Update guest
+                // Calculate expected amount based on entry type
+                const expectedAmount = entryType === 'stag' ? 2750 : 4750;
+                
+                // Auto-update status based on payment amount
+                let finalStatus = status;
+                if (paidAmount >= expectedAmount) {
+                    finalStatus = 'paid';
+                } else if (paidAmount > 0 && paidAmount < expectedAmount) {
+                    finalStatus = 'partially_paid';
+                } else {
+                    finalStatus = 'pending';
+                }
+                
+                // Update guest data
                 const updateData = {
                     guest_name: guestName,
                     club_name: clubName,
                     mobile_number: mobileNumber,
                     entry_type: entryType,
+                    status: finalStatus,
                     paid_amount: paidAmount,
-                    total_amount: totalAmount,
-                    has_room_booking: roomBooking === 'yes',
-                    room_booking_amount: roomBookingAmount
+                    has_room_booking: hasRoomBooking,
+                    notes: notes
                 };
                 
-                // Auto-update status to "Paid" if full amount is paid based on entry type
-                const expectedAmount = entryType === 'stag' ? 2750 : 4750;
-                if (paidAmount >= expectedAmount) {
-                    updateData.status = 'paid';
-                } else {
-                    updateData.status = status;
+                // Only include room booking amount if applicable
+                if (hasRoomBooking) {
+                    updateData.room_booking_amount = roomBookingAmount;
                 }
                 
+                // Update guest in database
                 const { error: updateError } = await supabase
                     .from('guests')
                     .update(updateData)
@@ -845,21 +874,6 @@ async function editGuest(guestId) {
             } catch (error) {
                 console.error('Error updating guest:', error);
                 alert('Error updating guest: ' + error.message);
-            }
-        });
-        
-        // Add event listener to room booking dropdown
-        document.getElementById('editRoomBooking').addEventListener('change', function() {
-            const roomBookingSection = document.getElementById('editRoomBookingSection');
-            const roomBookingAmountInput = document.getElementById('editRoomBookingAmount');
-            
-            if (this.value === 'yes') {
-                roomBookingSection.classList.remove('hidden');
-                roomBookingAmountInput.setAttribute('required', 'required');
-            } else {
-                roomBookingSection.classList.add('hidden');
-                roomBookingAmountInput.removeAttribute('required');
-                roomBookingAmountInput.value = '';
             }
         });
         
