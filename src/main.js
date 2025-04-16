@@ -1729,31 +1729,72 @@ Please show this pass at the entrance.`;
                     }
                 });
                 
-                // Create a modal to guide the user
+                // Check if user is on mobile device
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                
+                // Create appropriate modal based on device type
                 const modal = document.createElement('div');
                 modal.id = 'whatsappShareModal';
                 modal.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75';
-                modal.innerHTML = `
-                    <div class="kochin-container p-6 max-w-md mx-auto">
-                        <h3 class="text-xl font-bold mb-4 kochin-header">Share Guest Pass</h3>
-                        <p class="mb-4">The guest pass image will be downloaded when you continue.</p>
-                        <p class="mb-4">After clicking "Continue to WhatsApp", please:</p>
-                        <ol class="list-decimal pl-6 mb-6">
-                            <li class="mb-2">Send the text message first</li>
-                            <li class="mb-2">Tap the attachment icon in WhatsApp</li>
-                            <li class="mb-2">Select "Gallery" or "Documents"</li>
-                            <li class="mb-2">Find and select the downloaded guest pass image</li>
-                        </ol>
-                        <div class="flex justify-between">
-                            <button id="continueToWhatsAppBtn" class="kochin-button flex-1 bg-green-600">
-                                <i class="fab fa-whatsapp mr-2"></i> Continue to WhatsApp
-                            </button>
-                            <button id="closeShareModalBtn" class="kochin-button bg-gray-600 flex-1">
-                                Close
-                            </button>
+                
+                if (isMobile) {
+                    // Mobile version
+                    modal.innerHTML = `
+                        <div class="kochin-container p-6 max-w-md mx-auto">
+                            <h3 class="text-xl font-bold mb-4 kochin-header">Share Guest Pass</h3>
+                            <p class="mb-4">The guest pass image has been downloaded to your device.</p>
+                            <p class="mb-4">After clicking "Open WhatsApp", please:</p>
+                            <ol class="list-decimal pl-6 mb-6">
+                                <li class="mb-2">Send the text message first</li>
+                                <li class="mb-2">Tap the attachment icon in WhatsApp</li>
+                                <li class="mb-2">Select "Gallery" or "Documents"</li>
+                                <li class="mb-2">Find and select the downloaded guest pass image</li>
+                            </ol>
+                            <div class="flex justify-between">
+                                <button id="openWhatsAppBtn" class="kochin-button flex-1 bg-green-600">
+                                    <i class="fab fa-whatsapp mr-2"></i> Open WhatsApp
+                                </button>
+                                <button id="closeShareModalBtn" class="kochin-button bg-gray-600 flex-1">
+                                    Close
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                } else {
+                    // Desktop version with copyable message
+                    modal.innerHTML = `
+                        <div class="kochin-container p-6 max-w-md mx-auto">
+                            <h3 class="text-xl font-bold mb-4 kochin-header">Share Guest Pass</h3>
+                            <p class="mb-4">The guest pass image has been downloaded to your device.</p>
+                            <p class="mb-4">For WhatsApp Desktop:</p>
+                            <ol class="list-decimal pl-6 mb-6">
+                                <li class="mb-2">Click the button below to open WhatsApp</li>
+                                <li class="mb-2">Copy the message by clicking "Select & Copy Message"</li>
+                                <li class="mb-2">Paste the message into WhatsApp</li>
+                                <li class="mb-2">Attach the downloaded guest pass image</li>
+                            </ol>
+                            
+                            <div class="bg-gray-100 p-3 rounded mb-4 text-black overflow-auto" style="max-height: 120px;">
+                                <pre id="whatsappMessage" class="whitespace-pre-wrap text-sm font-mono">${message}</pre>
+                            </div>
+                            
+                            <div class="flex justify-between mb-3">
+                                <button id="copyMessageBtn" class="kochin-button flex-1 bg-blue-600">
+                                    <i class="fas fa-copy mr-2"></i> Select & Copy Message
+                                </button>
+                            </div>
+                            
+                            <div class="flex justify-between">
+                                <button id="openWhatsAppBtn" class="kochin-button flex-1 bg-green-600">
+                                    <i class="fab fa-whatsapp mr-2"></i> Open WhatsApp
+                                </button>
+                                <button id="closeShareModalBtn" class="kochin-button bg-gray-600 flex-1">
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
                 
                 document.body.appendChild(modal);
                 
@@ -1771,33 +1812,64 @@ Please show this pass at the entrance.`;
                     }
                 };
                 
-                // Add event listeners directly with onclick attributes
-                document.getElementById('continueToWhatsAppBtn').onclick = function() {
-                    // Remove the modal
-                    if (modal && modal.parentNode) {
-                        modal.parentNode.removeChild(modal);
+                // Download the image immediately when modal is shown
+                triggerDownload();
+                
+                // Helper function for safely removing the modal
+                const safeRemoveModal = () => {
+                    try {
+                        if (modal && modal.parentNode) {
+                            modal.parentNode.removeChild(modal);
+                        }
+                    } catch (err) {
+                        console.error('Error removing modal:', err);
                     }
-                    
-                    // Trigger the download when continuing to WhatsApp
-                    triggerDownload();
-                    
-                    // Open WhatsApp chat directly with the guest
-                    // Remove the + sign if present for the WhatsApp API
-                    const whatsappNumber = mobileNumber.replace('+', '');
-                    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
-                    
-                    // Open WhatsApp in a new tab
-                    window.open(whatsappUrl, '_blank');
                 };
                 
-                document.getElementById('closeShareModalBtn').onclick = function() {
-                    // Remove the modal
-                    if (modal && modal.parentNode) {
-                        modal.parentNode.removeChild(modal);
-                    }
+                // For desktop: handle copy message functionality
+                if (!isMobile && document.getElementById('copyMessageBtn')) {
+                    document.getElementById('copyMessageBtn').onclick = function() {
+                        const messageElement = document.getElementById('whatsappMessage');
+                        if (messageElement) {
+                            // Select and copy the message text
+                            const range = document.createRange();
+                            range.selectNodeContents(messageElement);
+                            const selection = window.getSelection();
+                            selection.removeAllRanges();
+                            selection.addRange(range);
+                            document.execCommand('copy');
+                            selection.removeAllRanges();
+                            
+                            // Show confirmation
+                            this.innerHTML = '<i class="fas fa-check mr-2"></i> Copied!';
+                            setTimeout(() => {
+                                this.innerHTML = '<i class="fas fa-copy mr-2"></i> Select & Copy Message';
+                            }, 1500);
+                        }
+                    };
+                }
+                
+                // Handle WhatsApp open button click
+                document.getElementById('openWhatsAppBtn').onclick = function() {
+                    // First remove the modal to ensure no browser redirect issues
+                    safeRemoveModal();
                     
-                    // Trigger the download when closing the modal
-                    triggerDownload();
+                    // Format the number for WhatsApp
+                    const whatsappNumber = mobileNumber.replace('+', '');
+                    
+                    if (isMobile) {
+                        // For mobile, use the direct protocol to open WhatsApp app
+                        window.location.href = `whatsapp://send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`;
+                    } else {
+                        // For desktop, open WhatsApp Web
+                        window.open(`https://web.whatsapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`, '_blank');
+                    }
+                };
+                
+                // Close button just closes the modal
+                document.getElementById('closeShareModalBtn').onclick = function() {
+                    safeRemoveModal();
+                    // No download here since it was already done when the modal opened
                 };
                 
             } catch (error) {
