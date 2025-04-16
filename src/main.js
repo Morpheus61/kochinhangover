@@ -267,6 +267,7 @@ async function loadGuestList(searchTerm = '') {
         if (roleError) throw roleError;
         
         const isAdmin = userRole?.role === 'admin';
+        const isDoorman = userRole?.role === 'doorman';
         
         // Filter guests based on search term if provided
         let filteredGuests = guests;
@@ -285,7 +286,7 @@ async function loadGuestList(searchTerm = '') {
                 <td class="py-3 px-4">${guest.guest_name || ''}</td>
                 <td class="py-3 px-4">${guest.club_name || ''}</td>
                 <td class="py-3 px-4">${guest.entry_type === 'stag' ? 'Stag' : 'Couple'}${safeGetGuestProperty(guest, 'has_room_booking', false) ? ' + Room' : ''}</td>
-                <td class="py-3 px-4">${formatPaymentDisplay(guest)}</td>
+                ${!isDoorman ? `<td class="py-3 px-4">${formatPaymentDisplay(guest)}</td>` : ''}
                 <td class="py-3 px-4">
                     ${getStatusBadge(guest)}
                 </td>
@@ -316,17 +317,18 @@ async function loadGuestList(searchTerm = '') {
         const verifiedPax = filteredGuests.filter(guest => guest.status === 'verified')
             .reduce((sum, guest) => sum + (guest.entry_type === 'couple' ? 2 : 1), 0);
 
-        // Add total row
+        // Add total row with adjusted colspan based on role
+        const paymentColspan = isDoorman ? 3 : 4;
         tbody.innerHTML += `
             <tr class="border-t-2 border-pink-500 bg-purple-900 bg-opacity-30 font-bold">
                 <td class="py-3 px-4" colspan="2">Total</td>
                 <td class="py-3 px-4">${totalRegistrations} Registrations</td>
-                <td class="py-3 px-4" colspan="3">${totalPax} PAX (Headcount)</td>
+                <td class="py-3 px-4" colspan="${paymentColspan}">${totalPax} PAX (Headcount)</td>
             </tr>
             <tr class="bg-green-900 bg-opacity-30 font-bold">
                 <td class="py-3 px-4" colspan="2">Verified (Arrived)</td>
                 <td class="py-3 px-4">${verifiedGuests} Guests</td>
-                <td class="py-3 px-4" colspan="3">${verifiedPax} PAX (Headcount)</td>
+                <td class="py-3 px-4" colspan="${paymentColspan}">${verifiedPax} PAX (Headcount)</td>
             </tr>
         `;
         
