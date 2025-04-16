@@ -155,25 +155,22 @@ export const initWhatsAppShare = () => {
                     const messageEncoded = encodeURIComponent(message);
                     
                     if (isMobile) {
-                        // Mobile handling with native app priority
+                        // Mobile handling with native app only
                         const whatsappUrl = `whatsapp://send?phone=${whatsappNumber}&text=${messageEncoded}`;
                         
                         if (/Android/i.test(navigator.userAgent)) {
+                            // For Android, use iframe approach
                             const iframe = document.createElement('iframe');
                             iframe.style.display = 'none';
                             iframe.src = whatsappUrl;
                             document.body.appendChild(iframe);
                             setTimeout(() => document.body.removeChild(iframe), 100);
                         } else {
+                            // For iOS, use direct href
                             window.location.href = whatsappUrl;
                         }
-                        
-                        // Fallback after delay
-                        setTimeout(() => {
-                            window.open(`https://wa.me/${whatsappNumber}?text=${messageEncoded}`, '_blank');
-                        }, 500);
                     } else {
-                        // Desktop handling
+                        // Desktop handling - open WhatsApp Web directly
                         window.open(`https://web.whatsapp.com/send?phone=${whatsappNumber}&text=${messageEncoded}`, '_blank');
                     }
                     
