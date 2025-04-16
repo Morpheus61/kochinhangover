@@ -697,9 +697,9 @@ async function editGuest(guestId) {
         
         // Create edit form modal
         const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75 overflow-y-auto';
+        modal.className = 'fixed inset-0 flex items-start justify-center z-50 bg-black bg-opacity-75 overflow-y-auto py-8';
         modal.innerHTML = `
-            <div class="kochin-container p-6 max-w-md mx-auto my-4 sm:my-8">
+            <div class="kochin-container p-6 max-w-md mx-auto">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-xl font-bold kochin-header">Edit Guest</h3>
                     <button class="text-gray-300 hover:text-white close-modal-btn">
@@ -707,58 +707,58 @@ async function editGuest(guestId) {
                     </button>
                 </div>
                 
-                <form id="editGuestForm" class="max-h-[70vh] overflow-y-auto pr-2">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Name</label>
-                            <input type="text" id="editGuestName" class="kochin-input w-full" value="${guest.guest_name}" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Club Name</label>
-                            <input type="text" id="editClubName" class="kochin-input w-full" value="${guest.club_name || ''}">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Mobile Number</label>
-                            <input type="tel" id="editMobileNumber" class="kochin-input w-full" value="${guest.mobile_number}" required pattern="[0-9]{10}" title="Please enter a valid 10-digit mobile number">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Entry Type</label>
-                            <select id="editEntryType" class="kochin-input w-full" required>
-                                <option value="stag" ${guest.entry_type === 'stag' ? 'selected' : ''}>Stag (₹2750)</option>
-                                <option value="couple" ${guest.entry_type === 'couple' ? 'selected' : ''}>Couple (₹4750)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Status</label>
-                            <select id="editStatus" class="kochin-input w-full" required>
-                                <option value="pending" ${guest.status === 'pending' ? 'selected' : ''}>Pending</option>
-                                <option value="partially_paid" ${guest.status === 'partially_paid' ? 'selected' : ''}>Partially Paid</option>
-                                <option value="paid" ${guest.status === 'paid' ? 'selected' : ''}>Paid</option>
-                                <option value="verified" ${guest.status === 'verified' ? 'selected' : ''}>Verified</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Paid Amount (₹)</label>
-                            <input type="number" id="editPaidAmount" class="kochin-input w-full" value="${guest.paid_amount || 0}" min="0" step="100" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Room Booking</label>
-                            <select id="editHasRoomBooking" class="kochin-input w-full" required>
-                                <option value="false" ${!guest.has_room_booking ? 'selected' : ''}>No Room Booking</option>
-                                <option value="true" ${guest.has_room_booking ? 'selected' : ''}>With Room Booking</option>
-                            </select>
-                        </div>
-                        <div id="roomBookingAmountContainer" class="${guest.has_room_booking ? '' : 'hidden'}">
-                            <label class="block text-sm font-medium mb-1">Room Booking Amount (₹)</label>
-                            <input type="number" id="editRoomBookingAmount" class="kochin-input w-full" value="${guest.room_booking_amount || 0}" min="0" step="100">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Notes</label>
-                            <textarea id="editNotes" class="kochin-input w-full">${guest.notes || ''}</textarea>
-                        </div>
+                <form id="editGuestForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Name</label>
+                        <input type="text" id="editGuestName" class="kochin-input w-full" value="${guest.guest_name}" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Club Name</label>
+                        <input type="text" id="editClubName" class="kochin-input w-full" value="${guest.club_name || ''}">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Mobile Number</label>
+                        <input type="tel" id="editMobileNumber" class="kochin-input w-full" value="${guest.mobile_number}" required pattern="[0-9]{10}" title="Please enter a valid 10-digit mobile number">
+                        <small class="text-gray-400">10-digit mobile number for QR code delivery and verification</small>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Entry Type</label>
+                        <select id="editEntryType" class="kochin-input w-full" required>
+                            <option value="stag" ${guest.entry_type === 'stag' ? 'selected' : ''}>Stag (₹2750)</option>
+                            <option value="couple" ${guest.entry_type === 'couple' ? 'selected' : ''}>Couple (₹4750)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Payment Mode</label>
+                        <select id="editPaymentMode" class="kochin-input w-full" required>
+                            <option value="full_payment_cash" ${guest.payment_mode === 'full_payment_cash' ? 'selected' : ''}>Full Payment - Cash</option>
+                            <option value="full_payment_upi" ${guest.payment_mode === 'full_payment_upi' ? 'selected' : ''}>Full Payment - UPI</option>
+                            <option value="partial_payment_cash" ${guest.payment_mode === 'partial_payment_cash' ? 'selected' : ''}>Partial Payment - Cash</option>
+                            <option value="partial_payment_upi" ${guest.payment_mode === 'partial_payment_upi' ? 'selected' : ''}>Partial Payment - UPI</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Paid Amount (₹)</label>
+                        <input type="number" id="editPaidAmount" class="kochin-input w-full" value="${guest.paid_amount || 0}" min="0" step="100" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Room Booking</label>
+                        <select id="editHasRoomBooking" class="kochin-input w-full" required>
+                            <option value="false" ${!guest.has_room_booking ? 'selected' : ''}>No Room Booking</option>
+                            <option value="true" ${guest.has_room_booking ? 'selected' : ''}>Room Booking</option>
+                        </select>
+                    </div>
+                    <div id="roomBookingAmountContainer" class="${guest.has_room_booking ? '' : 'hidden'}">
+                        <label class="block text-sm font-medium mb-1">Room Booking Amount (₹)</label>
+                        <input type="number" id="editRoomBookingAmount" class="kochin-input w-full" value="${guest.room_booking_amount || 0}" min="0" step="100">
+                        <small class="text-gray-400">Enter the amount received for room booking.</small>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Notes</label>
+                        <textarea id="editNotes" class="kochin-input w-full" rows="3">${guest.notes || ''}</textarea>
                     </div>
                     
-                    <div class="mt-6 flex space-x-4 sticky bottom-0 bg-[#2a0e3a] py-4">
+                    <div class="mt-6 flex space-x-4">
                         <button type="submit" class="kochin-button flex-1">
                             <i class="fas fa-save mr-2"></i> Save Changes
                         </button>
@@ -797,7 +797,7 @@ async function editGuest(guestId) {
             const clubName = document.getElementById('editClubName').value.trim();
             const mobileNumber = document.getElementById('editMobileNumber').value.trim();
             const entryType = document.getElementById('editEntryType').value;
-            const status = document.getElementById('editStatus').value;
+            const paymentMode = document.getElementById('editPaymentMode').value;
             const paidAmount = parseFloat(document.getElementById('editPaidAmount').value) || 0;
             const hasRoomBooking = document.getElementById('editHasRoomBooking').value === 'true';
             const roomBookingAmount = hasRoomBooking ? (parseFloat(document.getElementById('editRoomBookingAmount').value) || 0) : 0;
@@ -829,7 +829,7 @@ async function editGuest(guestId) {
                 const expectedAmount = entryType === 'stag' ? 2750 : 4750;
                 
                 // Auto-update status based on payment amount
-                let finalStatus = status;
+                let finalStatus;
                 if (paidAmount >= expectedAmount) {
                     finalStatus = 'paid';
                 } else if (paidAmount > 0 && paidAmount < expectedAmount) {
@@ -845,6 +845,7 @@ async function editGuest(guestId) {
                     mobile_number: mobileNumber,
                     entry_type: entryType,
                     status: finalStatus,
+                    payment_mode: paymentMode,
                     paid_amount: paidAmount,
                     has_room_booking: hasRoomBooking,
                     notes: notes
