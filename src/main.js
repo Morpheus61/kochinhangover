@@ -93,7 +93,7 @@ async function setupNavigation() {
         return;
     }
 
-    const isStaff = userRole?.role === 'staff';
+    const isStaff = userRole?.role === 'staff';  // Committee Member login
     const isAdmin = userRole?.role === 'admin';
     const isDoorman = userRole?.role === 'doorman';
 
@@ -148,13 +148,14 @@ async function setupNavigation() {
         showTab('registration');
     }
     
-    // Staff: Access ONLY to Registered Guests and Stats
+    // Staff (Committee Member): Access to Registration, Guests and Stats
     else if (isStaff) {
-        // Show only guests and stats buttons
+        // Show registration, guests and stats buttons
+        document.getElementById('newRegistrationBtn')?.classList.remove('hidden');
         document.getElementById('guestListBtn')?.classList.remove('hidden');
         document.getElementById('statsBtn')?.classList.remove('hidden');
         
-        // Auto-navigate to guests tab for staff users
+        // Auto-navigate to guests tab for committee members
         showTab('guests');
     }
     
@@ -183,13 +184,13 @@ async function showTab(tabId) {
         return;
     }
 
-    const isStaff = userRole?.role === 'staff';
+    const isStaff = userRole?.role === 'staff' || userRole?.role === 'committee';
     const isAdmin = userRole?.role === 'admin';
     const isDoorman = userRole?.role === 'doorman';
 
     // Role-based access control for tabs
-    if (isStaff && !['guests', 'stats'].includes(tabId)) {
-        // Staff can only access guests and stats tabs
+    if (isStaff && !['registration', 'guests', 'stats'].includes(tabId)) {
+        // Staff/Committee can access registration, guests and stats tabs
         tabId = 'guests';
     } else if (isDoorman && !['verification', 'guests'].includes(tabId)) {
         // Doorman can only access verification and guests tabs
@@ -281,23 +282,31 @@ async function loadGuestList(searchTerm = '') {
         if (roleError) throw roleError;
         
         const isAdmin = userRole?.role === 'admin';
+        const isStaff = userRole?.role === 'staff';  // Committee Member login
         const isDoorman = userRole?.role === 'doorman';
 
-        // Hide download buttons and payment column for doorman
+        // Handle download buttons visibility and state for doorman
         const downloadButtons = document.querySelectorAll('#downloadGuestsPDFBtn, #downloadGuestsCSVBtn, #downloadStatsPDFBtn, #downloadStatsCSVBtn');
         downloadButtons.forEach(button => {
-            button.style.display = isDoorman ? 'none' : '';
+            if (isDoorman) {
+                button.style.display = 'none';
+                button.disabled = true;
+            } else {
+                button.style.display = '';
+                button.disabled = false;
+            }
         });
 
         // Update table headers based on role
         const paymentHeader = document.getElementById('paymentHeader');
-        const paymentCells = document.querySelectorAll('.payment-column');
-        if (isDoorman) {
-            paymentHeader.style.display = 'none';
-            paymentCells.forEach(cell => cell.style.display = 'none');
-        } else {
-            paymentHeader.style.display = '';
-            paymentCells.forEach(cell => cell.style.display = '');
+        if (paymentHeader) {
+            paymentHeader.style.display = isDoorman ? 'none' : '';
+        }
+
+        // Update actions header based on role
+        const actionsHeader = document.getElementById('actionsHeader');
+        if (actionsHeader) {
+            actionsHeader.style.display = isAdmin ? '' : 'none';
         }
         
         // Filter guests based on search term if provided
@@ -321,8 +330,8 @@ async function loadGuestList(searchTerm = '') {
                 <td class="py-3 px-4">
                     ${getStatusBadge(guest)}
                 </td>
+                ${isAdmin ? `
                 <td class="py-3 px-4">
-                    ${isAdmin ? `
                     <button class="text-blue-400 hover:text-blue-600 mr-2" onclick="editGuest('${guest.id}')">
                         <i class="fas fa-edit"></i>
                     </button>
@@ -332,8 +341,8 @@ async function loadGuestList(searchTerm = '') {
                     <button class="whatsapp-share text-green-400 hover:text-green-600" data-guest-id="${guest.id}">
                         <i class="fab fa-whatsapp"></i>
                     </button>
-                    ` : ''}
                 </td>
+                ` : ''}
             </tr>
         `).join('');
 
@@ -349,35 +358,30 @@ async function loadGuestList(searchTerm = '') {
             .reduce((sum, guest) => sum + (guest.entry_type === 'couple' ? 2 : 1), 0);
 
         // Add total row with adjusted colspan based on role
-        const paymentColspan = isDoorman ? 2 : 3;
+        const totalColspan = isDoorman ? 2 : (isAdmin ? 3 : 3); // Adjust colspan based on visible columns
         tbody.innerHTML += `
             <tr class="border-t-2 border-pink-500 bg-purple-900 bg-opacity-30 font-bold">
                 <td class="py-3 px-4" colspan="2">Total</td>
                 <td class="py-3 px-4">${totalRegistrations} Registrations</td>
-                <td class="py-3 px-4" colspan="${paymentColspan}">${totalPax} PAX (Headcount)</td>
+                <td class="py-3 px-4" colspan="${totalColspan}">${totalPax} PAX (Headcount)</td>
             </tr>
             <tr class="bg-green-900 bg-opacity-30 font-bold">
                 <td class="py-3 px-4" colspan="2">Verified (Arrived)</td>
                 <td class="py-3 px-4">${verifiedGuests} Guests</td>
-                <td class="py-3 px-4" colspan="${paymentColspan}">${verifiedPax} PAX (Headcount)</td>
+                <td class="py-3 px-4" colspan="${totalColspan}">${verifiedPax} PAX (Headcount)</td>
             </tr>
         `;
         
-        // Re-attach event listeners for WhatsApp sharing
-        document.querySelectorAll('.whatsapp-share').forEach(button => {
-            button.addEventListener('click', function() {
-                const guestId = this.getAttribute('data-guest-id');
-                if (guestId) {
-                    showWhatsAppShareModal(guestId);
-                }
+        // Re-attach event listeners for WhatsApp sharing (only for admin)
+        if (isAdmin) {
+            document.querySelectorAll('.whatsapp-share').forEach(button => {
+                button.addEventListener('click', function() {
+                    const guestId = this.getAttribute('data-guest-id');
+                    if (guestId) {
+                        showWhatsAppShareModal(guestId);
+                    }
+                });
             });
-        });
-        
-        // Preserve search input focus and value
-        const searchInput = document.getElementById('guestSearchInput');
-        if (searchInput && document.activeElement !== searchInput) {
-            // Only focus if it wasn't already focused (to avoid cursor jumping)
-            searchInput.focus();
         }
         
     } catch (error) {
@@ -2111,63 +2115,41 @@ async function downloadGuestsPDF() {
         // Fetch all guests
         const { data: guests, error } = await supabase
             .from('guests')
-            .select('*');
+            .select('*')
+            .order('created_at', { ascending: false });
         
-        if (error) {
-            console.error('Error fetching guests:', error);
-            alert('Error generating PDF: ' + error.message);
+        if (error) throw error;
+        if (!guests || guests.length === 0) {
+            alert('No guests found to generate PDF.');
             return;
         }
-        
-        // Create a new jsPDF instance
+
+        // Create PDF document
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // Define theme colors
-        const primaryColor = '#e83283';
-        const darkColor = '#2a0e3a';
-        
-        // Simple header with brand colors
-        doc.setFillColor(darkColor);
-        doc.rect(0, 0, 210, 40, 'F');
+        // Define colors
+        const darkColor = 40;
+        const primaryColor = [232, 50, 131];
         
         // Add title
+        doc.setFillColor(darkColor, darkColor, darkColor);
+        doc.rect(0, 0, 210, 20, 'F');
         doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(24);
-        doc.text('KOCHIN HANGOVER', 105, 20, { align: 'center' });
-        
-        doc.setTextColor(100, 100, 100);
         doc.setFontSize(16);
-        doc.text('Guest List', 105, 30, { align: 'center' });
+        doc.text('KOCHIN HANGOVER - Guest List', 105, 15, { align: 'center' });
         
-        // Add generation date
-        const now = new Date();
-        const formattedDate = now.toLocaleDateString('en-US', { 
-            day: '2-digit', 
-            month: '2-digit', 
-            year: '2-digit', 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            hour12: true 
-        }).replace(',', '');
+        // Set up table
+        const startY = 30;
+        const headers = ['#', 'Guest Details', 'Entry Type', 'Payment', 'Status'];
+        const colWidths = [15, 75, 35, 35, 30];
         
-        doc.setFontSize(10);
-        doc.text(`Generated: ${formattedDate}`, 105, 37, { align: 'center' });
-        
-        // Add table headers
-        const startY = 50;
-        const colWidths = [10, 70, 30, 40, 40];
-        const headers = ['#', 'Guest Details', 'Entry Type', 'Amount', 'Status'];
-        
-        // Add table header background
-        doc.setFillColor(primaryColor);
-        doc.rect(10, startY - 6, 190, 10, 'F');
-        
-        // Add header text
+        // Add headers
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(10, startY - 5, 190, 10, 'F');
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
         
         let xPos = 10;
         headers.forEach((header, i) => {
@@ -2179,19 +2161,13 @@ async function downloadGuestsPDF() {
         let yPos = startY + 10;
         doc.setTextColor(darkColor);
         doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
         
         // Add alternating row colors
         guests.forEach((guest, index) => {
-            // Each guest now takes up more vertical space
             const rowHeight = 15;
             
             // Add row background
-            if (index % 2 === 0) {
-                doc.setFillColor(245, 245, 245);
-            } else {
-                doc.setFillColor(235, 235, 235);
-            }
+            doc.setFillColor(index % 2 === 0 ? 245 : 235);
             doc.rect(10, yPos - 5, 190, rowHeight, 'F');
             
             // Add row data
@@ -2216,73 +2192,12 @@ async function downloadGuestsPDF() {
             doc.text(`${entryType}${safeGetGuestProperty(guest, 'has_room_booking', false) ? ' + Room' : ''}`, xPos + 2, yPos);
             xPos += colWidths[2];
             
-            // Amount - only show amount received
-            const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
-            const paidAmount = guest.paid_amount || 0;
-            const roomBookingAmount = safeGetGuestProperty(guest, 'room_booking_amount', 0) || 0;
-            
-            let amountText;
-            if (roomBookingAmount > 0) {
-                // If there's a room booking, show both amounts separately
-                if (paidAmount >= expectedAmount) {
-                    amountText = `Rs.${paidAmount} + Rs.${roomBookingAmount}`;
-                } else {
-                    amountText = `Rs.${paidAmount}/Rs.${expectedAmount} + Rs.${roomBookingAmount}`;
-                }
-            } else {
-                // No room booking, just show registration amount
-                if (paidAmount >= expectedAmount) {
-                    amountText = `Rs.${paidAmount}`;
-                } else {
-                    amountText = `Rs.${paidAmount}/Rs.${expectedAmount}`;
-                }
-            }
-            
-            doc.text(amountText, xPos + 2, yPos);
+            // Payment
+            doc.text(`Rs.${guest.paid_amount || 0} / Rs.${guest.total_amount || 0}`, xPos + 2, yPos);
             xPos += colWidths[3];
             
-            // Status with colored background
-            let statusColor = '';
-            let statusText = '';
-            let verifiedIcon = '';
-            
-            if (guest.status === 'verified') {
-                // Guest has been verified (arrived at event)
-                verifiedIcon = '<i class="fas fa-check-circle mr-1"></i>';
-                
-                if (paidAmount >= expectedAmount) {
-                    // Fully paid and verified
-                    statusColor = '#4ade80'; // green
-                    statusText = 'VERIFIED (PAID)';
-                } else {
-                    // Partially paid but verified
-                    statusColor = '#f59e0b'; // yellow
-                    statusText = 'VERIFIED (PARTIAL)';
-                }
-            } else if (guest.status === 'paid' || paidAmount >= expectedAmount) {
-                // Fully paid but not verified
-                statusColor = '#3b82f6'; // blue
-                statusText = 'PAID';
-            } else if (guest.status === 'partially_paid') {
-                // Partially paid
-                statusColor = '#f59e0b'; // yellow
-                statusText = 'PARTIAL';
-            } else {
-                // Pending
-                statusColor = '#ef4444'; // red
-                statusText = 'PENDING';
-            }
-            
-            // Add status background
-            doc.setFillColor(statusColor);
-            doc.rect(xPos, yPos - 4, 30, 8, 'F');
-            
-            // Add status text
-            doc.setTextColor(255, 255, 255); // Change text color to white
-            doc.setFont('helvetica', 'bold');
-            doc.text(`${verifiedIcon}${statusText}`, xPos + 2, yPos);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(darkColor);
+            // Status
+            doc.text(guest.status || 'pending', xPos + 2, yPos);
             
             yPos += rowHeight;
             
@@ -2291,10 +2206,8 @@ async function downloadGuestsPDF() {
                 doc.addPage();
                 
                 // Add header to new page
-                doc.setFillColor(darkColor);
+                doc.setFillColor(darkColor, darkColor, darkColor);
                 doc.rect(0, 0, 210, 20, 'F');
-                
-                // Add title to new page
                 doc.setTextColor(255, 255, 255);
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(16);
@@ -2305,90 +2218,31 @@ async function downloadGuestsPDF() {
             }
         });
         
+        // Add summary section with white background and dark text
+        yPos += 10;
+        doc.setFillColor(255, 255, 255);
+        doc.rect(10, yPos - 5, 190, 40, 'F');
+        
         // Calculate totals
         const totalGuests = guests.length;
+        const totalPax = guests.reduce((sum, guest) => sum + (guest.entry_type === 'couple' ? 2 : 1), 0);
+        const verifiedGuests = guests.filter(guest => guest.status === 'verified').length;
+        const verifiedPax = guests.filter(guest => guest.status === 'verified')
+            .reduce((sum, guest) => sum + (guest.entry_type === 'couple' ? 2 : 1), 0);
         
-        // Count verified entries based on full payment
-        const verifiedEntries = guests.filter(guest => {
-            const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
-            const isPaidInFull = parseFloat(guest.paid_amount) >= expectedAmount;
-            return isPaidInFull; // Guest has paid in full
-        }).length;
-        
-        const pendingEntries = totalGuests - verifiedEntries;
-        const registrationRevenue = guests.reduce((sum, guest) => sum + (parseFloat(guest.paid_amount) || 0), 0);
-        const roomBookingRevenue = guests.reduce((sum, guest) => sum + (safeGetGuestProperty(guest, 'has_room_booking', false) ? (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0) : 0), 0);
-        const totalRevenue = registrationRevenue + roomBookingRevenue;
-        
-        // Calculate total PAX (headcount)
-        const totalPax = guests.reduce((sum, guest) => {
-            return sum + (guest.entry_type === 'couple' ? 2 : 1);
-        }, 0);
-
-        // Update summary stats
-        const summaryRow = `
-            <tr class="border-t-2 border-pink-500 bg-purple-900 bg-opacity-30 font-bold">
-                <td class="py-3 px-4" colspan="2">Total</td>
-                <td class="py-3 px-4">${totalGuests} Registrations</td>
-                <td class="py-3 px-4" colspan="3">${totalPax} PAX (Headcount)</td>
-            </tr>
-            <tr class="bg-green-900 bg-opacity-30 font-bold">
-                <td class="py-3 px-4" colspan="2">Verified (Arrived)</td>
-                <td class="py-3 px-4">${verifiedEntries} Guests</td>
-                <td class="py-3 px-4" colspan="3">${verifiedEntries} PAX (Headcount)</td>
-            </tr>
-        `;
-        
-        // Add total row
-        doc.setFillColor(primaryColor);
-        doc.rect(10, yPos - 5, 190, 15, 'F');
-        
-        // Add border at the top
-        doc.setDrawColor(primaryColor);
-        doc.setLineWidth(1);
-        doc.line(10, yPos - 5, 200, yPos - 5);
-        
-        // Add total text
-        doc.setTextColor(255, 255, 255); // Change text color to white
+        // Add totals with clear formatting
+        doc.setTextColor(darkColor);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
+        doc.text(`Total Registrations: ${totalGuests} (${totalPax} PAX)`, 15, yPos + 5);
+        doc.text(`Verified Entries: ${verifiedGuests} (${verifiedPax} PAX)`, 15, yPos + 20);
         
-        // Total label
-        xPos = 10;
-        doc.text('TOTAL', xPos + 2, yPos + 2);
-        
-        // Total registrations
-        xPos = 80;
-        doc.text(`${totalGuests} Registrations`, xPos + 2, yPos + 2);
-        
-        // Total PAX
-        xPos = 150;
-        doc.text(`${totalPax} PAX (Headcount)`, xPos + 2, yPos + 2);
-        
-        yPos += 15;
-        
-        // Add total rows with white background and dark text
-        doc.setFillColor(255, 255, 255);
-        doc.rect(10, yPos - 5, 190, 20, 'F');
-        doc.setTextColor(darkColor);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Total Registrations: ${totalGuests}`, 12, yPos + 5);
-        doc.text(`Total PAX: ${totalPax}`, 100, yPos + 5);
-
-        // Add verified entries row with light green background
-        yPos += 15;
-        doc.setFillColor(220, 255, 220);
-        doc.rect(10, yPos - 5, 190, 20, 'F');
-        doc.setTextColor(darkColor);
-        doc.text(`Verified (Arrived): ${verifiedEntries} Guests`, 12, yPos + 5);
-        doc.text(`Verified PAX: ${verifiedPax}`, 100, yPos + 5);
-
         // Save the PDF
         doc.save('kochin-hangover-guest-list.pdf');
         
     } catch (error) {
         console.error('Error generating PDF:', error);
-        alert('Failed to generate PDF');
+        alert('Failed to generate PDF. Please try again.');
     }
 }
 
@@ -2468,263 +2322,89 @@ async function downloadStatsPDF() {
             return;
         }
 
-        // Fetch the latest stats
+        // Fetch all guests
         const { data: guests, error } = await supabase
             .from('guests')
             .select('*');
         
         if (error) throw error;
+        if (!guests || guests.length === 0) {
+            alert('No data available to generate statistics PDF.');
+            return;
+        }
+
+        // Create PDF document
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
         
-        // Create a new jsPDF instance
-        const doc = new jspdf.jsPDF();
-        const primaryColor = [232, 50, 131]; // #e83283
-        const secondaryColor = [52, 219, 219]; // #34dbdb
-        const darkColor = [42, 14, 58]; // #2a0e3a
+        // Define colors
+        const darkColor = 40;
         
         // Add title
-        doc.setFillColor(darkColor[0], darkColor[1], darkColor[2]);
-        doc.rect(0, 0, 210, 40, 'F');
-        
+        doc.setFillColor(darkColor, darkColor, darkColor);
+        doc.rect(0, 0, 210, 20, 'F');
         doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(24);
-        doc.text('KOCHIN HANGOVER', 105, 20, { align: 'center' });
-        
-        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
         doc.setFontSize(16);
-        doc.text('Event Statistics Report', 105, 30, { align: 'center' });
-        
-        // Add date
-        doc.setTextColor(100, 100, 100);
-        doc.setFontSize(10);
-        const today = new Date();
-        doc.text(`Generated on: ${today.toLocaleDateString()} ${today.toLocaleTimeString()}`, 105, 38, { align: 'center' });
+        doc.text('KOCHIN HANGOVER - Event Statistics', 105, 15, { align: 'center' });
         
         // Calculate statistics
         const totalGuests = guests.length;
-        
-        // Count by status
-        const verifiedCount = guests.filter(guest => guest.status === 'verified').length;
-        const paidCount = guests.filter(guest => guest.status === 'paid').length;
-        const partiallyPaidCount = guests.filter(guest => guest.status === 'partially_paid').length;
-        const pendingCount = guests.filter(guest => guest.status !== 'verified' && guest.status !== 'paid' && guest.status !== 'partially_paid').length;
-        
-        // Count by entry type
-        const stagCount = guests.filter(guest => guest.entry_type === 'stag').length;
-        const coupleCount = guests.filter(guest => guest.entry_type === 'couple').length;
-        
-        // Calculate total PAX (headcount)
-        const totalPax = guests.reduce((sum, guest) => {
-            return sum + (guest.entry_type === 'couple' ? 2 : 1);
-        }, 0);
-
-        // Calculate verified PAX (headcount)
-        const verifiedPax = guests.filter(guest => guest.status === 'verified')
-            .reduce((sum, guest) => sum + (guest.entry_type === 'couple' ? 2 : 1), 0);
-
-        // Calculate revenue
-        const statsRevenue = guests.reduce((sum, guest) => sum + Number(guest.paid_amount || 0), 0);
-        const expectedRevenue = guests.reduce((sum, guest) => sum + Number(guest.total_amount || 0), 0);
-        const pendingRevenue = expectedRevenue - statsRevenue;
-        
-        // Start y position for content
-        let yPos = 50;
+        const verifiedEntries = guests.filter(guest => guest.status === 'verified').length;
+        const pendingEntries = totalGuests - verifiedEntries;
+        const registrationRevenue = guests.reduce((sum, guest) => sum + (parseFloat(guest.paid_amount) || 0), 0);
+        const roomBookingRevenue = guests.reduce((sum, guest) => 
+            sum + (safeGetGuestProperty(guest, 'has_room_booking', false) ? 
+            (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0) : 0), 0);
+        const totalRevenue = registrationRevenue + roomBookingRevenue;
+        const totalPax = guests.reduce((sum, guest) => sum + (guest.entry_type === 'couple' ? 2 : 1), 0);
         
         // Function to add a card with better visibility
-        function addCard(title, value, x, y, width, height = 30) {
-            // Use white background for all cards
+        function addCard(title, value, x, y, width, height = 25) {
+            // White background
             doc.setFillColor(255, 255, 255);
             doc.rect(x, y, width, height, 'F');
             
-            // Add dark text for better visibility
+            // Dark text
             doc.setTextColor(darkColor);
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(12);
-            doc.text(title, x + 5, y + 12);
+            doc.setFontSize(10);
+            doc.text(title, x + 5, y + 10);
             
-            doc.setFontSize(14);
-            doc.text(value, x + 5, y + 25);
+            doc.setFontSize(12);
+            doc.text(value, x + 5, y + 20);
         }
-
+        
         // Add statistics cards with reduced height and better visibility
-        const cardWidth = 90;
-        const cardHeight = 30;
         const margin = 10;
-        let startY = 40;
-
+        const cardWidth = 90;
+        const cardHeight = 25;
+        let startY = 30;
+        
         // First row
         addCard('Total Registrations', totalGuests.toString(), margin, startY, cardWidth, cardHeight);
         addCard('Verified Entries', verifiedEntries.toString(), margin + cardWidth + 10, startY, cardWidth, cardHeight);
-
+        
         // Second row
-        startY += cardHeight + 10;
+        startY += cardHeight + 5;
         addCard('Pending Entries', pendingEntries.toString(), margin, startY, cardWidth, cardHeight);
-        addCard('Total Revenue', `₹${totalRevenue}`, margin + cardWidth + 10, startY, cardWidth, cardHeight);
-
+        addCard('Total Revenue', `Rs.${totalRevenue}`, margin + cardWidth + 10, startY, cardWidth, cardHeight);
+        
         // Third row
-        startY += cardHeight + 10;
-        addCard('Registration Revenue', `₹${registrationRevenue}`, margin, startY, cardWidth, cardHeight);
-        addCard('Room Booking Revenue', `₹${roomBookingRevenue}`, margin + cardWidth + 10, startY, cardWidth, cardHeight);
-
+        startY += cardHeight + 5;
+        addCard('Registration Revenue', `Rs.${registrationRevenue}`, margin, startY, cardWidth, cardHeight);
+        addCard('Room Booking Revenue', `Rs.${roomBookingRevenue}`, margin + cardWidth + 10, startY, cardWidth, cardHeight);
+        
         // Fourth row - Full width card
-        startY += cardHeight + 10;
+        startY += cardHeight + 5;
         addCard('Total PAX (Headcount)', totalPax.toString(), margin, startY, cardWidth * 2 + 10, cardHeight);
-
-        yPos += 45;
-        
-        // Add status breakdown section
-        doc.setFillColor(darkColor[0], darkColor[1], darkColor[2]);
-        doc.rect(10, yPos, 190, 10, 'F');
-        
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Registration Status Breakdown', 105, yPos + 7, { align: 'center' });
-        
-        yPos += 20;
-        
-        // Add status pie chart data
-        doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'normal');
-        
-        const statusData = [
-            { label: 'Verified', count: verifiedCount, color: [74, 222, 128] }, // green
-            { label: 'Paid', count: paidCount, color: [59, 130, 246] }, // blue
-            { label: 'Partially Paid', count: partiallyPaidCount, color: [245, 158, 11] }, // yellow
-            { label: 'Pending', count: pendingCount, color: [239, 68, 68] } // red
-        ];
-        
-        // Draw status breakdown table
-        doc.setFillColor(245, 245, 245);
-        doc.rect(50, yPos, 110, 60, 'F');
-        
-        doc.setDrawColor(200, 200, 200);
-        
-        let tableY = yPos + 10;
-        statusData.forEach((status, index) => {
-            // Color indicator
-            doc.setFillColor(status.color[0], status.color[1], status.color[2]);
-            doc.rect(60, tableY - 5, 10, 10, 'F');
-            
-            // Label and count
-            doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-            doc.setFont('helvetica', 'normal');
-            doc.text(status.label, 80, tableY);
-            
-            doc.setFont('helvetica', 'bold');
-            doc.text(status.count.toString(), 140, tableY);
-            
-            tableY += 15;
-        });
-        
-        yPos += 70;
-        
-        // Add club breakdown section if there are clubs
-        const clubStats = {};
-        
-        guests.forEach(guest => {
-            const clubName = guest.club_name || 'No Club';
-            
-            if (!clubStats[clubName]) {
-                clubStats[clubName] = {
-                    count: 0,
-                    totalAmount: 0,
-                    paidAmount: 0
-                };
-            }
-            
-            clubStats[clubName].count++;
-            clubStats[clubName].totalAmount += guest.total_amount || 0;
-            clubStats[clubName].paidAmount += guest.paid_amount || 0;
-        });
-        
-        // Sort clubs by count (descending)
-        const sortedClubs = Object.keys(clubStats)
-            .sort((a, b) => clubStats[b].count - clubStats[a].count);
-        
-        // Only show top 10 clubs to avoid overflow
-        const topClubs = sortedClubs.slice(0, 10);
-        
-        if (topClubs.length > 0) {
-            // Add new page if needed
-            if (yPos > 230) {
-                doc.addPage();
-                yPos = 20;
-            }
-            
-            // Add club breakdown header
-            doc.setFillColor(darkColor[0], darkColor[1], darkColor[2]);
-            doc.rect(10, yPos, 190, 10, 'F');
-            
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(14);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Club Registration Breakdown (Top 10)', 105, yPos + 7, { align: 'center' });
-            
-            yPos += 20;
-            
-            // Set up table headers
-            doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-            doc.rect(10, yPos, 190, 10, 'F');
-            
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(11);
-            doc.text('Club Name', 15, yPos + 7);
-            doc.text('Registrations', 110, yPos + 7);
-            doc.text('Revenue', 150, yPos + 7);
-            doc.text('Pending', 180, yPos + 7);
-            
-            yPos += 15;
-            
-            // Add club data rows
-            doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-            doc.setFontSize(10);
-            
-            topClubs.forEach((club, index) => {
-                // Alternating row background
-                if (index % 2 === 0) {
-                    doc.setFillColor(245, 245, 245);
-                } else {
-                    doc.setFillColor(235, 235, 235);
-                }
-                doc.rect(10, yPos - 5, 190, 10, 'F');
-                
-                // Club name (truncate if too long)
-                const clubName = club.length > 25 ? club.substring(0, 22) + '...' : club;
-                doc.setFont('helvetica', 'normal');
-                doc.text(clubName, 15, yPos);
-                
-                // Registration count
-                doc.setFont('helvetica', 'bold');
-                doc.text(clubStats[club].count.toString(), 110, yPos);
-                
-                // Revenue collected
-                doc.text(`Rs.${clubStats[club].paidAmount}`, 150, yPos);
-                
-                // Pending amount
-                const pendingAmount = clubStats[club].totalAmount - clubStats[club].paidAmount;
-                doc.text(`Rs.${pendingAmount}`, 180, yPos);
-                
-                yPos += 10;
-            });
-        }
-        
-        // Add footer
-        doc.setFillColor(darkColor[0], darkColor[1], darkColor[2]);
-        doc.rect(0, 280, 210, 17, 'F');
-        
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.text('KOCHIN HANGOVER - Event Management System', 105, 288, { align: 'center' });
         
         // Save the PDF
-        doc.save('kochin-hangover-stats.pdf');
+        doc.save('kochin-hangover-statistics.pdf');
         
     } catch (error) {
-        console.error('Error generating stats PDF:', error);
-        alert('Failed to generate statistics PDF');
+        console.error('Error generating statistics PDF:', error);
+        alert('Failed to generate statistics PDF. Please try again.');
     }
 }
 
