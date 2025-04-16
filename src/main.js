@@ -1858,8 +1858,22 @@ Please show this pass at the entrance.`;
                     const whatsappNumber = mobileNumber.replace('+', '');
                     
                     if (isMobile) {
-                        // For mobile, use the direct protocol to open WhatsApp app
-                        window.location.href = `whatsapp://send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`;
+                        // For mobile devices: first close modal completely, then use a direct approach
+                        // This prevents the browser redirect and download again popup
+                        
+                        // Create a direct link element instead of changing window.location
+                        const directLink = document.createElement('a');
+                        directLink.setAttribute('href', `whatsapp://send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`);
+                        directLink.setAttribute('target', '_self');
+                        directLink.style.display = 'none';
+                        document.body.appendChild(directLink);
+                        
+                        // Small delay to ensure modal is gone before opening WhatsApp
+                        setTimeout(() => {
+                            directLink.click();
+                            // Remove the element after use
+                            document.body.removeChild(directLink);
+                        }, 100);
                     } else {
                         // For desktop, open WhatsApp Web
                         window.open(`https://web.whatsapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`, '_blank');
