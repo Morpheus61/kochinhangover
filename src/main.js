@@ -761,7 +761,7 @@ async function editGuest(guestId) {
                     </div>
                     
                     <div class="mt-6 flex space-x-4">
-                        <button type="submit" class="kochin-button flex-1">
+                        <button type="button" id="saveGuestBtn" class="kochin-button flex-1">
                             <i class="fas fa-save mr-2"></i> Save Changes
                         </button>
                         <button type="button" class="kochin-button bg-gray-600 flex-1 close-modal-btn">
@@ -801,9 +801,8 @@ async function editGuest(guestId) {
             }
         });
         
-        // Add event listener to form submit
-        document.getElementById('editGuestForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        // Add event listener to save button
+        document.getElementById('saveGuestBtn').addEventListener('click', async () => {
             
             const guestName = document.getElementById('editGuestName').value.trim();
             const clubName = document.getElementById('editClubName').value.trim();
