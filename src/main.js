@@ -122,6 +122,20 @@ async function setupNavigation() {
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.add('hidden'));
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
     
+    // Handle download buttons visibility
+    const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+    const downloadCsvBtn = document.getElementById('downloadCsvBtn');
+    
+    if (downloadPdfBtn) {
+        downloadPdfBtn.classList.toggle('hidden', isDoorman);
+        downloadPdfBtn.disabled = isDoorman;
+    }
+    
+    if (downloadCsvBtn) {
+        downloadCsvBtn.classList.toggle('hidden', isDoorman);
+        downloadCsvBtn.disabled = isDoorman;
+    }
+    
     // Admin: Full Access to all features
     if (isAdmin) {
         // Show all navigation buttons
@@ -268,6 +282,14 @@ async function loadGuestList(searchTerm = '') {
         
         const isAdmin = userRole?.role === 'admin';
         const isDoorman = userRole?.role === 'doorman';
+
+        // Update table headers based on role
+        const tableHeaders = document.querySelectorAll('#guestListTable thead th');
+        tableHeaders.forEach(header => {
+            if (header.textContent.trim() === 'Payment') {
+                header.style.display = isDoorman ? 'none' : '';
+            }
+        });
         
         // Filter guests based on search term if provided
         let filteredGuests = guests;
@@ -318,7 +340,7 @@ async function loadGuestList(searchTerm = '') {
             .reduce((sum, guest) => sum + (guest.entry_type === 'couple' ? 2 : 1), 0);
 
         // Add total row with adjusted colspan based on role
-        const paymentColspan = isDoorman ? 3 : 4;
+        const paymentColspan = isDoorman ? 2 : 3;
         tbody.innerHTML += `
             <tr class="border-t-2 border-pink-500 bg-purple-900 bg-opacity-30 font-bold">
                 <td class="py-3 px-4" colspan="2">Total</td>
