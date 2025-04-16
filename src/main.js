@@ -883,8 +883,8 @@ async function editGuest(guestId) {
                 document.body.removeChild(modal);
                 
                 // Reload guest list and stats
-                await loadGuestList();
-                await loadStats();
+                const currentTab = window.location.hash.slice(1) || 'registration';
+                await showTab(currentTab); // This will refresh both guest list and stats if needed
                 
                 alert('Guest updated successfully!');
             } catch (error) {
