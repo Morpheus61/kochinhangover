@@ -883,8 +883,8 @@ async function editGuest(guestId) {
                 document.body.removeChild(modal);
                 
                 // Reload guest list and stats
-                await loadGuestList();
-                await loadStats();
+                await fetchAndDisplayGuests();
+                await updateStats();
                 
                 alert('Guest updated successfully!');
             } catch (error) {
