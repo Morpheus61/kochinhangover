@@ -1858,22 +1858,24 @@ Please show this pass at the entrance.`;
                     const whatsappNumber = mobileNumber.replace('+', '');
                     
                     if (isMobile) {
-                        // For mobile devices: first close modal completely, then use a direct approach
-                        // This prevents the browser redirect and download again popup
+                        // For mobile: completely remove the modal first
+                        try {
+                            if (modal.parentNode) {
+                                modal.parentNode.removeChild(modal);
+                            }
+                            
+                            // Also try to find and remove by ID in case the direct reference fails
+                            const modalBySelector = document.getElementById('whatsappShareModal');
+                            if (modalBySelector && modalBySelector.parentNode) {
+                                modalBySelector.parentNode.removeChild(modalBySelector);
+                            }
+                        } catch (err) {
+                            console.error('Error removing modal before WhatsApp open:', err);
+                        }
                         
-                        // Create a direct link element instead of changing window.location
-                        const directLink = document.createElement('a');
-                        directLink.setAttribute('href', `whatsapp://send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`);
-                        directLink.setAttribute('target', '_self');
-                        directLink.style.display = 'none';
-                        document.body.appendChild(directLink);
-                        
-                        // Small delay to ensure modal is gone before opening WhatsApp
-                        setTimeout(() => {
-                            directLink.click();
-                            // Remove the element after use
-                            document.body.removeChild(directLink);
-                        }, 100);
+                        // Use a custom URL scheme that bypasses the browser on mobile
+                        // This should directly open WhatsApp without any browser redirects
+                        window.location.href = `whatsapp://send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`;
                     } else {
                         // For desktop, use wa.me format which works better for message insertion
                         // This ensures the pre-formatted message appears in the selected guest's chat
