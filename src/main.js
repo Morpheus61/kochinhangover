@@ -755,10 +755,7 @@ async function editGuest(guestId) {
                         <input type="number" id="editRoomBookingAmount" class="kochin-input w-full" value="${guest.room_booking_amount || 0}" min="0" step="100">
                         <small class="text-gray-400">Enter the amount received for room booking.</small>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Notes</label>
-                        <textarea id="editNotes" class="kochin-input w-full" rows="3">${guest.notes || ''}</textarea>
-                    </div>
+
                     
                     <div class="mt-6 flex space-x-4">
                         <button type="button" id="saveGuestBtn" class="kochin-button flex-1">
@@ -811,7 +808,6 @@ async function editGuest(guestId) {
             const paymentMode = document.getElementById('editPaymentMode').value;
             const hasRoomBooking = document.getElementById('editHasRoomBooking').value === 'true';
             const roomBookingAmount = hasRoomBooking ? (parseFloat(document.getElementById('editRoomBookingAmount').value) || 0) : 0;
-            const notes = document.getElementById('editNotes').value.trim();
             
             // Get paid amount based on payment mode
             let paidAmount;
@@ -867,8 +863,7 @@ async function editGuest(guestId) {
                     status: finalStatus,
                     payment_mode: paymentMode,
                     paid_amount: paidAmount,
-                    has_room_booking: hasRoomBooking,
-                    notes: notes
+                    has_room_booking: hasRoomBooking
                 };
                 
                 // Only include room booking amount if applicable
