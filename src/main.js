@@ -737,10 +737,12 @@ async function editGuest(guestId) {
                             <option value="partial_payment_upi" ${guest.payment_mode === 'partial_payment_upi' ? 'selected' : ''}>Partial Payment - UPI</option>
                         </select>
                     </div>
-                    <div>
+                    <div id="paidAmountContainer" class="${guest.payment_mode?.includes('partial_payment') ? '' : 'hidden'}">
                         <label class="block text-sm font-medium mb-1">Paid Amount (₹)</label>
                         <input type="number" id="editPaidAmount" class="kochin-input w-full" value="${guest.paid_amount || 0}" min="0" step="100" required>
+                        <small class="text-gray-400">Enter the amount received as partial payment</small>
                     </div>
+
                     <div>
                         <label class="block text-sm font-medium mb-1">Room Booking</label>
                         <select id="editHasRoomBooking" class="kochin-input w-full" required>
@@ -779,13 +781,23 @@ async function editGuest(guestId) {
             });
         });
 
-        // Add event listener for room booking toggle
+        // Add event listeners for toggles
         document.getElementById('editHasRoomBooking').addEventListener('change', function() {
             const roomBookingAmountContainer = document.getElementById('roomBookingAmountContainer');
             if (this.value === 'true') {
                 roomBookingAmountContainer.classList.remove('hidden');
             } else {
                 roomBookingAmountContainer.classList.add('hidden');
+            }
+        });
+
+        // Add event listener for payment mode toggle
+        document.getElementById('editPaymentMode').addEventListener('change', function() {
+            const paidAmountContainer = document.getElementById('paidAmountContainer');
+            if (this.value.includes('partial_payment')) {
+                paidAmountContainer.classList.remove('hidden');
+            } else {
+                paidAmountContainer.classList.add('hidden');
             }
         });
         
@@ -798,10 +810,19 @@ async function editGuest(guestId) {
             const mobileNumber = document.getElementById('editMobileNumber').value.trim();
             const entryType = document.getElementById('editEntryType').value;
             const paymentMode = document.getElementById('editPaymentMode').value;
-            const paidAmount = parseFloat(document.getElementById('editPaidAmount').value) || 0;
             const hasRoomBooking = document.getElementById('editHasRoomBooking').value === 'true';
             const roomBookingAmount = hasRoomBooking ? (parseFloat(document.getElementById('editRoomBookingAmount').value) || 0) : 0;
             const notes = document.getElementById('editNotes').value.trim();
+            
+            // Get paid amount based on payment mode
+            let paidAmount;
+            if (paymentMode.includes('partial_payment')) {
+                paidAmount = parseFloat(document.getElementById('editPaidAmount').value) || 0;
+            } else {
+                // For full payment, use entry type amount plus room booking if any
+                const entryAmount = entryType === 'stag' ? 2750 : 4750;
+                paidAmount = entryAmount + (hasRoomBooking ? roomBookingAmount : 0);
+            }
             
             // Validate inputs
             if (!guestName) {
