@@ -1804,16 +1804,21 @@ Please show this pass at the entrance.`;
                 // Function to trigger download only once
                 const triggerDownload = () => {
                     if (!downloadTriggered) {
+                        // Create a temporary link for download
                         const downloadLink = document.createElement('a');
                         downloadLink.href = guestPassImageUrl;
                         downloadLink.download = guestPassFileName;
+                        
+                        // Trigger download programmatically
+                        document.body.appendChild(downloadLink);
                         downloadLink.click();
+                        document.body.removeChild(downloadLink);
+                        
                         downloadTriggered = true;
                     }
                 };
                 
-                // Download the image immediately when modal is shown
-                triggerDownload();
+                // Do NOT download immediately - will download only when user chooses to share
                 
                 // Helper function for safely removing the modal
                 const safeRemoveModal = () => {
@@ -1849,33 +1854,30 @@ Please show this pass at the entrance.`;
                     };
                 }
                 
-                // Handle WhatsApp open button click
+                // Only trigger download when user explicitly chooses to share
                 document.getElementById('openWhatsAppBtn').onclick = function() {
-                    // First remove the modal to ensure no browser redirect issues
-                    safeRemoveModal();
+                    triggerDownload();
+                    
+                    // Close modal
+                    if (modal && modal.parentNode) {
+                        modal.parentNode.removeChild(modal);
+                    }
                     
                     // Format the number for WhatsApp
                     const whatsappNumber = mobileNumber.replace('+', '');
                     
+                    // Track sharing state to prevent duplicates
+                    let isSharing = false;
+                    
                     if (isMobile) {
-                        // For mobile: completely remove the modal first
-                        try {
-                            if (modal.parentNode) {
-                                modal.parentNode.removeChild(modal);
-                            }
-                            
-                            // Also try to find and remove by ID in case the direct reference fails
-                            const modalBySelector = document.getElementById('whatsappShareModal');
-                            if (modalBySelector && modalBySelector.parentNode) {
-                                modalBySelector.parentNode.removeChild(modalBySelector);
-                            }
-                        } catch (err) {
-                            console.error('Error removing modal before WhatsApp open:', err);
-                        }
+                        const whatsappUrl = `whatsapp://send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`;
                         
-                        // Use a custom URL scheme that bypasses the browser on mobile
-                        // This should directly open WhatsApp without any browser redirects
-                        window.location.href = `whatsapp://send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`;
+                        // Approach 2: More robust with timeout
+                        const openAppTimeout = setTimeout(() => {
+                            window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank');
+                        }, 250);
+                        
+                        window.location.href = whatsappUrl;
                     } else {
                         // For desktop, use wa.me format which works better for message insertion
                         // This ensures the pre-formatted message appears in the selected guest's chat
