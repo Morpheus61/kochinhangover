@@ -1875,8 +1875,9 @@ Please show this pass at the entrance.`;
                             document.body.removeChild(directLink);
                         }, 100);
                     } else {
-                        // For desktop, open WhatsApp Web
-                        window.open(`https://web.whatsapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`, '_blank');
+                        // For desktop, use wa.me format which works better for message insertion
+                        // This ensures the pre-formatted message appears in the selected guest's chat
+                        window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank');
                     }
                 };
                 
