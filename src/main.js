@@ -1408,32 +1408,45 @@ function setupEventListeners() {
 
             // Create a temporary container for clean screenshot
             const tempContainer = document.createElement('div');
-            tempContainer.style.cssText = 'background-color: #2a0e3a; padding: 20px; width: fit-content; position: fixed; left: -9999px;';
+            tempContainer.style.cssText = 'background-color: #2a0e3a; padding: 20px; width: fit-content; position: absolute; left: -9999px; top: 0;';
             document.body.appendChild(tempContainer);
 
-            // Clone the cards container
+            // Clone the cards container and its contents
             const clone = cardsContainer.cloneNode(true);
-            clone.style.cssText = 'display: grid; grid-template-columns: 1fr; gap: 12px; width: fit-content;';
+            clone.style.cssText = 'display: grid; grid-template-columns: 1fr; gap: 12px; width: 400px;';
             tempContainer.appendChild(clone);
+
+            // Wait for the next frame to ensure everything is rendered
+            await new Promise(resolve => requestAnimationFrame(resolve));
 
             const canvas = await html2canvas(tempContainer, {
                 backgroundColor: '#2a0e3a',
                 scale: 2,
                 useCORS: true,
-                logging: false
+                logging: false,
+                allowTaint: true,
+                foreignObjectRendering: true,
+                removeContainer: true
             });
 
             // Clean up
             document.body.removeChild(tempContainer);
 
-            canvas.toBlob((blob) => {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'kochin-stats.png';
-                a.click();
-                URL.revokeObjectURL(url);
-            }, 'image/png');
+            // Convert to blob and download
+            const blob = await new Promise(resolve => {
+                canvas.toBlob(resolve, 'image/png', 1.0);
+            });
+
+            if (!blob) {
+                throw new Error('Failed to create image');
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'kochin-stats.png';
+            a.click();
+            URL.revokeObjectURL(url);
         } catch (error) {
             console.error('Error saving stats:', error);
             alert('Error saving stats');
