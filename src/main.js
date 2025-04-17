@@ -2294,99 +2294,70 @@ async function loadStats() {
 // Download functions
 async function downloadStatsImage() {
     try {
-        // Check user role first
-        const { data: userRole, error: roleError } = await supabase
+        // Check user permissions
+        const { data: userRole } = await supabase
             .from('users')
             .select('role')
             .eq('id', currentUser.id)
             .single();
-        
-        if (roleError) throw roleError;
+
         if (userRole?.role === 'doorman') {
             alert('Access denied. You do not have permission to download statistics.');
             return;
         }
 
-        // Get the stats container
-        const statsContainer = document.querySelector('#stats');
+        // Get the stats container and its content
+        const statsContainer = document.getElementById('stats');
         
-        // Create a clone of the stats container
-        const clonedStats = statsContainer.cloneNode(true);
+        // Create a clone of the stats container to preserve original styling
+        const clone = statsContainer.cloneNode(true);
+        clone.style.position = 'absolute';
+        clone.style.left = '-9999px';
+        clone.style.top = '0';
+        clone.style.width = statsContainer.offsetWidth + 'px';
+        clone.style.backgroundColor = '#2a0e3a';
+        clone.style.padding = '20px';
+        clone.style.boxSizing = 'border-box';
         
-        // Remove buttons and table from clone
-        const buttons = clonedStats.querySelector('.flex.flex-wrap');
+        // Remove buttons from the clone
+        const buttons = clone.querySelector('.flex.flex-wrap');
         if (buttons) buttons.remove();
-        const table = clonedStats.querySelector('.overflow-x-auto');
-        if (table) table.remove();
-
-        // Style the clone for capture
-        clonedStats.style.position = 'absolute';
-        clonedStats.style.left = '-9999px';
-        clonedStats.style.padding = '20px';
-        clonedStats.style.width = '400px';
-        clonedStats.style.backgroundColor = '#2a0e3a';
-        document.body.appendChild(clonedStats);
-
-        // Update header
-        const header = clonedStats.querySelector('h2');
-        if (header) {
-            header.style.color = '#e83283';
-            header.style.fontSize = '24px';
-            header.style.marginBottom = '20px';
-            header.style.textAlign = 'center';
-        }
-
-        // Style all stat cards
-        const cards = clonedStats.querySelectorAll('.rounded-lg');
-        cards.forEach(card => {
-            card.style.margin = '10px 0';
-            card.style.padding = '15px';
-            card.style.borderRadius = '12px';
-        });
-
-        // Style all titles
-        const titles = clonedStats.querySelectorAll('h3');
-        titles.forEach(title => {
-            title.style.fontSize = '14px';
-            title.style.fontWeight = '600';
-            title.style.marginBottom = '8px';
-            title.style.wordSpacing = '0.05em';
-        });
-
-        // Style all values
-        const values = clonedStats.querySelectorAll('p');
-        values.forEach(value => {
-            value.style.fontSize = '28px';
-            value.style.fontWeight = '700';
-            value.style.lineHeight = '1.2';
-        });
-
-        // Use html2canvas with enhanced settings
-        const canvas = await html2canvas(clonedStats, {
+        
+        // Remove the club-wise stats table if it exists
+        const clubTable = clone.querySelector('.overflow-x-auto');
+        if (clubTable) clubTable.remove();
+        
+        // Append the clone to the body
+        document.body.appendChild(clone);
+        
+        // Use html2canvas with these settings for best results
+        const canvas = await html2canvas(clone, {
             backgroundColor: '#2a0e3a',
-            scale: 2,
+            scale: 2, // Higher scale for better quality
             logging: false,
-            letterRendering: true,
             useCORS: true,
             allowTaint: true,
-            foreignObjectRendering: true
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: clone.scrollWidth,
+            windowHeight: clone.scrollHeight
         });
-
-        // Clean up
-        document.body.removeChild(clonedStats);
         
-        // Convert to blob
-        canvas.toBlob((blob) => {
+        // Clean up
+        document.body.removeChild(clone);
+        
+        // Convert to blob and download
+        canvas.toBlob(blob => {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'kochin-stats.png';
+            a.download = `kochin-hangover-stats-${new Date().toISOString().slice(0,10)}.png`;
             a.click();
-            URL.revokeObjectURL(url);
-        }, 'image/png');
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+        }, 'image/png', 1.0); // Highest quality
     } catch (error) {
-        console.error('Error creating screenshot:', error);
-        alert('Error creating screenshot');
+        console.error('Failed to generate stats image:', error);
+        alert('Failed to save statistics. Please try again.');
     }
 }
 
