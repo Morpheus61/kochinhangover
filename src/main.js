@@ -1407,14 +1407,14 @@ function setupEventListeners() {
             const container = document.createElement('div');
             container.style.cssText = `
                 background: #2a0e3a;
-                padding: 20px;
+                padding: 12px;
                 display: flex;
                 flex-direction: column;
-                gap: 12px;
+                gap: 8px;
                 position: fixed;
                 left: -9999px;
                 top: 0;
-                width: 400px;
+                width: 300px;
             `;
 
             // Define IDs of the cards in the order we want them
@@ -1433,7 +1433,35 @@ function setupEventListeners() {
                 const card = statsContainer.querySelector(`div:has(#${id})`);
                 if (!card) throw new Error(`Could not find card for ${id}`);
                 const clone = card.cloneNode(true);
-                clone.style.cssText = 'margin: 0; width: 100%; border-radius: 8px;';
+                
+                // Style the card container
+                clone.style.cssText = `
+                    margin: 0;
+                    width: 100%;
+                    border-radius: 6px;
+                    padding: 8px;
+                `;
+
+                // Style the heading
+                const heading = clone.querySelector('h3');
+                if (heading) {
+                    heading.style.cssText = `
+                        font-size: 14px;
+                        margin-bottom: 4px;
+                        font-weight: bold;
+                    `;
+                }
+
+                // Style the value
+                const value = clone.querySelector('p');
+                if (value) {
+                    value.style.cssText = `
+                        font-size: 20px;
+                        font-weight: bold;
+                        margin: 0;
+                    `;
+                }
+
                 container.appendChild(clone);
             });
 
