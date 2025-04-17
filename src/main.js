@@ -1398,82 +1398,150 @@ function setupEventListeners() {
     });
 
     // Stats screenshot button
-    document.getElementById('downloadStatsImageBtn')?.addEventListener('click', async () => {
+    document.getElementById('downloadStatsImageBtn')?.addEventListener('click', downloadStatsImage);
+
+    // Then add this separate function (can be placed anywhere in your main.js file):
+    async function downloadStatsImage() {
         try {
-            // Create container for screenshot
+            // Check user role first
+            const { data: userRole, error: roleError } = await supabase
+                .from('users')
+                .select('role')
+                .eq('id', currentUser.id)
+                .single();
+            
+            if (roleError) throw roleError;
+            if (userRole?.role === 'doorman') {
+                alert('Access denied. You do not have permission to download statistics.');
+                return;
+            }
+    
+            // Create a container for the screenshot with proper styling
             const container = document.createElement('div');
             container.style.cssText = `
                 background: #2a0e3a;
-                padding: 12px;
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
+                padding: 16px;
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+                width: 100%;
+                max-width: 600px;
                 position: fixed;
                 left: -9999px;
                 top: 0;
-                width: 300px;
             `;
-
-            // Define card selectors in order
+    
+            // Define the 7 stats cards we want to capture in order
             const cardSelectors = [
-                '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(1)',  // Total Registrations
-                '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(2)',  // Verified Entries
-                '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(3)',  // Pending Entries
-                '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(4)',  // Total Revenue
-                '#stats .grid.grid-cols-1.sm\\:grid-cols-2 > div:nth-child(1)',                    // Registration Revenue
-                '#stats .grid.grid-cols-1.sm\\:grid-cols-2 > div:nth-child(2)',                    // Room Booking Revenue
-                '#stats > div.bg-pink-200.rounded-lg.p-4'                                           // Total PAX
+                '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(1)', // Total Registrations
+                '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(2)', // Verified Entries
+                '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(3)', // Pending Entries
+                '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(4)', // Total Revenue
+                '#stats .grid.grid-cols-1.sm\\:grid-cols-2 > div:nth-child(1)', // Registration Revenue
+                '#stats .grid.grid-cols-1.sm\\:grid-cols-2 > div:nth-child(2)', // Room Booking Revenue
+                '#stats > div.bg-pink-200.rounded-lg.p-4' // Total PAX
             ];
-
-            // Find and clone each card using exact selectors
+    
+            // Clone and style each card
             cardSelectors.forEach(selector => {
-                const card = document.querySelector(selector);
-                if (!card) throw new Error(`Could not find card: ${selector}`);
-                const clone = card.cloneNode(true);
+                const originalCard = document.querySelector(selector);
+                if (!originalCard) return;
+    
+                const clone = originalCard.cloneNode(true);
                 
-                // Style the card container
+                // Apply mobile-friendly styling
                 clone.style.cssText = `
                     margin: 0;
+                    padding: 12px;
+                    border-radius: 8px;
                     width: 100%;
-                    border-radius: 6px;
-                    padding: 8px;
+                    height: auto;
+                    min-height: 0;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
                 `;
-
+    
                 // Style the heading
                 const heading = clone.querySelector('h3');
                 if (heading) {
                     heading.style.cssText = `
                         font-size: 14px;
-                        margin-bottom: 4px;
+                        margin-bottom: 8px;
                         font-weight: bold;
+                        text-align: center;
                     `;
                 }
-
+    
                 // Style the value
                 const value = clone.querySelector('p');
                 if (value) {
                     value.style.cssText = `
-                        font-size: 20px;
+                        font-size: 18px;
                         font-weight: bold;
                         margin: 0;
+                        text-align: center;
                     `;
                 }
-
+    
+                // Special handling for the Total PAX card which has different structure
+                if (selector.includes('bg-pink-200')) {
+                    const heading = clone.querySelector('h3');
+                    const value = clone.querySelector('p');
+                    
+                    if (heading) {
+                        heading.style.cssText = `
+                            font-size: 14px;
+                            margin-bottom: 8px;
+                            font-weight: bold;
+                            text-align: center;
+                        `;
+                    }
+                    
+                    if (value) {
+                        value.style.cssText = `
+                            font-size: 18px;
+                            font-weight: bold;
+                            margin: 0;
+                            text-align: center;
+                        `;
+                    }
+                    
+                    // Make this card span both columns
+                    clone.style.gridColumn = '1 / -1';
+                    clone.style.padding = '12px';
+                }
+    
                 container.appendChild(clone);
             });
-
+    
+            // Add title to the screenshot
+            const title = document.createElement('div');
+            title.style.cssText = `
+                grid-column: 1 / -1;
+                text-align: center;
+                font-size: 18px;
+                font-weight: bold;
+                margin-bottom: 12px;
+                color: white;
+            `;
+            title.textContent = 'KOCHIN HANGOVER - Event Statistics';
+            container.insertBefore(title, container.firstChild);
+    
             document.body.appendChild(container);
-
-            // Take screenshot
+    
+            // Take screenshot with proper scaling for mobile
             const canvas = await html2canvas(container, {
                 backgroundColor: '#2a0e3a',
                 scale: 2,
                 width: container.offsetWidth,
-                height: container.offsetHeight
+                height: container.offsetHeight,
+                logging: false,
+                useCORS: true
             });
-
+    
             document.body.removeChild(container);
-
+    
             // Download the image
             canvas.toBlob(blob => {
                 const url = URL.createObjectURL(blob);
@@ -1482,13 +1550,13 @@ function setupEventListeners() {
                 a.download = 'kochin-stats.png';
                 a.click();
                 URL.revokeObjectURL(url);
-            }, 'image/png');
-
+            }, 'image/png', 0.9);
+    
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Error creating stats screenshot:', error);
             alert('Could not save stats. Please try again.');
         }
-    });
+    }
 
     // Individual navigation buttons (for backward compatibility)
     document.getElementById('newRegistrationBtn')?.addEventListener('click', () => showTab('registration'));
