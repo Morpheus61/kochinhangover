@@ -1400,44 +1400,49 @@ function setupEventListeners() {
     // Stats screenshot button
     document.getElementById('downloadStatsImageBtn')?.addEventListener('click', async () => {
         try {
-            const statsCards = document.querySelectorAll('#stats .grid > div');
-            if (!statsCards.length) {
-                throw new Error('Stats cards not found');
+            const statsContainer = document.querySelector('#stats .grid');
+            if (!statsContainer) {
+                throw new Error('Stats container not found');
             }
 
-            // Create a temporary container for all cards
-            const container = document.createElement('div');
-            container.style.cssText = 'background-color: #2a0e3a; padding: 20px; display: flex; flex-direction: column; gap: 12px; width: fit-content;';
-            document.body.appendChild(container);
+            // Store original styles
+            const originalStyle = statsContainer.style.cssText;
+            const originalWidth = statsContainer.style.width;
+            const originalDisplay = statsContainer.style.display;
 
-            // Clone all cards into the temporary container
-            statsCards.forEach(card => {
-                const clone = card.cloneNode(true);
-                clone.style.margin = '0';
-                container.appendChild(clone);
-            });
+            // Set styles for screenshot
+            statsContainer.style.width = 'fit-content';
+            statsContainer.style.display = 'grid';
+            statsContainer.style.gap = '12px';
+            statsContainer.style.padding = '20px';
+            statsContainer.style.backgroundColor = '#2a0e3a';
+            statsContainer.style.borderRadius = '8px';
 
-            const canvas = await html2canvas(container, {
+            const canvas = await html2canvas(statsContainer, {
                 backgroundColor: '#2a0e3a',
                 scale: 2,
                 useCORS: true,
-                logging: false
+                logging: false,
+                width: statsContainer.offsetWidth,
+                height: statsContainer.offsetHeight
             });
 
-            // Clean up temporary container
-            document.body.removeChild(container);
+            // Restore original styles
+            statsContainer.style.cssText = originalStyle;
+            statsContainer.style.width = originalWidth;
+            statsContainer.style.display = originalDisplay;
 
             canvas.toBlob((blob) => {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'kochin-stats-cards.png';
+                a.download = 'kochin-stats.png';
                 a.click();
                 URL.revokeObjectURL(url);
             }, 'image/png');
         } catch (error) {
-            console.error('Error creating screenshot:', error);
-            alert('Error creating screenshot');
+            console.error('Error saving stats:', error);
+            alert('Error saving stats');
         }
     });
 
