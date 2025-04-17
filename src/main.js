@@ -1398,165 +1398,144 @@ function setupEventListeners() {
     });
 
     // Stats screenshot button
-    document.getElementById('downloadStatsImageBtn')?.addEventListener('click', downloadStatsImage);
+ // Replace the existing stats screenshot code with this version
+async function downloadStatsImage() {
+    try {
+        // Check user permissions
+        const { data: userRole } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', currentUser.id)
+            .single();
 
-    // Then add this separate function (can be placed anywhere in your main.js file):
-    async function downloadStatsImage() {
-        try {
-            // Check user role first
-            const { data: userRole, error: roleError } = await supabase
-                .from('users')
-                .select('role')
-                .eq('id', currentUser.id)
-                .single();
-            
-            if (roleError) throw roleError;
-            if (userRole?.role === 'doorman') {
-                alert('Access denied. You do not have permission to download statistics.');
+        if (userRole?.role === 'doorman') {
+            alert('Access denied. You do not have permission to download statistics.');
+            return;
+        }
+
+        // Create optimized container for screenshot
+        const container = document.createElement('div');
+        container.style.cssText = `
+            background: #2a0e3a;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 600px;
+            position: fixed;
+            left: -9999px;
+            top: 0;
+        `;
+
+        // Precise selectors for all 7 cards in correct order
+        const cardData = [
+            { selector: '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(1)', title: 'Total Registrations' },
+            { selector: '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(2)', title: 'Verified Entries' },
+            { selector: '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(3)', title: 'Pending Entries' },
+            { selector: '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(4)', title: 'Total Revenue' },
+            { selector: '#stats .grid.grid-cols-1.sm\\:grid-cols-2 > div:nth-child(1)', title: 'Registration Revenue' },
+            { selector: '#stats .grid.grid-cols-1.sm\\:grid-cols-2 > div:nth-child(2)', title: 'Room Booking Revenue' },
+            { selector: '#stats > div.bg-pink-200.rounded-lg.p-4', title: 'Total PAX', fullWidth: true }
+        ];
+
+        // Process each card
+        cardData.forEach(({selector, title, fullWidth}) => {
+            const card = document.querySelector(selector);
+            if (!card) {
+                console.warn(`Card not found: ${title}`);
                 return;
             }
-    
-            // Create a container for the screenshot with proper styling
-            const container = document.createElement('div');
-            container.style.cssText = `
-                background: #2a0e3a;
-                padding: 16px;
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 12px;
+
+            const clone = card.cloneNode(true);
+            
+            // Standardize card styling
+            clone.style.cssText = `
+                margin: 0;
+                padding: 15px;
+                border-radius: 10px;
                 width: 100%;
-                max-width: 600px;
-                position: fixed;
-                left: -9999px;
-                top: 0;
-            `;
-    
-            // Define the 7 stats cards we want to capture in order
-            const cardSelectors = [
-                '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(1)', // Total Registrations
-                '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(2)', // Verified Entries
-                '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(3)', // Pending Entries
-                '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(4)', // Total Revenue
-                '#stats .grid.grid-cols-1.sm\\:grid-cols-2 > div:nth-child(1)', // Registration Revenue
-                '#stats .grid.grid-cols-1.sm\\:grid-cols-2 > div:nth-child(2)', // Room Booking Revenue
-                '#stats > div.bg-pink-200.rounded-lg.p-4' // Total PAX
-            ];
-    
-            // Clone and style each card
-            cardSelectors.forEach(selector => {
-                const originalCard = document.querySelector(selector);
-                if (!originalCard) return;
-    
-                const clone = originalCard.cloneNode(true);
-                
-                // Apply mobile-friendly styling
-                clone.style.cssText = `
-                    margin: 0;
-                    padding: 12px;
-                    border-radius: 8px;
-                    width: 100%;
-                    height: auto;
-                    min-height: 0;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                `;
-    
-                // Style the heading
-                const heading = clone.querySelector('h3');
-                if (heading) {
-                    heading.style.cssText = `
-                        font-size: 14px;
-                        margin-bottom: 8px;
-                        font-weight: bold;
-                        text-align: center;
-                    `;
-                }
-    
-                // Style the value
-                const value = clone.querySelector('p');
-                if (value) {
-                    value.style.cssText = `
-                        font-size: 18px;
-                        font-weight: bold;
-                        margin: 0;
-                        text-align: center;
-                    `;
-                }
-    
-                // Special handling for the Total PAX card which has different structure
-                if (selector.includes('bg-pink-200')) {
-                    const heading = clone.querySelector('h3');
-                    const value = clone.querySelector('p');
-                    
-                    if (heading) {
-                        heading.style.cssText = `
-                            font-size: 14px;
-                            margin-bottom: 8px;
-                            font-weight: bold;
-                            text-align: center;
-                        `;
-                    }
-                    
-                    if (value) {
-                        value.style.cssText = `
-                            font-size: 18px;
-                            font-weight: bold;
-                            margin: 0;
-                            text-align: center;
-                        `;
-                    }
-                    
-                    // Make this card span both columns
-                    clone.style.gridColumn = '1 / -1';
-                    clone.style.padding = '12px';
-                }
-    
-                container.appendChild(clone);
-            });
-    
-            // Add title to the screenshot
-            const title = document.createElement('div');
-            title.style.cssText = `
-                grid-column: 1 / -1;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
                 text-align: center;
-                font-size: 18px;
-                font-weight: bold;
-                margin-bottom: 12px;
-                color: white;
             `;
-            title.textContent = 'KOCHIN HANGOVER - Event Statistics';
-            container.insertBefore(title, container.firstChild);
-    
-            document.body.appendChild(container);
-    
-            // Take screenshot with proper scaling for mobile
-            const canvas = await html2canvas(container, {
-                backgroundColor: '#2a0e3a',
-                scale: 2,
-                width: container.offsetWidth,
-                height: container.offsetHeight,
-                logging: false,
-                useCORS: true
-            });
-    
-            document.body.removeChild(container);
-    
-            // Download the image
-            canvas.toBlob(blob => {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'kochin-stats.png';
-                a.click();
-                URL.revokeObjectURL(url);
-            }, 'image/png', 0.9);
-    
-        } catch (error) {
-            console.error('Error creating stats screenshot:', error);
-            alert('Could not save stats. Please try again.');
-        }
+
+            // Make full-width if specified (for Total PAX)
+            if (fullWidth) {
+                clone.style.gridColumn = '1 / -1';
+            }
+
+            // Standardize text styling
+            const heading = clone.querySelector('h3');
+            const value = clone.querySelector('p');
+            
+            if (heading) {
+                heading.style.cssText = `
+                    font-size: 16px;
+                    margin: 0 0 8px 0;
+                    font-weight: bold;
+                    color: inherit;
+                `;
+            }
+            
+            if (value) {
+                value.style.cssText = `
+                    font-size: 24px;
+                    font-weight: bold;
+                    margin: 0;
+                    color: inherit;
+                `;
+            }
+
+            container.appendChild(clone);
+        });
+
+        // Add header
+        const header = document.createElement('h2');
+        header.textContent = 'KOCHIN HANGOVER STATISTICS';
+        header.style.cssText = `
+            grid-column: 1 / -1;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0 0 15px 0;
+            color: #e83283;
+        `;
+        container.insertBefore(header, container.firstChild);
+
+        document.body.appendChild(container);
+
+        // Generate screenshot
+        const canvas = await html2canvas(container, {
+            backgroundColor: '#2a0e3a',
+            scale: 2,
+            logging: false,
+            useCORS: true
+        });
+
+        // Clean up
+        document.body.removeChild(container);
+
+        // Trigger download
+        canvas.toBlob(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `kochin-stats-${new Date().toISOString().slice(0,10)}.png`;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+        }, 'image/png', 0.95);
+
+    } catch (error) {
+        console.error('Failed to generate stats image:', error);
+        alert('Failed to save statistics. Please try again.');
     }
+}
+
+// Update event listener
+document.getElementById('downloadStatsImageBtn')?.addEventListener('click', downloadStatsImage);
 
     // Individual navigation buttons (for backward compatibility)
     document.getElementById('newRegistrationBtn')?.addEventListener('click', () => showTab('registration'));
