@@ -1400,56 +1400,58 @@ function setupEventListeners() {
     // Stats screenshot button
     document.getElementById('downloadStatsImageBtn')?.addEventListener('click', async () => {
         try {
-            // Get only the stats cards container (before the club-wise stats table)
-            const cardsContainer = document.querySelector('#stats .grid:first-of-type');
-            if (!cardsContainer) {
-                throw new Error('Stats cards not found');
-            }
+            const statsContainer = document.querySelector('#stats');
+            if (!statsContainer) throw new Error('Stats section not found');
 
-            // Create a temporary container for clean screenshot
-            const tempContainer = document.createElement('div');
-            tempContainer.style.cssText = 'background-color: #2a0e3a; padding: 20px; width: fit-content; position: absolute; left: -9999px; top: 0;';
-            document.body.appendChild(tempContainer);
+            // Get all stat cards (excluding the club-wise stats table)
+            const cards = statsContainer.querySelectorAll('.grid > div');
+            if (!cards.length) throw new Error('No stats cards found');
 
-            // Clone the cards container and its contents
-            const clone = cardsContainer.cloneNode(true);
-            clone.style.cssText = 'display: grid; grid-template-columns: 1fr; gap: 12px; width: 400px;';
-            tempContainer.appendChild(clone);
+            // Create container for screenshot
+            const container = document.createElement('div');
+            container.style.cssText = `
+                background: #2a0e3a;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                position: fixed;
+                left: -9999px;
+                top: 0;
+            `;
 
-            // Wait for the next frame to ensure everything is rendered
-            await new Promise(resolve => requestAnimationFrame(resolve));
+            // Add each card to the container
+            cards.forEach(card => {
+                const clone = card.cloneNode(true);
+                clone.style.margin = '0';
+                container.appendChild(clone);
+            });
 
-            const canvas = await html2canvas(tempContainer, {
+            document.body.appendChild(container);
+
+            // Take screenshot
+            const canvas = await html2canvas(container, {
                 backgroundColor: '#2a0e3a',
                 scale: 2,
-                useCORS: true,
-                logging: false,
-                allowTaint: true,
-                foreignObjectRendering: true,
-                removeContainer: true
+                width: container.offsetWidth,
+                height: container.offsetHeight
             });
 
-            // Clean up
-            document.body.removeChild(tempContainer);
+            document.body.removeChild(container);
 
-            // Convert to blob and download
-            const blob = await new Promise(resolve => {
-                canvas.toBlob(resolve, 'image/png', 1.0);
-            });
+            // Download the image
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'kochin-stats.png';
+                a.click();
+                URL.revokeObjectURL(url);
+            }, 'image/png');
 
-            if (!blob) {
-                throw new Error('Failed to create image');
-            }
-
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'kochin-stats.png';
-            a.click();
-            URL.revokeObjectURL(url);
         } catch (error) {
-            console.error('Error saving stats:', error);
-            alert('Error saving stats');
+            console.error('Error:', error);
+            alert('Could not save stats. Please try again.');
         }
     });
 
