@@ -2310,11 +2310,38 @@ async function downloadStatsImage() {
         // Get the stats container
         const statsContainer = document.querySelector('#stats');
         
-        // Use html2canvas to create an image
-        const canvas = await html2canvas(statsContainer, {
-            backgroundColor: '#2a0e3a', // Match the dark theme
-            scale: 2 // Better quality
+        // Create a clone of the stats container to modify for image capture
+        const clonedStats = statsContainer.cloneNode(true);
+        clonedStats.style.position = 'absolute';
+        clonedStats.style.left = '-9999px';
+        document.body.appendChild(clonedStats);
+
+        // Ensure proper text rendering
+        const titles = clonedStats.querySelectorAll('h3');
+        titles.forEach(title => {
+            // Ensure proper word spacing
+            title.style.wordSpacing = 'normal';
+            title.style.whiteSpace = 'normal';
+            title.style.fontSize = '14px';
         });
+
+        const values = clonedStats.querySelectorAll('p');
+        values.forEach(value => {
+            value.style.fontSize = '30px';
+            value.style.lineHeight = '1.2';
+        });
+
+        // Use html2canvas to create an image
+        const canvas = await html2canvas(clonedStats, {
+            backgroundColor: '#2a0e3a', // Match the dark theme
+            scale: 2, // Better quality
+            logging: false,
+            letterRendering: true,
+            useCORS: true
+        });
+
+        // Clean up
+        document.body.removeChild(clonedStats);
         
         // Convert to blob
         canvas.toBlob((blob) => {
