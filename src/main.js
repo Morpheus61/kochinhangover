@@ -112,7 +112,7 @@ async function setupNavigation() {
             userRoleDisplay.classList.add('bg-blue-600');
             userRoleDisplay.classList.remove('bg-purple-700', 'bg-green-600');
         } else if (isDoorman) {
-            userRoleDisplay.textContent = 'Logged in as Entry Checker';
+            userRoleDisplay.textContent = 'Logged in as Entry Check';
             userRoleDisplay.classList.add('bg-green-600');
             userRoleDisplay.classList.remove('bg-purple-700', 'bg-blue-600');
         }
@@ -151,7 +151,6 @@ async function setupNavigation() {
     // Staff (Committee Member): Access to Registration, Guests and Stats
     else if (isStaff) {
         // Show registration, guests and stats buttons
-        document.getElementById('newRegistrationBtn')?.classList.remove('hidden');
         document.getElementById('guestListBtn')?.classList.remove('hidden');
         document.getElementById('statsBtn')?.classList.remove('hidden');
         
@@ -189,7 +188,7 @@ async function showTab(tabId) {
     const isDoorman = userRole?.role === 'doorman';
 
     // Role-based access control for tabs
-    if (isStaff && !['registration', 'guests', 'stats'].includes(tabId)) {
+    if (isStaff && !['guests', 'stats'].includes(tabId)) {
         // Staff/Committee can access registration, guests and stats tabs
         tabId = 'guests';
     } else if (isDoorman && !['verification', 'guests'].includes(tabId)) {
