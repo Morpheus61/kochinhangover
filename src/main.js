@@ -699,59 +699,76 @@ async function editGuest(guestId) {
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 flex items-start justify-center z-50 bg-black bg-opacity-75 overflow-y-auto py-8';
         modal.innerHTML = `
-            <div class="kochin-container p-6 max-w-md mx-auto">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold kochin-header">Edit Guest</h3>
+            <div class="bg-[#2a0e3a] p-6 rounded-lg max-w-md w-full mx-4 my-8 shadow-xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-white">Edit Guest</h3>
                     <button class="text-gray-300 hover:text-white close-modal-btn">
-                        <i class="fas fa-times"></i>
+                        <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
                 
                 <form id="editGuestForm" class="space-y-4">
-                    <div class="form-group">
-                        <label for="editGuestName">Guest Name</label>
-                        <input type="text" id="editGuestName" class="form-control" value="${guest.guest_name || ''}" required>
+                    <div class="grid grid-cols-4 gap-4 items-center">
+                        <label for="editGuestName" class="text-white col-span-1">Guest Name</label>
+                        <input type="text" id="editGuestName" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2" 
+                               value="${guest.guest_name || ''}" required>
                     </div>
-                    <div class="form-group">
-                        <label for="editClubName">Club Name</label>
-                        <input type="text" id="editClubName" class="form-control" value="${guest.club_name || ''}">
+                    
+                    <div class="grid grid-cols-4 gap-4 items-center">
+                        <label for="editClubName" class="text-white col-span-1">Club Name</label>
+                        <input type="text" id="editClubName" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2" 
+                               value="${guest.club_name || ''}">
                     </div>
-                    <div class="form-group">
-                        <label for="editMobileNumber">Mobile Number</label>
-                        <input type="tel" id="editMobileNumber" class="form-control" value="${guest.mobile_number || ''}" required>
+                    
+                    <div class="grid grid-cols-4 gap-4 items-center">
+                        <label for="editMobileNumber" class="text-white col-span-1">Mobile Number</label>
+                        <input type="tel" id="editMobileNumber" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2" 
+                               value="${guest.mobile_number || ''}" required>
                     </div>
-                    <div class="form-group">
-                        <label for="editEntryType">Entry Type</label>
-                        <select id="editEntryType" class="form-control" required>
+                    
+                    <div class="grid grid-cols-4 gap-4 items-center">
+                        <label for="editEntryType" class="text-white col-span-1">Entry Type</label>
+                        <select id="editEntryType" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2" required>
                             <option value="stag" ${guest.entry_type === 'stag' ? 'selected' : ''}>Stag</option>
                             <option value="couple" ${guest.entry_type === 'couple' ? 'selected' : ''}>Couple</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label for="editPaymentMode">Payment Mode</label>
-                        <select id="editPaymentMode" class="form-control" required>
+                    
+                    <div class="grid grid-cols-4 gap-4 items-center">
+                        <label for="editPaymentMode" class="text-white col-span-1">Payment Mode</label>
+                        <select id="editPaymentMode" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2" required>
                             <option value="full_payment" ${guest.payment_mode === 'full_payment' ? 'selected' : ''}>Full Payment</option>
                             <option value="partial_payment" ${guest.payment_mode === 'partial_payment' ? 'selected' : ''}>Partial Payment</option>
                         </select>
                     </div>
-                    <div id="editPartialPaymentContainer" class="form-group" style="display: ${guest.payment_mode === 'partial_payment' ? 'block' : 'none'}">
-                        <label for="editPaidAmount">Paid Amount</label>
-                        <input type="number" id="editPaidAmount" class="form-control" value="${guest.paid_amount || 0}">
+                    
+                    <div id="editPartialPaymentContainer" class="grid grid-cols-4 gap-4 items-center" style="display: ${guest.payment_mode === 'partial_payment' ? 'grid' : 'none'}">
+                        <label for="editPaidAmount" class="text-white col-span-1">Paid Amount</label>
+                        <input type="number" id="editPaidAmount" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2" 
+                               value="${guest.paid_amount || 0}">
                     </div>
-                    <div class="form-group">
-                        <label for="editHasRoomBooking">Room Booking</label>
-                        <select id="editHasRoomBooking" class="form-control" required>
+                    
+                    <div class="grid grid-cols-4 gap-4 items-center">
+                        <label for="editHasRoomBooking" class="text-white col-span-1">Room Booking</label>
+                        <select id="editHasRoomBooking" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2" required>
                             <option value="false" ${!guest.has_room_booking ? 'selected' : ''}>No</option>
                             <option value="true" ${guest.has_room_booking ? 'selected' : ''}>Yes</option>
                         </select>
                     </div>
-                    <div id="editRoomBookingContainer" class="form-group" style="display: ${guest.has_room_booking ? 'block' : 'none'}">
-                        <label for="editRoomBookingAmount">Room Booking Amount</label>
-                        <input type="number" id="editRoomBookingAmount" class="form-control" value="${guest.room_booking_amount || 0}">
+                    
+                    <div id="editRoomBookingContainer" class="grid grid-cols-4 gap-4 items-center" style="display: ${guest.has_room_booking ? 'grid' : 'none'}">
+                        <label for="editRoomBookingAmount" class="text-white col-span-1">Room Booking Amount</label>
+                        <input type="number" id="editRoomBookingAmount" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2" 
+                               value="${guest.room_booking_amount || ''}">
                     </div>
-                    <div class="flex space-x-3">
-                        <button type="button" id="saveGuestBtn" class="kochin-button flex-1">Save</button>
-                        <button type="button" class="kochin-button flex-1 bg-gray-600 close-modal-btn">Cancel</button>
+                    
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button type="button" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 close-modal-btn">
+                            Cancel
+                        </button>
+                        <button type="button" id="saveGuestBtn" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+                            Save
+                        </button>
                     </div>
                 </form>
             </div>
@@ -760,23 +777,26 @@ async function editGuest(guestId) {
         document.body.appendChild(modal);
         
         // Close modal handler
-        modal.querySelector('.close-modal-btn').addEventListener('click', () => {
-            document.body.removeChild(modal);
+        const closeButtons = modal.querySelectorAll('.close-modal-btn');
+        closeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
         });
         
         // Show/hide partial payment field
         document.getElementById('editPaymentMode').addEventListener('change', function() {
             document.getElementById('editPartialPaymentContainer').style.display = 
-                this.value === 'partial_payment' ? 'block' : 'none';
+                this.value === 'partial_payment' ? 'grid' : 'none';
         });
         
         // Show/hide room booking amount field
         document.getElementById('editHasRoomBooking').addEventListener('change', function() {
             document.getElementById('editRoomBookingContainer').style.display = 
-                this.value === 'true' ? 'block' : 'none';
+                this.value === 'true' ? 'grid' : 'none';
         });
         
-        // Modified save button handler
+        // Save button handler with all fixes
         document.getElementById('saveGuestBtn').addEventListener('click', async () => {
             // Get form values
             const guestName = document.getElementById('editGuestName').value.trim();
@@ -785,7 +805,8 @@ async function editGuest(guestId) {
             const entryType = document.getElementById('editEntryType').value;
             const paymentMode = document.getElementById('editPaymentMode').value;
             const hasRoomBooking = document.getElementById('editHasRoomBooking').value === 'true';
-            const roomBookingAmount = hasRoomBooking ? (parseFloat(document.getElementById('editRoomBookingAmount').value) || 0) : 0;
+            const roomBookingAmountInput = document.getElementById('editRoomBookingAmount').value.trim();
+            const roomBookingAmount = hasRoomBooking ? parseFloat(roomBookingAmountInput) || 0 : 0;
             
             // Validate inputs
             if (!guestName) {
@@ -802,8 +823,9 @@ async function editGuest(guestId) {
             const expectedAmount = entryType === 'stag' ? 2750 : 4750;
             let paidAmount;
             
-            if (paymentMode.includes('partial_payment')) {
-                paidAmount = parseFloat(document.getElementById('editPaidAmount').value) || 0;
+            if (paymentMode === 'partial_payment') {
+                const paidAmountInput = document.getElementById('editPaidAmount').value.trim();
+                paidAmount = parseFloat(paidAmountInput) || 0;
                 if (paidAmount < 0 || paidAmount >= expectedAmount) {
                     alert(`Partial payment must be between 0 and ${expectedAmount - 1}`);
                     return;
@@ -812,8 +834,8 @@ async function editGuest(guestId) {
                 paidAmount = expectedAmount;
             }
             
-            if (hasRoomBooking && roomBookingAmount < 0) {
-                alert('Room booking amount cannot be negative');
+            if (hasRoomBooking && (isNaN(roomBookingAmount) || roomBookingAmount < 0)) {
+                alert('Please enter a valid room booking amount');
                 return;
             }
             
@@ -828,7 +850,7 @@ async function editGuest(guestId) {
                     finalStatus = 'pending';
                 }
                 
-                // Update guest data
+                // Prepare update data
                 const updateData = {
                     guest_name: guestName,
                     club_name: clubName,
@@ -838,18 +860,16 @@ async function editGuest(guestId) {
                     payment_mode: paymentMode,
                     paid_amount: paidAmount,
                     has_room_booking: hasRoomBooking,
-                    total_amount: expectedAmount
+                    total_amount: expectedAmount,
+                    room_booking_amount: hasRoomBooking ? roomBookingAmount : null
                 };
                 
-                if (hasRoomBooking) {
-                    updateData.room_booking_amount = roomBookingAmount;
-                }
-                
                 // Perform update
-                const { error: updateError } = await supabase
+                const { data: updatedGuest, error: updateError } = await supabase
                     .from('guests')
                     .update(updateData)
-                    .eq('id', guestId);
+                    .eq('id', guestId)
+                    .select();
                 
                 if (updateError) throw updateError;
                 
