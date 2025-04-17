@@ -1403,10 +1403,6 @@ function setupEventListeners() {
             const statsContainer = document.querySelector('#stats');
             if (!statsContainer) throw new Error('Stats section not found');
 
-            // Get all stat cards (excluding the club-wise stats table)
-            const cards = statsContainer.querySelectorAll('.grid > div');
-            if (!cards.length) throw new Error('No stats cards found');
-
             // Create container for screenshot
             const container = document.createElement('div');
             container.style.cssText = `
@@ -1420,12 +1416,33 @@ function setupEventListeners() {
                 top: 0;
             `;
 
-            // Add each card to the container
-            cards.forEach(card => {
+            // Get all stat cards from both grid containers and the single card
+            const firstGridCards = statsContainer.querySelector('.grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4');
+            const secondGridCards = statsContainer.querySelector('.grid.grid-cols-1.sm\\:grid-cols-2');
+            const paxCard = statsContainer.querySelector('.bg-pink-200.rounded-lg.p-4');
+
+            if (!firstGridCards || !secondGridCards || !paxCard) {
+                throw new Error('Could not find all stats cards');
+            }
+
+            // Clone first grid cards (4 cards)
+            Array.from(firstGridCards.children).forEach(card => {
                 const clone = card.cloneNode(true);
                 clone.style.margin = '0';
                 container.appendChild(clone);
             });
+
+            // Clone second grid cards (2 cards)
+            Array.from(secondGridCards.children).forEach(card => {
+                const clone = card.cloneNode(true);
+                clone.style.margin = '0';
+                container.appendChild(clone);
+            });
+
+            // Clone the PAX card
+            const paxClone = paxCard.cloneNode(true);
+            paxClone.style.margin = '0';
+            container.appendChild(paxClone);
 
             document.body.appendChild(container);
 
