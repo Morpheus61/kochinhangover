@@ -1400,28 +1400,33 @@ function setupEventListeners() {
     // Stats screenshot button
     document.getElementById('downloadStatsImageBtn')?.addEventListener('click', async () => {
         try {
-            const statsCards = document.querySelector('#stats .grid');
-            if (!statsCards) {
-                throw new Error('Stats cards container not found');
+            const statsCards = document.querySelectorAll('#stats .grid > div');
+            if (!statsCards.length) {
+                throw new Error('Stats cards not found');
             }
 
-            // Temporarily modify styles for clean screenshot
-            const originalStyle = statsCards.style.cssText;
-            statsCards.style.backgroundColor = '#2a0e3a';
-            statsCards.style.padding = '20px';
-            statsCards.style.borderRadius = '10px';
-            
-            const canvas = await html2canvas(statsCards, {
-                backgroundColor: '#2a0e3a',
-                scale: 2, // Better quality
-                useCORS: true,
-                logging: false,
-                removeContainer: false
+            // Create a temporary container for all cards
+            const container = document.createElement('div');
+            container.style.cssText = 'background-color: #2a0e3a; padding: 20px; display: flex; flex-direction: column; gap: 12px; width: fit-content;';
+            document.body.appendChild(container);
+
+            // Clone all cards into the temporary container
+            statsCards.forEach(card => {
+                const clone = card.cloneNode(true);
+                clone.style.margin = '0';
+                container.appendChild(clone);
             });
-            
-            // Restore original styles
-            statsCards.style.cssText = originalStyle;
-            
+
+            const canvas = await html2canvas(container, {
+                backgroundColor: '#2a0e3a',
+                scale: 2,
+                useCORS: true,
+                logging: false
+            });
+
+            // Clean up temporary container
+            document.body.removeChild(container);
+
             canvas.toBlob((blob) => {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
