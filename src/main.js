@@ -1400,9 +1400,6 @@ function setupEventListeners() {
     // Stats screenshot button
     document.getElementById('downloadStatsImageBtn')?.addEventListener('click', async () => {
         try {
-            const statsContainer = document.querySelector('#stats');
-            if (!statsContainer) throw new Error('Stats section not found');
-
             // Create container for screenshot
             const container = document.createElement('div');
             container.style.cssText = `
@@ -1417,21 +1414,21 @@ function setupEventListeners() {
                 width: 300px;
             `;
 
-            // Define IDs of the cards in the order we want them
-            const cardIds = [
-                'totalRegistrations',    // Total Registrations
-                'verifiedEntries',       // Verified Entries
-                'pendingEntries',        // Pending Entries
-                'totalRevenue',          // Total Revenue
-                'registrationRevenue',   // Registration Revenue
-                'roomBookingRevenue',    // Room Booking Revenue
-                'totalPax'               // Total PAX (Headcount)
+            // Define card selectors in order
+            const cardSelectors = [
+                '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(1)',  // Total Registrations
+                '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(2)',  // Verified Entries
+                '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(3)',  // Pending Entries
+                '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(4)',  // Total Revenue
+                '#stats .grid.grid-cols-1.sm\\:grid-cols-2 > div:nth-child(1)',                    // Registration Revenue
+                '#stats .grid.grid-cols-1.sm\\:grid-cols-2 > div:nth-child(2)',                    // Room Booking Revenue
+                '#stats > div.bg-pink-200.rounded-lg.p-4'                                           // Total PAX
             ];
 
-            // Find and clone each card by looking for its ID in parent div
-            cardIds.forEach(id => {
-                const card = statsContainer.querySelector(`div:has(#${id})`);
-                if (!card) throw new Error(`Could not find card for ${id}`);
+            // Find and clone each card using exact selectors
+            cardSelectors.forEach(selector => {
+                const card = document.querySelector(selector);
+                if (!card) throw new Error(`Could not find card: ${selector}`);
                 const clone = card.cloneNode(true);
                 
                 // Style the card container
