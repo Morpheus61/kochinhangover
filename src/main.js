@@ -1400,37 +1400,31 @@ function setupEventListeners() {
     // Stats screenshot button
     document.getElementById('downloadStatsImageBtn')?.addEventListener('click', async () => {
         try {
-            const statsContainer = document.querySelector('#stats .grid');
-            if (!statsContainer) {
-                throw new Error('Stats container not found');
+            // Get only the stats cards container (before the club-wise stats table)
+            const cardsContainer = document.querySelector('#stats .grid:first-of-type');
+            if (!cardsContainer) {
+                throw new Error('Stats cards not found');
             }
 
-            // Store original styles
-            const originalStyle = statsContainer.style.cssText;
-            const originalWidth = statsContainer.style.width;
-            const originalDisplay = statsContainer.style.display;
+            // Create a temporary container for clean screenshot
+            const tempContainer = document.createElement('div');
+            tempContainer.style.cssText = 'background-color: #2a0e3a; padding: 20px; width: fit-content; position: fixed; left: -9999px;';
+            document.body.appendChild(tempContainer);
 
-            // Set styles for screenshot
-            statsContainer.style.width = 'fit-content';
-            statsContainer.style.display = 'grid';
-            statsContainer.style.gap = '12px';
-            statsContainer.style.padding = '20px';
-            statsContainer.style.backgroundColor = '#2a0e3a';
-            statsContainer.style.borderRadius = '8px';
+            // Clone the cards container
+            const clone = cardsContainer.cloneNode(true);
+            clone.style.cssText = 'display: grid; grid-template-columns: 1fr; gap: 12px; width: fit-content;';
+            tempContainer.appendChild(clone);
 
-            const canvas = await html2canvas(statsContainer, {
+            const canvas = await html2canvas(tempContainer, {
                 backgroundColor: '#2a0e3a',
                 scale: 2,
                 useCORS: true,
-                logging: false,
-                width: statsContainer.offsetWidth,
-                height: statsContainer.offsetHeight
+                logging: false
             });
 
-            // Restore original styles
-            statsContainer.style.cssText = originalStyle;
-            statsContainer.style.width = originalWidth;
-            statsContainer.style.display = originalDisplay;
+            // Clean up
+            document.body.removeChild(tempContainer);
 
             canvas.toBlob((blob) => {
                 const url = URL.createObjectURL(blob);
