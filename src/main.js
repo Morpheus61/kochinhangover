@@ -2310,34 +2310,66 @@ async function downloadStatsImage() {
         // Get the stats container
         const statsContainer = document.querySelector('#stats');
         
-        // Create a clone of the stats container to modify for image capture
+        // Create a clone of the stats container
         const clonedStats = statsContainer.cloneNode(true);
+        
+        // Remove buttons and table from clone
+        const buttons = clonedStats.querySelector('.flex.flex-wrap');
+        if (buttons) buttons.remove();
+        const table = clonedStats.querySelector('.overflow-x-auto');
+        if (table) table.remove();
+
+        // Style the clone for capture
         clonedStats.style.position = 'absolute';
         clonedStats.style.left = '-9999px';
+        clonedStats.style.padding = '20px';
+        clonedStats.style.width = '400px';
+        clonedStats.style.backgroundColor = '#2a0e3a';
         document.body.appendChild(clonedStats);
 
-        // Ensure proper text rendering
-        const titles = clonedStats.querySelectorAll('h3');
-        titles.forEach(title => {
-            // Ensure proper word spacing
-            title.style.wordSpacing = 'normal';
-            title.style.whiteSpace = 'normal';
-            title.style.fontSize = '14px';
+        // Update header
+        const header = clonedStats.querySelector('h2');
+        if (header) {
+            header.style.color = '#e83283';
+            header.style.fontSize = '24px';
+            header.style.marginBottom = '20px';
+            header.style.textAlign = 'center';
+        }
+
+        // Style all stat cards
+        const cards = clonedStats.querySelectorAll('.rounded-lg');
+        cards.forEach(card => {
+            card.style.margin = '10px 0';
+            card.style.padding = '15px';
+            card.style.borderRadius = '12px';
         });
 
+        // Style all titles
+        const titles = clonedStats.querySelectorAll('h3');
+        titles.forEach(title => {
+            title.style.fontSize = '14px';
+            title.style.fontWeight = '600';
+            title.style.marginBottom = '8px';
+            title.style.wordSpacing = '0.05em';
+        });
+
+        // Style all values
         const values = clonedStats.querySelectorAll('p');
         values.forEach(value => {
-            value.style.fontSize = '30px';
+            value.style.fontSize = '28px';
+            value.style.fontWeight = '700';
             value.style.lineHeight = '1.2';
         });
 
-        // Use html2canvas to create an image
+        // Use html2canvas with enhanced settings
         const canvas = await html2canvas(clonedStats, {
-            backgroundColor: '#2a0e3a', // Match the dark theme
-            scale: 2, // Better quality
+            backgroundColor: '#2a0e3a',
+            scale: 2,
             logging: false,
             letterRendering: true,
-            useCORS: true
+            useCORS: true,
+            allowTaint: true,
+            foreignObjectRendering: true
         });
 
         // Clean up
