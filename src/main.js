@@ -1400,17 +1400,33 @@ function setupEventListeners() {
     // Stats screenshot button
     document.getElementById('downloadStatsImageBtn')?.addEventListener('click', async () => {
         try {
-            const statsContainer = document.querySelector('#stats');
-            const canvas = await html2canvas(statsContainer, {
-                backgroundColor: '#2a0e3a', // Match the dark theme
-                scale: 2 // Better quality
+            const statsCards = document.querySelector('#stats .grid');
+            if (!statsCards) {
+                throw new Error('Stats cards container not found');
+            }
+
+            // Temporarily modify styles for clean screenshot
+            const originalStyle = statsCards.style.cssText;
+            statsCards.style.backgroundColor = '#2a0e3a';
+            statsCards.style.padding = '20px';
+            statsCards.style.borderRadius = '10px';
+            
+            const canvas = await html2canvas(statsCards, {
+                backgroundColor: '#2a0e3a',
+                scale: 2, // Better quality
+                useCORS: true,
+                logging: false,
+                removeContainer: false
             });
+            
+            // Restore original styles
+            statsCards.style.cssText = originalStyle;
             
             canvas.toBlob((blob) => {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'kochin-stats.png';
+                a.download = 'kochin-stats-cards.png';
                 a.click();
                 URL.revokeObjectURL(url);
             }, 'image/png');
