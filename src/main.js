@@ -865,22 +865,20 @@ async function editGuest(guestId) {
                 };
                 
                 // Perform update
-                const { data: updatedGuest, error: updateError } = await supabase
+                const { error: updateError } = await supabase
                     .from('guests')
                     .update(updateData)
-                    .eq('id', guestId)
-                    .select();
-                
+                    .eq('id', guestId);
+
                 if (updateError) throw updateError;
-                
+
                 // Close edit modal
                 document.body.removeChild(modal);
-                
-                // Force refresh all data
-                await Promise.all([
-                    loadGuestList('', true),
-                    loadStats(true)
-                ]);
+
+                // Refresh guest list
+                await loadGuestList();
+                // Refresh stats
+                await loadStats();
                 
                 // Show success notification
                 const successModal = document.createElement('div');
