@@ -1428,70 +1428,6 @@ async function downloadStatsImage() {
             top: 0;
         `;
 
-        // Precise selectors for all 7 cards in correct order
-        const cardData = [
-            { selector: '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(1)', title: 'Total Registrations' },
-            { selector: '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(2)', title: 'Verified Entries' },
-            { selector: '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(3)', title: 'Pending Entries' },
-            { selector: '#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4 > div:nth-child(4)', title: 'Total Revenue' },
-            { selector: '#stats .grid.grid-cols-1.sm\\:grid-cols-2 > div:nth-child(1)', title: 'Registration Revenue' },
-            { selector: '#stats .grid.grid-cols-1.sm\\:grid-cols-2 > div:nth-child(2)', title: 'Room Booking Revenue' },
-            { selector: '#stats > div.bg-pink-200.rounded-lg.p-4', title: 'Total PAX', fullWidth: true }
-        ];
-
-        // Process each card
-        cardData.forEach(({selector, title, fullWidth}) => {
-            const card = document.querySelector(selector);
-            if (!card) {
-                console.warn(`Card not found: ${title}`);
-                return;
-            }
-
-            const clone = card.cloneNode(true);
-            
-            // Standardize card styling
-            clone.style.cssText = `
-                margin: 0;
-                padding: 15px;
-                border-radius: 10px;
-                width: 100%;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                text-align: center;
-            `;
-
-            // Make full-width if specified (for Total PAX)
-            if (fullWidth) {
-                clone.style.gridColumn = '1 / -1';
-            }
-
-            // Standardize text styling
-            const heading = clone.querySelector('h3');
-            const value = clone.querySelector('p');
-            
-            if (heading) {
-                heading.style.cssText = `
-                    font-size: 16px;
-                    margin: 0 0 8px 0;
-                    font-weight: bold;
-                    color: inherit;
-                `;
-            }
-            
-            if (value) {
-                value.style.cssText = `
-                    font-size: 24px;
-                    font-weight: bold;
-                    margin: 0;
-                    color: inherit;
-                `;
-            }
-
-            container.appendChild(clone);
-        });
-
         // Add header
         const header = document.createElement('h2');
         header.textContent = 'KOCHIN HANGOVER STATISTICS';
@@ -1501,9 +1437,84 @@ async function downloadStatsImage() {
             font-size: 20px;
             font-weight: bold;
             margin: 0 0 15px 0;
-            color: #e83283;
+            color: #ff69b4;
         `;
-        container.insertBefore(header, container.firstChild);
+        container.appendChild(header);
+
+        // Get all grid containers
+        const firstGrid = document.querySelector('#stats .grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4');
+        const secondGrid = document.querySelector('#stats .grid.grid-cols-1.sm\\:grid-cols-2');
+        const paxCard = document.querySelector('#stats > div.bg-pink-200.rounded-lg.p-4');
+
+        if (!firstGrid || !secondGrid || !paxCard) {
+            throw new Error('Could not find all required stat containers');
+        }
+
+        // Function to create and style a card
+        const createStyledCard = (originalCard, bgColor, textColor) => {
+            const clone = originalCard.cloneNode(true);
+            clone.style.cssText = `
+                margin: 0;
+                padding: 15px;
+                border-radius: 10px;
+                background-color: ${bgColor};
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+            `;
+
+            const heading = clone.querySelector('h3');
+            if (heading) {
+                heading.style.cssText = `
+                    font-size: 16px;
+                    margin: 0 0 8px 0;
+                    font-weight: bold;
+                    color: ${textColor};
+                `;
+            }
+
+            const value = clone.querySelector('p');
+            if (value) {
+                value.style.cssText = `
+                    font-size: 24px;
+                    font-weight: bold;
+                    margin: 0;
+                    color: ${textColor};
+                `;
+            }
+
+            return clone;
+        };
+
+        // Add first grid cards (first 4 cards)
+        const firstGridCards = Array.from(firstGrid.children).slice(0, 4);
+        firstGridCards.forEach((card, index) => {
+            const colors = [
+                { bg: '#e6e6fa', text: '#4b0082' },  // Total Registrations (Light purple)
+                { bg: '#98fb98', text: '#006400' },  // Verified Entries (Light green)
+                { bg: '#fafad2', text: '#8b4513' },  // Pending Entries (Light yellow)
+                { bg: '#add8e6', text: '#00008b' }   // Total Revenue (Light blue)
+            ];
+            container.appendChild(createStyledCard(card, colors[index].bg, colors[index].text));
+        });
+
+        // Add second grid cards (next 2 cards)
+        const secondGridCards = Array.from(secondGrid.children).slice(0, 2);
+        secondGridCards.forEach((card, index) => {
+            const colors = [
+                { bg: '#e6e6fa', text: '#4b0082' },  // Registration Revenue (Light purple)
+                { bg: '#ffb6c1', text: '#8b0000' }   // Room Booking Revenue (Light pink)
+            ];
+            container.appendChild(createStyledCard(card, colors[index].bg, colors[index].text));
+        });
+
+        // Add PAX card (spans full width)
+        const paxClone = createStyledCard(paxCard, '#ffc0cb', '#8b008b');
+        paxClone.style.gridColumn = '1 / -1';
+        container.appendChild(paxClone);
 
         document.body.appendChild(container);
 
