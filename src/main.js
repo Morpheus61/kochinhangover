@@ -1396,13 +1396,39 @@ function setupEventListeners() {
             showTab(tabId);
         });
     });
-    
+
+    // Stats screenshot button
+    document.getElementById('downloadStatsImageBtn')?.addEventListener('click', async () => {
+        try {
+            const statsContainer = document.querySelector('#stats');
+            const canvas = await html2canvas(statsContainer, {
+                backgroundColor: '#2a0e3a', // Match the dark theme
+                scale: 2 // Better quality
+            });
+            
+            canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'kochin-stats.png';
+                a.click();
+                URL.revokeObjectURL(url);
+            }, 'image/png');
+        } catch (error) {
+            console.error('Error creating screenshot:', error);
+            alert('Error creating screenshot');
+        }
+    });
+
     // Individual navigation buttons (for backward compatibility)
     document.getElementById('newRegistrationBtn')?.addEventListener('click', () => showTab('registration'));
     document.getElementById('entryVerificationBtn')?.addEventListener('click', () => showTab('verification'));
     document.getElementById('guestListBtn')?.addEventListener('click', () => showTab('guests'));
     document.getElementById('statsBtn')?.addEventListener('click', () => showTab('stats'));
     document.getElementById('usersBtn')?.addEventListener('click', () => showTab('users'));
+
+    // Entry type change handler
+    document.getElementById('entryType')?.addEventListener('change', updateAmount);
 
     // Guest search input - simplified implementation
     const searchInput = document.getElementById('guestSearchInput');
@@ -1532,16 +1558,7 @@ function setupEventListeners() {
         }
     });
 
-    // Entry type change handler
-    document.getElementById('entryType')?.addEventListener('change', updateAmount);
-
-    // PDF and CSV download buttons
-    document.getElementById('downloadGuestsPDFBtn')?.addEventListener('click', downloadGuestsPDF);
-    document.getElementById('downloadGuestsCSVBtn')?.addEventListener('click', downloadGuestsCSV);
-    document.getElementById('downloadStatsPDFBtn')?.addEventListener('click', downloadStatsPDF);
-    document.getElementById('downloadStatsCSVBtn')?.addEventListener('click', downloadStatsCSV);
-    
-    // Add User form
+    // Add user form handler
     document.getElementById('addUserForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -2137,6 +2154,45 @@ async function loadStats() {
 }
 
 // Download functions
+async function downloadStatsImage() {
+    try {
+        // Check user role first
+        const { data: userRole, error: roleError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', currentUser.id)
+            .single();
+        
+        if (roleError) throw roleError;
+        if (userRole?.role === 'doorman') {
+            alert('Access denied. You do not have permission to download statistics.');
+            return;
+        }
+
+        // Get the stats container
+        const statsContainer = document.querySelector('#stats');
+        
+        // Use html2canvas to create an image
+        const canvas = await html2canvas(statsContainer, {
+            backgroundColor: '#2a0e3a', // Match the dark theme
+            scale: 2 // Better quality
+        });
+        
+        // Convert to blob
+        canvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'kochin-stats.png';
+            a.click();
+            URL.revokeObjectURL(url);
+        }, 'image/png');
+    } catch (error) {
+        console.error('Error creating screenshot:', error);
+        alert('Error creating screenshot');
+    }
+}
+
 async function downloadGuestsPDF() {
     try {
         // Check user role first
