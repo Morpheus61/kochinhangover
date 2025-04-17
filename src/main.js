@@ -1414,35 +1414,28 @@ function setupEventListeners() {
                 position: fixed;
                 left: -9999px;
                 top: 0;
+                width: 400px;
             `;
 
-            // Get all stat cards from both grid containers and the single card
-            const firstGridCards = statsContainer.querySelector('.grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-4');
-            const secondGridCards = statsContainer.querySelector('.grid.grid-cols-1.sm\\:grid-cols-2');
-            const paxCard = statsContainer.querySelector('.bg-pink-200.rounded-lg.p-4');
+            // Define IDs of the cards in the order we want them
+            const cardIds = [
+                'totalRegistrations',    // Total Registrations
+                'verifiedEntries',       // Verified Entries
+                'pendingEntries',        // Pending Entries
+                'totalRevenue',          // Total Revenue
+                'registrationRevenue',   // Registration Revenue
+                'roomBookingRevenue',    // Room Booking Revenue
+                'totalPax'               // Total PAX (Headcount)
+            ];
 
-            if (!firstGridCards || !secondGridCards || !paxCard) {
-                throw new Error('Could not find all stats cards');
-            }
-
-            // Clone first grid cards (4 cards)
-            Array.from(firstGridCards.children).forEach(card => {
+            // Find and clone each card by looking for its ID in parent div
+            cardIds.forEach(id => {
+                const card = statsContainer.querySelector(`div:has(#${id})`);
+                if (!card) throw new Error(`Could not find card for ${id}`);
                 const clone = card.cloneNode(true);
-                clone.style.margin = '0';
+                clone.style.cssText = 'margin: 0; width: 100%; border-radius: 8px;';
                 container.appendChild(clone);
             });
-
-            // Clone second grid cards (2 cards)
-            Array.from(secondGridCards.children).forEach(card => {
-                const clone = card.cloneNode(true);
-                clone.style.margin = '0';
-                container.appendChild(clone);
-            });
-
-            // Clone the PAX card
-            const paxClone = paxCard.cloneNode(true);
-            paxClone.style.margin = '0';
-            container.appendChild(paxClone);
 
             document.body.appendChild(container);
 
