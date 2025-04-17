@@ -710,25 +710,25 @@ async function editGuest(guestId) {
                 <form id="editGuestForm" class="space-y-4">
                     <div class="grid grid-cols-4 gap-4 items-center">
                         <label for="editGuestName" class="text-white col-span-1">Guest Name</label>
-                        <input type="text" id="editGuestName" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2" 
+                        <input type="text" id="editGuestName" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2 placeholder-gray-400" 
                                value="${guest.guest_name || ''}" required>
                     </div>
                     
                     <div class="grid grid-cols-4 gap-4 items-center">
                         <label for="editClubName" class="text-white col-span-1">Club Name</label>
-                        <input type="text" id="editClubName" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2" 
+                        <input type="text" id="editClubName" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2 placeholder-gray-400" 
                                value="${guest.club_name || ''}">
                     </div>
                     
                     <div class="grid grid-cols-4 gap-4 items-center">
                         <label for="editMobileNumber" class="text-white col-span-1">Mobile Number</label>
-                        <input type="tel" id="editMobileNumber" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2" 
+                        <input type="tel" id="editMobileNumber" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2 placeholder-gray-400" 
                                value="${guest.mobile_number || ''}" required>
                     </div>
                     
                     <div class="grid grid-cols-4 gap-4 items-center">
                         <label for="editEntryType" class="text-white col-span-1">Entry Type</label>
-                        <select id="editEntryType" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2" required>
+                        <select id="editEntryType" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2 placeholder-gray-400" required>
                             <option value="stag" ${guest.entry_type === 'stag' ? 'selected' : ''}>Stag</option>
                             <option value="couple" ${guest.entry_type === 'couple' ? 'selected' : ''}>Couple</option>
                         </select>
@@ -736,7 +736,7 @@ async function editGuest(guestId) {
                     
                     <div class="grid grid-cols-4 gap-4 items-center">
                         <label for="editPaymentMode" class="text-white col-span-1">Payment Mode</label>
-                        <select id="editPaymentMode" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2" required>
+                        <select id="editPaymentMode" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2 placeholder-gray-400" required>
                             <option value="full_payment" ${guest.payment_mode === 'full_payment' ? 'selected' : ''}>Full Payment</option>
                             <option value="partial_payment" ${guest.payment_mode === 'partial_payment' ? 'selected' : ''}>Partial Payment</option>
                         </select>
@@ -744,13 +744,13 @@ async function editGuest(guestId) {
                     
                     <div id="editPartialPaymentContainer" class="grid grid-cols-4 gap-4 items-center" style="display: ${guest.payment_mode === 'partial_payment' ? 'grid' : 'none'}">
                         <label for="editPaidAmount" class="text-white col-span-1">Paid Amount</label>
-                        <input type="number" id="editPaidAmount" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2" 
+                        <input type="number" id="editPaidAmount" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2 placeholder-gray-400" 
                                value="${guest.paid_amount || 0}">
                     </div>
                     
                     <div class="grid grid-cols-4 gap-4 items-center">
                         <label for="editHasRoomBooking" class="text-white col-span-1">Room Booking</label>
-                        <select id="editHasRoomBooking" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2" required>
+                        <select id="editHasRoomBooking" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2 placeholder-gray-400" required>
                             <option value="false" ${!guest.has_room_booking ? 'selected' : ''}>No</option>
                             <option value="true" ${guest.has_room_booking ? 'selected' : ''}>Yes</option>
                         </select>
@@ -758,7 +758,7 @@ async function editGuest(guestId) {
                     
                     <div id="editRoomBookingContainer" class="grid grid-cols-4 gap-4 items-center" style="display: ${guest.has_room_booking ? 'grid' : 'none'}">
                         <label for="editRoomBookingAmount" class="text-white col-span-1">Room Booking Amount</label>
-                        <input type="number" id="editRoomBookingAmount" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2" 
+                        <input type="number" id="editRoomBookingAmount" class="form-control col-span-3 bg-[#3a1e4a] text-white border border-[#4a2e5a] rounded px-3 py-2 placeholder-gray-400" 
                                value="${guest.room_booking_amount || ''}">
                     </div>
                     
