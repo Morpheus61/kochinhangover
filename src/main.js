@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import QRCode from 'qrcode';
 import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 const supabaseUrl = 'https://rcedawlruorpkzzrvkqn.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjZWRhd2xydW9ycGt6enJ2a3FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxOTU4MDQsImV4cCI6MjA1OTc3MTgwNH0.opF31e2g9ZGIJBAR6McDvBEXPtSOhrmW1c_QQh_u1yg';
@@ -1509,7 +1510,7 @@ async function downloadStatsImage() {
             const heading = document.createElement('h3');
             heading.textContent = title;
             heading.style.cssText = `
-                font-size: 14px;
+                font-size: 18px;
                 margin: 0 0 8px 0;
                 font-weight: bold;
                 color: ${color};
@@ -1519,7 +1520,7 @@ async function downloadStatsImage() {
             const valueElement = document.createElement('p');
             valueElement.textContent = value;
             valueElement.style.cssText = `
-                font-size: 14px;
+                font-size: 32px;
                 margin: 0;
                 font-weight: bold;
                 color: ${color};
@@ -1834,7 +1835,7 @@ document.getElementById('downloadStatsImageBtn')?.addEventListener('click', down
                                 font-weight: bold;
                                 margin: 0;
                                 color: #e83283;
-                                text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+                                text-shadow: 0 2px 4px rgba(0,0,0,0.2);
                             ">KOCHIN HANGOVER</h1>
                             <h2 style="
                                 font-size: 24px;
@@ -2432,7 +2433,7 @@ async function downloadStatsImage() {
             const heading = document.createElement('h3');
             heading.textContent = title;
             heading.style.cssText = `
-                font-size: 14px;
+                font-size: 18px;
                 margin: 0 0 8px 0;
                 font-weight: 600;
                 color: ${color};
@@ -2444,7 +2445,7 @@ async function downloadStatsImage() {
             const valueElement = document.createElement('p');
             valueElement.textContent = value;
             valueElement.style.cssText = `
-                font-size: ${valueSize};
+                font-size: 32px;
                 margin: 0;
                 font-weight: 700;
                 color: ${valueColor};
@@ -2531,7 +2532,6 @@ async function downloadGuestsPDF() {
         }
         
         // Create PDF document
-        const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
         // Define colors
@@ -2635,7 +2635,7 @@ async function downloadGuestsPDF() {
         const verifiedGuests = guests.filter(guest => guest.status === 'verified').length;
         const verifiedPax = guests.filter(guest => guest.status === 'verified')
             .reduce((sum, guest) => sum + (guest.entry_type === 'couple' ? 2 : 1), 0);
-        
+
         // Add totals with clear formatting
         doc.setTextColor(darkColor);
         doc.setFont('helvetica', 'bold');
@@ -2740,7 +2740,6 @@ async function downloadStatsPDF() {
         }
 
         // Create PDF document
-        const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
         // Define colors
