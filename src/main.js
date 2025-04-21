@@ -2318,6 +2318,7 @@ async function downloadStatsImage() {
         clone.style.backgroundColor = '#2a0e3a';
         clone.style.padding = '20px';
         clone.style.boxSizing = 'border-box';
+        clone.style.fontSize = '22px'; // Added larger font size
         
         // Remove buttons from the clone
         const buttons = clone.querySelector('.flex.flex-wrap');
@@ -2382,12 +2383,12 @@ async function downloadGuestsPDF() {
             .select('*')
             .order('created_at', { ascending: false });
         
-        if (error) throw error;
-        if (!guests || guests.length === 0) {
-            alert('No guests found to generate PDF.');
+        if (error) {
+            console.error('Error loading stats:', error);
+            alert('Failed to load statistics');
             return;
         }
-
+        
         // Create PDF document
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
