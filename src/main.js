@@ -2320,6 +2320,11 @@ async function downloadStatsImage() {
         clone.style.boxSizing = 'border-box';
         clone.style.fontSize = '22px'; // Added larger font size
         
+        // Adjust font sizes for different elements
+        clone.querySelector('h2').style.fontSize = '30px'; // Title
+        clone.querySelectorAll('.text-4xl').forEach(el => el.style.fontSize = '36px'); // Numbers
+        clone.querySelectorAll('.text-lg').forEach(el => el.style.fontSize = '24px'); // Labels
+        
         // Remove buttons from the clone
         const buttons = clone.querySelector('.flex.flex-wrap');
         if (buttons) buttons.remove();
