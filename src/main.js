@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import QRCode from 'qrcode';
+import html2canvas from 'html2canvas';
 
 const supabaseUrl = 'https://rcedawlruorpkzzrvkqn.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjZWRhd2xydW9ycGt6enJ2a3FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxOTU4MDQsImV4cCI6MjA1OTc3MTgwNH0.opF31e2g9ZGIJBAR6McDvBEXPtSOhrmW1c_QQh_u1yg';
@@ -1434,7 +1435,11 @@ async function downloadStatsImage() {
             font-size: 20px;
             font-weight: bold;
             margin: 0 0 15px 0;
-            color: #ff69b4;
+            color: #e83283;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: 'Poppins', sans-serif;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         `;
         container.appendChild(header);
 
@@ -2306,7 +2311,16 @@ async function downloadStatsImage() {
             return;
         }
 
-        // Create optimized container for screenshot
+        // First load the Poppins font
+        const fontLink = document.createElement('link');
+        fontLink.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap';
+        fontLink.rel = 'stylesheet';
+        document.head.appendChild(fontLink);
+
+        // Wait for fonts to load
+        await document.fonts.ready;
+
+        // Create container with explicit font styling
         const container = document.createElement('div');
         container.style.cssText = `
             background: #2a0e3a;
@@ -2318,10 +2332,10 @@ async function downloadStatsImage() {
             position: fixed;
             left: -9999px;
             top: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         `;
 
-        // Add header with exact styling from app
+        // Header with exact app styling
         const header = document.createElement('h2');
         header.textContent = 'KOCHIN HANGOVER STATISTICS';
         header.style.cssText = `
@@ -2332,6 +2346,8 @@ async function downloadStatsImage() {
             color: #e83283;
             text-transform: uppercase;
             letter-spacing: 1px;
+            font-family: 'Poppins', sans-serif;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         `;
         container.appendChild(header);
 
@@ -2418,10 +2434,11 @@ async function downloadStatsImage() {
             heading.style.cssText = `
                 font-size: 14px;
                 margin: 0 0 8px 0;
-                font-weight: bold;
+                font-weight: 600;
                 color: ${color};
                 text-align: center;
                 text-transform: uppercase;
+                font-family: 'Poppins', sans-serif;
             `;
 
             const valueElement = document.createElement('p');
@@ -2429,9 +2446,10 @@ async function downloadStatsImage() {
             valueElement.style.cssText = `
                 font-size: ${valueSize};
                 margin: 0;
-                font-weight: bold;
+                font-weight: 700;
                 color: ${valueColor};
                 text-align: center;
+                font-family: 'Poppins', sans-serif;
             `;
 
             card.appendChild(heading);
@@ -2449,7 +2467,7 @@ async function downloadStatsImage() {
         `;
         
         // Move all cards into the grid container
-        while (container.children.length > 1) { // Keep header in main container
+        while (container.children.length > 1) {
             gridContainer.appendChild(container.children[1]);
         }
         container.appendChild(gridContainer);
@@ -2459,7 +2477,7 @@ async function downloadStatsImage() {
         // Generate screenshot with higher quality settings
         const canvas = await html2canvas(container, {
             backgroundColor: '#2a0e3a',
-            scale: 3, // Higher scale for better quality
+            scale: 3,
             logging: false,
             useCORS: true,
             allowTaint: true
@@ -2467,6 +2485,7 @@ async function downloadStatsImage() {
 
         // Clean up
         document.body.removeChild(container);
+        document.head.removeChild(fontLink);
 
         // Trigger download
         canvas.toBlob(blob => {
@@ -2476,7 +2495,7 @@ async function downloadStatsImage() {
             a.download = `kochin-stats-${new Date().toISOString().slice(0,10)}.png`;
             a.click();
             setTimeout(() => URL.revokeObjectURL(url), 100);
-        }, 'image/png', 1.0); // Highest quality
+        }, 'image/png', 1.0);
 
     } catch (error) {
         console.error('Failed to generate stats image:', error);
@@ -2947,3 +2966,6 @@ function formatWhatsAppPaymentInfo(guest) {
     
     return message;
 }
+
+// Make downloadStatsImage globally accessible
+window.downloadStatsImage = downloadStatsImage;
