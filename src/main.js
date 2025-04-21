@@ -2306,61 +2306,178 @@ async function downloadStatsImage() {
             return;
         }
 
-        // Get the stats container and its content
-        const statsContainer = document.getElementById('stats');
+        // Create optimized container for screenshot
+        const container = document.createElement('div');
+        container.style.cssText = `
+            background: #2a0e3a;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 300px;
+            position: fixed;
+            left: -9999px;
+            top: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        `;
+
+        // Add header with exact styling from app
+        const header = document.createElement('h2');
+        header.textContent = 'KOCHIN HANGOVER STATISTICS';
+        header.style.cssText = `
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0 0 15px 0;
+            color: #e83283;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        `;
+        container.appendChild(header);
+
+        // Define all cards with their IDs and styles to match app
+        const cards = [
+            {
+                id: 'totalRegistrations',
+                title: 'Total Registrations',
+                bg: '#e6e6fa',
+                color: '#4b0082',
+                valueColor: '#4b0082',
+                valueSize: '24px'
+            },
+            {
+                id: 'verifiedEntries',
+                title: 'Verified Entries',
+                bg: '#98fb98',
+                color: '#006400',
+                valueColor: '#006400',
+                valueSize: '24px'
+            },
+            {
+                id: 'pendingEntries',
+                title: 'Pending Entries',
+                bg: '#fafad2',
+                color: '#8b4513',
+                valueColor: '#8b4513',
+                valueSize: '24px'
+            },
+            {
+                id: 'totalRevenue',
+                title: 'Total Revenue',
+                bg: '#add8e6',
+                color: '#00008b',
+                valueColor: '#00008b',
+                valueSize: '24px'
+            },
+            {
+                id: 'registrationRevenue',
+                title: 'Registration Revenue',
+                bg: '#e6e6fa',
+                color: '#4b0082',
+                valueColor: '#4b0082',
+                valueSize: '24px'
+            },
+            {
+                id: 'roomBookingRevenue',
+                title: 'Room Booking Revenue',
+                bg: '#ffb6c1',
+                color: '#8b0000',
+                valueColor: '#8b0000',
+                valueSize: '24px'
+            },
+            {
+                id: 'totalPax',
+                title: 'Total PAX (Headcount)',
+                bg: '#ffc0cb',
+                color: '#8b008b',
+                valueColor: '#8b008b',
+                valueSize: '24px',
+                fullWidth: true
+            }
+        ];
+
+        // Create each card with exact styling from app
+        cards.forEach(({ id, title, bg, color, valueColor, valueSize, fullWidth }) => {
+            const value = document.getElementById(id)?.textContent || '0';
+            
+            const card = document.createElement('div');
+            card.style.cssText = `
+                background-color: ${bg};
+                padding: 15px;
+                border-radius: 10px;
+                width: ${fullWidth ? '100%' : 'calc(50% - 7.5px)'};
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            `;
+
+            const heading = document.createElement('h3');
+            heading.textContent = title;
+            heading.style.cssText = `
+                font-size: 14px;
+                margin: 0 0 8px 0;
+                font-weight: bold;
+                color: ${color};
+                text-align: center;
+                text-transform: uppercase;
+            `;
+
+            const valueElement = document.createElement('p');
+            valueElement.textContent = value;
+            valueElement.style.cssText = `
+                font-size: ${valueSize};
+                margin: 0;
+                font-weight: bold;
+                color: ${valueColor};
+                text-align: center;
+            `;
+
+            card.appendChild(heading);
+            card.appendChild(valueElement);
+            container.appendChild(card);
+        });
+
+        // Arrange cards in a grid layout similar to app
+        const gridContainer = document.createElement('div');
+        gridContainer.style.cssText = `
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            width: 100%;
+        `;
         
-        // Create a clone of the stats container to preserve original styling
-        const clone = statsContainer.cloneNode(true);
-        clone.style.position = 'absolute';
-        clone.style.left = '-9999px';
-        clone.style.top = '0';
-        clone.style.width = statsContainer.offsetWidth + 'px';
-        clone.style.backgroundColor = '#2a0e3a';
-        clone.style.padding = '20px';
-        clone.style.boxSizing = 'border-box';
-        clone.style.fontSize = '22px'; // Added larger font size
-        
-        // Adjust font sizes for different elements
-        clone.querySelector('h2').style.fontSize = '30px'; // Title
-        clone.querySelectorAll('.text-4xl').forEach(el => el.style.fontSize = '36px'); // Numbers
-        clone.querySelectorAll('.text-lg').forEach(el => el.style.fontSize = '24px'); // Labels
-        
-        // Remove buttons from the clone
-        const buttons = clone.querySelector('.flex.flex-wrap');
-        if (buttons) buttons.remove();
-        
-        // Remove the club-wise stats table if it exists
-        const clubTable = clone.querySelector('.overflow-x-auto');
-        if (clubTable) clubTable.remove();
-        
-        // Append the clone to the body
-        document.body.appendChild(clone);
-        
-        // Use html2canvas with these settings for best results
-        const canvas = await html2canvas(clone, {
+        // Move all cards into the grid container
+        while (container.children.length > 1) { // Keep header in main container
+            gridContainer.appendChild(container.children[1]);
+        }
+        container.appendChild(gridContainer);
+
+        document.body.appendChild(container);
+
+        // Generate screenshot with higher quality settings
+        const canvas = await html2canvas(container, {
             backgroundColor: '#2a0e3a',
-            scale: 2, // Higher scale for better quality
+            scale: 3, // Higher scale for better quality
             logging: false,
             useCORS: true,
-            allowTaint: true,
-            scrollX: 0,
-            scrollY: 0,
-            windowWidth: clone.scrollWidth,
-            windowHeight: clone.scrollHeight
+            allowTaint: true
         });
-        
+
         // Clean up
-        document.body.removeChild(clone);
-        
-        // Convert to blob and download
+        document.body.removeChild(container);
+
+        // Trigger download
         canvas.toBlob(blob => {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `kochin-hangover-stats-${new Date().toISOString().slice(0,10)}.png`;
+            a.download = `kochin-stats-${new Date().toISOString().slice(0,10)}.png`;
             a.click();
             setTimeout(() => URL.revokeObjectURL(url), 100);
         }, 'image/png', 1.0); // Highest quality
+
     } catch (error) {
         console.error('Failed to generate stats image:', error);
         alert('Failed to save statistics. Please try again.');
