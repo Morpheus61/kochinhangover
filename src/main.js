@@ -2359,7 +2359,7 @@ async function downloadStatsImage() {
                 bg: '#e6e6fa',
                 color: '#4b0082',
                 valueColor: '#4b0082',
-                valueSize: '24px'
+                valueSize: '32px'
             },
             {
                 id: 'verifiedEntries',
@@ -2367,7 +2367,7 @@ async function downloadStatsImage() {
                 bg: '#98fb98',
                 color: '#006400',
                 valueColor: '#006400',
-                valueSize: '24px'
+                valueSize: '32px'
             },
             {
                 id: 'pendingEntries',
@@ -2375,7 +2375,7 @@ async function downloadStatsImage() {
                 bg: '#fafad2',
                 color: '#8b4513',
                 valueColor: '#8b4513',
-                valueSize: '24px'
+                valueSize: '32px'
             },
             {
                 id: 'totalRevenue',
@@ -2383,7 +2383,7 @@ async function downloadStatsImage() {
                 bg: '#add8e6',
                 color: '#00008b',
                 valueColor: '#00008b',
-                valueSize: '24px'
+                valueSize: '32px'
             },
             {
                 id: 'registrationRevenue',
@@ -2391,7 +2391,7 @@ async function downloadStatsImage() {
                 bg: '#e6e6fa',
                 color: '#4b0082',
                 valueColor: '#4b0082',
-                valueSize: '24px'
+                valueSize: '32px'
             },
             {
                 id: 'roomBookingRevenue',
@@ -2399,7 +2399,7 @@ async function downloadStatsImage() {
                 bg: '#ffb6c1',
                 color: '#8b0000',
                 valueColor: '#8b0000',
-                valueSize: '24px'
+                valueSize: '32px'
             },
             {
                 id: 'totalPax',
@@ -2407,7 +2407,7 @@ async function downloadStatsImage() {
                 bg: '#ffc0cb',
                 color: '#8b008b',
                 valueColor: '#8b008b',
-                valueSize: '24px',
+                valueSize: '32px',
                 fullWidth: true
             }
         ];
