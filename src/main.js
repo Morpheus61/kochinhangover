@@ -2199,7 +2199,7 @@ async function downloadStatsImage() {
         const cards = [
             {
                 id: 'totalRegistrations',
-                title: 'Total Registrations',
+                title: 'TOTAL REGISTRATIONS',
                 bg: '#e6e6fa',
                 color: '#4b0082',
                 valueColor: '#4b0082',
@@ -2207,7 +2207,7 @@ async function downloadStatsImage() {
             },
             {
                 id: 'verifiedEntries',
-                title: 'Verified Entries',
+                title: 'VERIFIED ENTRIES',
                 bg: '#98fb98',
                 color: '#006400',
                 valueColor: '#006400',
@@ -2215,7 +2215,7 @@ async function downloadStatsImage() {
             },
             {
                 id: 'pendingEntries',
-                title: 'Pending Entries',
+                title: 'PENDING ENTRIES',
                 bg: '#fafad2',
                 color: '#8b4513',
                 valueColor: '#8b4513',
@@ -2223,7 +2223,7 @@ async function downloadStatsImage() {
             },
             {
                 id: 'totalRevenue',
-                title: 'Total Revenue',
+                title: 'TOTAL REVENUE',
                 bg: '#add8e6',
                 color: '#00008b',
                 valueColor: '#00008b',
@@ -2232,7 +2232,7 @@ async function downloadStatsImage() {
             },
             {
                 id: 'registrationRevenue',
-                title: 'Registration Revenue',
+                title: 'REGISTRATION REVENUE',
                 bg: '#e6e6fa',
                 color: '#4b0082',
                 valueColor: '#4b0082',
@@ -2241,7 +2241,7 @@ async function downloadStatsImage() {
             },
             {
                 id: 'roomBookingRevenue',
-                title: 'Room Booking Revenue',
+                title: 'ROOM BOOKING REVENUE',
                 bg: '#ffb6c1',
                 color: '#8b0000',
                 valueColor: '#8b0000',
@@ -2250,7 +2250,7 @@ async function downloadStatsImage() {
             },
             {
                 id: 'totalPax',
-                title: 'Total PAX (Headcount)',
+                title: 'TOTAL PAX (HEADCOUNT)',
                 bg: '#ffc0cb',
                 color: '#8b008b',
                 valueColor: '#8b008b',
@@ -2288,7 +2288,8 @@ async function downloadStatsImage() {
                 color: ${color};
                 text-align: center;
                 text-transform: uppercase;
-                word-spacing: 1px;
+                word-spacing: 2px;
+                letter-spacing: 0.5px;
                 font-family: 'Poppins', sans-serif;
             `;
 
@@ -2300,9 +2301,10 @@ async function downloadStatsImage() {
                 font-weight: 700;
                 color: ${valueColor};
                 text-align: center;
+                letter-spacing: 0.5px;
                 font-family: 'Poppins', sans-serif;
             `;
-
+            
             card.appendChild(heading);
             card.appendChild(valueElement);
             container.appendChild(card);
