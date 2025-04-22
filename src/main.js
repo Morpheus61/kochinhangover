@@ -2196,7 +2196,7 @@ async function downloadStatsImage() {
             position: fixed;
             left: -9999px;
             top: 0;
-            font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Poppins', sans-serif;
         `;
 
         // Header with exact app styling
@@ -2296,8 +2296,8 @@ async function downloadStatsImage() {
             const heading = document.createElement('h3');
             heading.textContent = title;
             heading.style.cssText = `
-                font-size: 14px;
-                margin: 0 0 8px 0;
+                font-size: 16px;
+                margin: 0 0 12px 0;
                 font-weight: 600;
                 color: ${color};
                 text-align: center;
@@ -2312,9 +2312,10 @@ async function downloadStatsImage() {
                 font-size: 32px;
                 margin: 0;
                 font-weight: 700;
-                color: ${valueColor};
+                color: ${valueColor || color};
                 text-align: center;
                 font-family: 'Poppins', sans-serif;
+                letter-spacing: 1px;
             `;
 
             card.appendChild(heading);
