@@ -2288,7 +2288,7 @@ async function downloadStatsImage() {
                 text-align: center;
                 text-transform: uppercase;
                 font-family: 'Poppins', sans-serif;
-                word-spacing: 2px;         // Add space between words in the card titles
+                word-spacing: 4px;         // Add space between words in the card titles
             `;
 
             const valueElement = document.createElement('p');
