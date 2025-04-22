@@ -2246,7 +2246,11 @@ async function downloadStatsImage() {
                 color: '#8b0000',
                 valueColor: '#8b0000',
                 valueSize: '32px',
-                format: value => `Rs.${value.replace('Rs.', '').replace('s.', '').trim()}`
+                format: value => {
+                    const amount = value.replace('Rs.', '').replace('s.', '').trim();
+                    const roomCount = amount / 5000; // Calculate number of rooms
+                    return `Rs.${amount} (${roomCount} Rooms)`;
+                }
             },
             {
                 id: 'totalPax',
@@ -2260,7 +2264,7 @@ async function downloadStatsImage() {
         ];
 
         // Create each card with exact styling from app
-        cards.forEach(({ id, title, bg, color, valueColor, valueSize, fullWidth, format }) => {
+        cards.forEach(({ id, title, bg, color, valueColor, valueSize, format }) => {
             let value = document.getElementById(id)?.textContent || '0';
             if (format) {
                 value = format(value);
@@ -2280,7 +2284,7 @@ async function downloadStatsImage() {
             `;
 
             const heading = document.createElement('h3');
-            heading.textContent = title;
+            heading.textContent = title.split(' ').join(' '); // Ensure proper word spacing
             heading.style.cssText = `
                 font-size: 14px;
                 margin: 0 0 8px 0;
@@ -2288,11 +2292,12 @@ async function downloadStatsImage() {
                 color: ${color};
                 text-align: center;
                 text-transform: uppercase;
-                word-spacing: 2px;
+                word-spacing: 3px;
                 letter-spacing: 0.5px;
                 font-family: 'Poppins', sans-serif;
+                white-space: pre-wrap;
             `;
-
+            
             const valueElement = document.createElement('p');
             valueElement.textContent = value;
             valueElement.style.cssText = `
