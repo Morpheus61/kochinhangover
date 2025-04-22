@@ -2151,15 +2151,39 @@ async function downloadStatsImage() {
             return;
         }
 
-        // First load the Poppins font
+        // First load the Poppins font with proper fallback
         const fontLink = document.createElement('link');
         fontLink.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap';
         fontLink.rel = 'stylesheet';
         document.head.appendChild(fontLink);
 
-        // Wait for fonts to load
-        await document.fonts.ready;
+        // Wait for font to load with timeout
+        const fontCheck = new Promise((resolve) => {
+            const checkFont = () => {
+                if (document.fonts.check('1em Poppins')) {
+                    resolve();
+                } else {
+                    setTimeout(checkFont, 100);
+                }
+            };
+            checkFont();
+            setTimeout(resolve, 2000); // Fallback timeout
+        });
 
+        await fontCheck;
+
+        // Fetch all guests
+        const { data: guests, error } = await supabase
+            .from('guests')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) {
+            console.error('Error loading stats:', error);
+            alert('Failed to load statistics');
+            return;
+        }
+        
         // Create optimized container for screenshot
         const container = document.createElement('div');
         container.style.cssText = `
