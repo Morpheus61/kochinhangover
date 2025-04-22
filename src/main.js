@@ -2136,7 +2136,6 @@ async function loadStats() {
     }
 }
 
-// Download functions
 async function downloadStatsImage() {
     try {
         // Check user permissions
@@ -2151,40 +2150,16 @@ async function downloadStatsImage() {
             return;
         }
 
-        // First load the Poppins font with proper fallback
+        // First load the Poppins font
         const fontLink = document.createElement('link');
         fontLink.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap';
         fontLink.rel = 'stylesheet';
         document.head.appendChild(fontLink);
 
-        // Wait for font to load with timeout
-        const fontCheck = new Promise((resolve) => {
-            const checkFont = () => {
-                if (document.fonts.check('1em Poppins')) {
-                    resolve();
-                } else {
-                    setTimeout(checkFont, 100);
-                }
-            };
-            checkFont();
-            setTimeout(resolve, 2000); // Fallback timeout
-        });
+        // Wait for fonts to load
+        await document.fonts.ready;
 
-        await fontCheck;
-
-        // Fetch all guests
-        const { data: guests, error } = await supabase
-            .from('guests')
-            .select('*')
-            .order('created_at', { ascending: false });
-        
-        if (error) {
-            console.error('Error loading stats:', error);
-            alert('Failed to load statistics');
-            return;
-        }
-        
-        // Create optimized container for screenshot
+        // Create container with explicit font styling
         const container = document.createElement('div');
         container.style.cssText = `
             background: #2a0e3a;
@@ -2210,6 +2185,7 @@ async function downloadStatsImage() {
             color: #e83283;
             text-transform: uppercase;
             letter-spacing: 1px;
+            word-spacing: 2px;
             font-family: 'Poppins', sans-serif;
             text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         `;
@@ -2223,7 +2199,7 @@ async function downloadStatsImage() {
                 bg: '#e6e6fa',
                 color: '#4b0082',
                 valueColor: '#4b0082',
-                valueSize: '18px'
+                valueSize: '32px'
             },
             {
                 id: 'verifiedEntries',
@@ -2231,7 +2207,7 @@ async function downloadStatsImage() {
                 bg: '#98fb98',
                 color: '#006400',
                 valueColor: '#006400',
-                valueSize: '18px'
+                valueSize: '32px'
             },
             {
                 id: 'pendingEntries',
@@ -2239,7 +2215,7 @@ async function downloadStatsImage() {
                 bg: '#fafad2',
                 color: '#8b4513',
                 valueColor: '#8b4513',
-                valueSize: '18px'
+                valueSize: '32px'
             },
             {
                 id: 'totalRevenue',
@@ -2247,7 +2223,8 @@ async function downloadStatsImage() {
                 bg: '#add8e6',
                 color: '#00008b',
                 valueColor: '#00008b',
-                valueSize: '18px'
+                valueSize: '32px',
+                format: value => `Rs.${value.replace('Rs.', '').replace('s.', '').trim()}`
             },
             {
                 id: 'registrationRevenue',
@@ -2255,7 +2232,8 @@ async function downloadStatsImage() {
                 bg: '#e6e6fa',
                 color: '#4b0082',
                 valueColor: '#4b0082',
-                valueSize: '18px'
+                valueSize: '32px',
+                format: value => `Rs.${value.replace('Rs.', '').replace('s.', '').trim()}`
             },
             {
                 id: 'roomBookingRevenue',
@@ -2263,7 +2241,8 @@ async function downloadStatsImage() {
                 bg: '#ffb6c1',
                 color: '#8b0000',
                 valueColor: '#8b0000',
-                valueSize: '18px'
+                valueSize: '32px',
+                format: value => `Rs.${value.replace('Rs.', '').replace('s.', '').trim()}`
             },
             {
                 id: 'totalPax',
@@ -2271,14 +2250,17 @@ async function downloadStatsImage() {
                 bg: '#ffc0cb',
                 color: '#8b008b',
                 valueColor: '#8b008b',
-                valueSize: '18px',
+                valueSize: '32px',
                 fullWidth: true
             }
         ];
 
         // Create each card with exact styling from app
-        cards.forEach(({ id, title, bg, color, valueColor, valueSize, fullWidth }) => {
-            const value = document.getElementById(id)?.textContent || '0';
+        cards.forEach(({ id, title, bg, color, valueColor, valueSize, fullWidth, format }) => {
+            let value = document.getElementById(id)?.textContent || '0';
+            if (format) {
+                value = format(value);
+            }
             
             const card = document.createElement('div');
             card.style.cssText = `
@@ -2296,26 +2278,25 @@ async function downloadStatsImage() {
             const heading = document.createElement('h3');
             heading.textContent = title;
             heading.style.cssText = `
-                font-size: 12px;
-                margin: 0 0 12px 0;
+                font-size: 14px;
+                margin: 0 0 8px 0;
                 font-weight: 600;
                 color: ${color};
                 text-align: center;
                 text-transform: uppercase;
-                word-spacing: 2px;
+                word-spacing: 1px;
                 font-family: 'Poppins', sans-serif;
             `;
 
             const valueElement = document.createElement('p');
             valueElement.textContent = value;
             valueElement.style.cssText = `
-                font-size: 18px;
+                font-size: ${valueSize};
                 margin: 0;
                 font-weight: 700;
-                color: ${valueColor || color};
+                color: ${valueColor};
                 text-align: center;
                 font-family: 'Poppins', sans-serif;
-                letter-spacing: 1px;
             `;
 
             card.appendChild(heading);
