@@ -1398,170 +1398,8 @@ function setupEventListeners() {
     });
 
     // Stats screenshot button
- // Replace the existing stats screenshot code with this version
-async function downloadStatsImage() {
-    try {
-        // Check user permissions
-        const { data: userRole } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', currentUser.id)
-            .single();
-
-        if (userRole?.role === 'doorman') {
-            alert('Access denied. You do not have permission to download statistics.');
-            return;
-        }
-
-        // Create optimized container for screenshot
-        const container = document.createElement('div');
-        container.style.cssText = `
-            background: #2a0e3a;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            width: 300px;
-            position: fixed;
-            left: -9999px;
-            top: 0;
-        `;
-
-        // Add header
-        const header = document.createElement('h2');
-        header.textContent = 'KOCHIN HANGOVER STATISTICS';
-        header.style.cssText = `
-            text-align: center;
-            font-size: 20px;
-            font-weight: bold;
-            margin: 0 0 15px 0;
-            color: #e83283;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-family: 'Poppins', sans-serif;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        `;
-        container.appendChild(header);
-
-        // Define all cards with their IDs and styles
-        const cards = [
-            {
-                id: 'totalRegistrations',
-                title: 'Total Registrations',
-                bg: '#e6e6fa',
-                color: '#4b0082'
-            },
-            {
-                id: 'verifiedEntries',
-                title: 'Verified Entries',
-                bg: '#98fb98',
-                color: '#006400'
-            },
-            {
-                id: 'pendingEntries',
-                title: 'Pending Entries',
-                bg: '#fafad2',
-                color: '#8b4513'
-            },
-            {
-                id: 'totalRevenue',
-                title: 'Total Revenue',
-                bg: '#add8e6',
-                color: '#00008b'
-            },
-            {
-                id: 'registrationRevenue',
-                title: 'Registration Revenue',
-                bg: '#e6e6fa',
-                color: '#4b0082'
-            },
-            {
-                id: 'roomBookingRevenue',
-                title: 'Room Booking Revenue',
-                bg: '#ffb6c1',
-                color: '#8b0000'
-            },
-            {
-                id: 'totalPax',
-                title: 'Total PAX (Headcount)',
-                bg: '#ffc0cb',
-                color: '#8b008b',
-                fullWidth: true
-            }
-        ];
-
-        // Create each card
-        cards.forEach(({ id, title, bg, color }) => {
-            const value = document.getElementById(id)?.textContent || '0';
-            
-            const card = document.createElement('div');
-            card.style.cssText = `
-                background-color: ${bg};
-                padding: 15px;
-                border-radius: 10px;
-                width: 100%;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-            `;
-
-            const heading = document.createElement('h3');
-            heading.textContent = title;
-            heading.style.cssText = `
-                font-size: 14px;
-                margin: 0 0 8px 0;
-                font-weight: bold;
-                color: ${color};
-                text-align: center;
-            `;
-
-            const valueElement = document.createElement('p');
-            valueElement.textContent = value;
-            valueElement.style.cssText = `
-                font-size: 14px;
-                margin: 0;
-                font-weight: bold;
-                color: ${color};
-                text-align: center;
-            `;
-
-            card.appendChild(heading);
-            card.appendChild(valueElement);
-            container.appendChild(card);
-        });
-
-        document.body.appendChild(container);
-
-        // Generate screenshot
-        const canvas = await html2canvas(container, {
-            backgroundColor: '#2a0e3a',
-            scale: 2,
-            logging: false,
-            useCORS: true
-        });
-
-        // Clean up
-        document.body.removeChild(container);
-
-        // Trigger download
-        canvas.toBlob(blob => {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `kochin-stats-${new Date().toISOString().slice(0,10)}.png`;
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(url), 100);
-        }, 'image/png', 0.95);
-
-    } catch (error) {
-        console.error('Failed to generate stats image:', error);
-        alert('Failed to save statistics. Please try again.');
-    }
-}
-
-// Update event listener
-document.getElementById('downloadStatsImageBtn')?.addEventListener('click', downloadStatsImage);
+    // Only keeping the better-formatted version below
+    document.getElementById('downloadStatsImageBtn')?.addEventListener('click', downloadStatsImage);
 
     // Individual navigation buttons (for backward compatibility)
     document.getElementById('newRegistrationBtn')?.addEventListener('click', () => showTab('registration'));
@@ -1834,7 +1672,7 @@ document.getElementById('downloadStatsImageBtn')?.addEventListener('click', down
                                 font-weight: bold;
                                 margin: 0;
                                 color: #e83283;
-                                text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+                                text-shadow: 0 2px 4px rgba(0,0,0,0.3);
                             ">KOCHIN HANGOVER</h1>
                             <h2 style="
                                 font-size: 24px;
@@ -2172,7 +2010,9 @@ async function loadStats() {
         
         const pendingEntries = totalGuests - verifiedEntries;
         const registrationRevenue = guests.reduce((sum, guest) => sum + (parseFloat(guest.paid_amount) || 0), 0);
-        const roomBookingRevenue = guests.reduce((sum, guest) => sum + (safeGetGuestProperty(guest, 'has_room_booking', false) ? (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0) : 0), 0);
+        const roomBookingRevenue = guests.reduce((sum, guest) => 
+            sum + (safeGetGuestProperty(guest, 'has_room_booking', false) ? 
+            (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0) : 0), 0);
         const totalRevenue = registrationRevenue + roomBookingRevenue;
         
         // Calculate total PAX (headcount)
@@ -2320,7 +2160,7 @@ async function downloadStatsImage() {
         // Wait for fonts to load
         await document.fonts.ready;
 
-        // Create container with explicit font styling
+        // Create optimized container for screenshot
         const container = document.createElement('div');
         container.style.cssText = `
             background: #2a0e3a;
@@ -2438,13 +2278,14 @@ async function downloadStatsImage() {
                 color: ${color};
                 text-align: center;
                 text-transform: uppercase;
+                word-spacing: 2px;
                 font-family: 'Poppins', sans-serif;
             `;
 
             const valueElement = document.createElement('p');
             valueElement.textContent = value;
             valueElement.style.cssText = `
-                font-size: ${valueSize};
+                font-size: 32px;
                 margin: 0;
                 font-weight: 700;
                 color: ${valueColor};
