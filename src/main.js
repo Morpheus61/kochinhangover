@@ -1671,8 +1671,12 @@ function setupEventListeners() {
                                 font-size: 36px;
                                 font-weight: bold;
                                 margin: 0;
-                                color: #e83283;
-                                text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                                color: #ffffff;
+                                text-transform: uppercase;
+                                letter-spacing: 1px;
+                                word-spacing: 2px;
+                                font-family: 'Poppins', sans-serif;
+                                text-shadow: 0 2px 4px rgba(0,0,0,0.2);
                             ">KOCHIN HANGOVER</h1>
                             <h2 style="
                                 font-size: 24px;
@@ -2182,7 +2186,7 @@ async function downloadStatsImage() {
             font-size: 20px;
             font-weight: bold;
             margin: 0 0 15px 0;
-            color: #e83283;
+            color: #ffffff;
             text-transform: uppercase;
             letter-spacing: 1px;
             word-spacing: 2px;
@@ -2267,7 +2271,7 @@ async function downloadStatsImage() {
                 background-color: ${bg};
                 padding: 15px;
                 border-radius: 10px;
-                width: ${fullWidth ? '100%' : 'calc(50% - 7.5px)'};
+                width: 100%;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -2304,11 +2308,11 @@ async function downloadStatsImage() {
             container.appendChild(card);
         });
 
-        // Arrange cards in a grid layout similar to app
+        // Arrange cards in a single column layout
         const gridContainer = document.createElement('div');
         gridContainer.style.cssText = `
             display: flex;
-            flex-wrap: wrap;
+            flex-direction: column;
             gap: 15px;
             width: 100%;
         `;
