@@ -2237,7 +2237,7 @@ async function downloadStatsImage() {
             },
             {
                 id: 'roomBookingRevenue',
-                title: 'Room Booking Revenue',
+                title: 'Room Booking Revenue(No. of Rooms)',
                 bg: '#ffb6c1',
                 color: '#8b0000',
                 valueColor: '#8b0000',
@@ -2288,7 +2288,7 @@ async function downloadStatsImage() {
                 text-align: center;
                 text-transform: uppercase;
                 font-family: 'Poppins', sans-serif;
-                word-spacing: 4px;         // Add space between words in the card titles
+                word-spacing: 2px;         // Add space between words in the card titles
             `;
 
             const valueElement = document.createElement('p');
