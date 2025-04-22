@@ -2223,7 +2223,7 @@ async function downloadStatsImage() {
                 bg: '#e6e6fa',
                 color: '#4b0082',
                 valueColor: '#4b0082',
-                valueSize: '32px'
+                valueSize: '18px'
             },
             {
                 id: 'verifiedEntries',
@@ -2231,7 +2231,7 @@ async function downloadStatsImage() {
                 bg: '#98fb98',
                 color: '#006400',
                 valueColor: '#006400',
-                valueSize: '32px'
+                valueSize: '18px'
             },
             {
                 id: 'pendingEntries',
@@ -2239,7 +2239,7 @@ async function downloadStatsImage() {
                 bg: '#fafad2',
                 color: '#8b4513',
                 valueColor: '#8b4513',
-                valueSize: '32px'
+                valueSize: '18px'
             },
             {
                 id: 'totalRevenue',
@@ -2247,7 +2247,7 @@ async function downloadStatsImage() {
                 bg: '#add8e6',
                 color: '#00008b',
                 valueColor: '#00008b',
-                valueSize: '32px'
+                valueSize: '18px'
             },
             {
                 id: 'registrationRevenue',
@@ -2255,7 +2255,7 @@ async function downloadStatsImage() {
                 bg: '#e6e6fa',
                 color: '#4b0082',
                 valueColor: '#4b0082',
-                valueSize: '32px'
+                valueSize: '18px'
             },
             {
                 id: 'roomBookingRevenue',
@@ -2263,7 +2263,7 @@ async function downloadStatsImage() {
                 bg: '#ffb6c1',
                 color: '#8b0000',
                 valueColor: '#8b0000',
-                valueSize: '32px'
+                valueSize: '18px'
             },
             {
                 id: 'totalPax',
@@ -2271,7 +2271,7 @@ async function downloadStatsImage() {
                 bg: '#ffc0cb',
                 color: '#8b008b',
                 valueColor: '#8b008b',
-                valueSize: '32px',
+                valueSize: '18px',
                 fullWidth: true
             }
         ];
@@ -2296,7 +2296,7 @@ async function downloadStatsImage() {
             const heading = document.createElement('h3');
             heading.textContent = title;
             heading.style.cssText = `
-                font-size: 16px;
+                font-size: 12px;
                 margin: 0 0 12px 0;
                 font-weight: 600;
                 color: ${color};
@@ -2309,7 +2309,7 @@ async function downloadStatsImage() {
             const valueElement = document.createElement('p');
             valueElement.textContent = value;
             valueElement.style.cssText = `
-                font-size: 32px;
+                font-size: 18px;
                 margin: 0;
                 font-weight: 700;
                 color: ${valueColor || color};
