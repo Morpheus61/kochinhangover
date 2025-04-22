@@ -2241,16 +2241,17 @@ async function downloadStatsImage() {
             },
             {
                 id: 'roomBookingRevenue',
-                title: 'ROOM BOOKING REVENUE(No. of Rooms)',
+                title: 'ROOM BOOKING REVENUE',
                 bg: '#ffb6c1',
                 color: '#8b0000',
                 valueColor: '#8b0000',
                 valueSize: '32px',
                 format: value => {
-                    const amount = value.replace('Rs.', '').replace('s.', '').trim();
-                    const roomCount = amount / 5000; // Calculate number of rooms
-                    return `Rs.${amount} (${roomCount} Rooms)`;
-                }
+                    const amount = parseFloat(value.replace('Rs.', '').replace(/\D+/g, '')) || 0;
+                    const roomCount = Math.round(amount / 5000);
+                    return `Rs.${amount}${roomCount ? ` (${roomCount} Rooms)` : ''}`;
+                },
+                isSpecialHeader: true // Flag for special formatting
             },
             {
                 id: 'totalPax',
@@ -2284,7 +2285,14 @@ async function downloadStatsImage() {
             `;
 
             const heading = document.createElement('h3');
-            heading.textContent = title.split(' ').join(' '); // Ensure proper word spacing
+            if (id === 'roomBookingRevenue') {
+                heading.innerHTML = `
+                    <div>ROOM BOOKING REVENUE</div>
+                    <div style="font-size: 12px;">(No. of Rooms)</div>
+                `;
+            } else {
+                heading.textContent = title;
+            }
             heading.style.cssText = `
                 font-size: 14px;
                 margin: 0 0 8px 0;
@@ -2306,7 +2314,7 @@ async function downloadStatsImage() {
             valueElement.style.cssText = `
                 font-size: ${valueSize};
                 margin: 0;
-                font-weight: 700;
+                font-weight: 400;
                 color: ${valueColor};
                 text-align: center;
                 letter-spacing: 0.5px;
