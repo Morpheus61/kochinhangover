@@ -2029,7 +2029,7 @@ async function loadStats() {
         document.getElementById('verifiedEntries').textContent = verifiedEntries;
         document.getElementById('pendingEntries').textContent = pendingEntries;
         document.getElementById('registrationRevenue').textContent = `Rs.${registrationRevenue}`;
-        document.getElementById('roomBookingRevenue').textContent = `Rs.${roomBookingRevenue}`;
+        document.getElementById('roomBookingRevenue').textContent = `Rs.${roomBookingRevenue} (${Math.round(roomBookingRevenue/5000)} Rooms)`;
         document.getElementById('totalRevenue').textContent = `Rs.${totalRevenue}`;
         document.getElementById('totalPax').textContent = totalPax;
         
@@ -2241,7 +2241,7 @@ async function downloadStatsImage() {
             },
             {
                 id: 'roomBookingRevenue',
-                title: 'ROOM BOOKING REVENUE',
+                title: 'ROOM BOOKING REVENUE(No. of Rooms)',
                 bg: '#ffb6c1',
                 color: '#8b0000',
                 valueColor: '#8b0000',
@@ -2295,7 +2295,10 @@ async function downloadStatsImage() {
                 word-spacing: 3px;
                 letter-spacing: 0.5px;
                 font-family: 'Poppins', sans-serif;
-                white-space: pre-wrap;
+                white-space: pre; /* More aggressive than pre-wrap */
+    font-synthesis: none; /* Prevent browser interference */
+    -webkit-text-size-adjust: 100%; /* Disable iOS scaling */
+    text-rendering: geometricPrecision; /* Better spacing */
             `;
             
             const valueElement = document.createElement('p');
