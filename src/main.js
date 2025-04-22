@@ -2247,7 +2247,9 @@ async function downloadStatsImage() {
                 valueColor: '#8b0000',
                 valueSize: '32px',
                 format: value => {
-                    const amount = parseFloat(value.replace('Rs.', '').replace(/\D+/g, '')) || 0;
+                    // Extract just the amount part before any parentheses
+                    const amountMatch = value.match(/Rs\.(\d+)/);
+                    const amount = amountMatch ? parseInt(amountMatch[1]) : 0;
                     const roomCount = Math.round(amount / 5000);
                     return `Rs.${amount}${roomCount ? ` (${roomCount} Rooms)` : ''}`;
                 },
@@ -2287,8 +2289,8 @@ async function downloadStatsImage() {
             const heading = document.createElement('h3');
             if (id === 'roomBookingRevenue') {
                 heading.innerHTML = `
-                    <div>ROOM BOOKING REVENUE</div>
-                    <div style="font-size: 12px;">(No. of Rooms)</div>
+                    <div style="margin-bottom: 2px;">ROOM BOOKING REVENUE</div>
+                    <div style="font-size: 10px; opacity: 0.9;">(NO. OF ROOMS)</div>
                 `;
             } else {
                 heading.textContent = title;
