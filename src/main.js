@@ -2203,7 +2203,7 @@ async function downloadStatsImage() {
                 bg: '#e6e6fa',
                 color: '#4b0082',
                 valueColor: '#4b0082',
-                valueSize: '32px'
+                valueSize: '28px'
             },
             {
                 id: 'verifiedEntries',
@@ -2211,7 +2211,7 @@ async function downloadStatsImage() {
                 bg: '#98fb98',
                 color: '#006400',
                 valueColor: '#006400',
-                valueSize: '32px'
+                valueSize: '28px'
             },
             {
                 id: 'pendingEntries',
@@ -2219,7 +2219,7 @@ async function downloadStatsImage() {
                 bg: '#fafad2',
                 color: '#8b4513',
                 valueColor: '#8b4513',
-                valueSize: '32px'
+                valueSize: '28px'
             },
             {
                 id: 'totalRevenue',
@@ -2227,7 +2227,7 @@ async function downloadStatsImage() {
                 bg: '#add8e6',
                 color: '#00008b',
                 valueColor: '#00008b',
-                valueSize: '32px',
+                valueSize: '28px',
                 format: value => `Rs.${value.replace('Rs.', '').replace('s.', '').trim()}`
             },
             {
@@ -2236,7 +2236,7 @@ async function downloadStatsImage() {
                 bg: '#e6e6fa',
                 color: '#4b0082',
                 valueColor: '#4b0082',
-                valueSize: '32px',
+                valueSize: '28px',
                 format: value => `Rs.${value.replace('Rs.', '').replace('s.', '').trim()}`
             },
             {
@@ -2245,7 +2245,7 @@ async function downloadStatsImage() {
                 bg: '#ffb6c1',
                 color: '#8b0000',
                 valueColor: '#8b0000',
-                valueSize: '32px',
+                valueSize: '28px',
                 format: value => {
                     // Extract just the amount part before any parentheses
                     const amountMatch = value.match(/Rs\.(\d+)/);
@@ -2261,7 +2261,7 @@ async function downloadStatsImage() {
                 bg: '#ffc0cb',
                 color: '#8b008b',
                 valueColor: '#8b008b',
-                valueSize: '32px',
+                valueSize: '28px',
                 fullWidth: true
             }
         ];
@@ -2290,7 +2290,7 @@ async function downloadStatsImage() {
             if (id === 'roomBookingRevenue') {
                 heading.innerHTML = `
                     <div style="margin-bottom: 2px;">ROOM BOOKING REVENUE</div>
-                    <div style="font-size: 10px; opacity: 0.9;">(NO. OF ROOMS)</div>
+                    
                 `;
             } else {
                 heading.textContent = title;
@@ -2316,7 +2316,7 @@ async function downloadStatsImage() {
             valueElement.style.cssText = `
                 font-size: ${valueSize};
                 margin: 0;
-                font-weight: 400;
+                font-weight: 600;
                 color: ${valueColor};
                 text-align: center;
                 letter-spacing: 0.5px;
