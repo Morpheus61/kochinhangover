@@ -2251,15 +2251,19 @@ async function downloadStatsImage() {
                 bg: '#ffb6c1',
                 color: '#8b0000',
                 valueColor: '#8b0000',
-                valueSize: '28px',
+                valueSize: '24px',
+                width: '300px',
+                height: '90px',
                 format: value => {
-                    // Extract just the amount part before any parentheses
                     const amountMatch = value.match(/Rs\.(\d+)/);
                     const amount = amountMatch ? parseInt(amountMatch[1]) : 0;
                     const roomCount = Math.round(amount / 5000);
-                    return `Rs.${amount}${roomCount ? ` (${roomCount} Rooms)` : ''}`;
+                    return {
+                        amount: `Rs.${amount}`,
+                        rooms: roomCount ? `(${roomCount} Rooms)` : ''
+                    };
                 },
-                isSpecialHeader: true // Flag for special formatting
+                isSpecialHeader: true
             },
             {
                 id: 'totalPax',
@@ -2273,7 +2277,7 @@ async function downloadStatsImage() {
         ];
 
         // Create each card with exact styling from app
-        cards.forEach(({ id, title, bg, color, valueColor, valueSize, format }) => {
+        cards.forEach(({ id, title, bg, color, valueColor, valueSize, format, width, height }) => {
             let value = document.getElementById(id)?.textContent || '0';
             if (format) {
                 value = format(value);
@@ -2284,7 +2288,8 @@ async function downloadStatsImage() {
                 background-color: ${bg};
                 padding: 15px;
                 border-radius: 10px;
-                width: 100%;
+                width: ${width || '100%'};
+                height: ${height || 'auto'};
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -2318,17 +2323,36 @@ async function downloadStatsImage() {
             `;
             
             const valueElement = document.createElement('p');
-            valueElement.textContent = value;
-            valueElement.style.cssText = `
-                font-size: ${valueSize};
+            if (id === 'roomBookingRevenue' && typeof value === 'object') {
+                valueElement.style.cssText = `
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
                 margin: 0;
-                font-weight: 600;
-                color: ${valueColor};
                 text-align: center;
-                letter-spacing: 0.5px;
                 font-family: 'Poppins', sans-serif;
-            `;
-            
+                `;
+                valueElement.innerHTML = `
+                    <div style="font-size: ${valueSize}; color: ${valueColor}; font-weight: 600; letter-spacing: 0.5px;">
+                        ${value.amount}
+                    </div>
+                    ${value.rooms ? `<div style="font-size: calc(${valueSize} * 0.8); color: ${valueColor}; font-weight: 500; letter-spacing: 0.5px;">
+                        ${value.rooms}
+                    </div>` : ''}
+                `;
+            } else {
+                valueElement.style.cssText = `
+                    font-size: ${valueSize};
+                    margin: 0;
+                    font-weight: 600;
+                    color: ${valueColor};
+                    text-align: center;
+                    letter-spacing: 0.5px;
+                    font-family: 'Poppins', sans-serif;
+                `;
+                valueElement.textContent = typeof value === 'string' ? value : value.amount;
+            }
             card.appendChild(heading);
             card.appendChild(valueElement);
             container.appendChild(card);
