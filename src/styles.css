@@ -202,25 +202,38 @@ tr:hover td {
 /* Room Booking Revenue   */
 /* ====================== */
 #roomBookingRevenue {
+    width: 100%;
+    max-width: 300px;
+    padding: 15px;
+    margin: 0 auto 15px;
+    
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
     gap: 0.25rem;
-    padding: 0.75rem;
     background-color: rgba(255, 255, 255, 0.1);
     border-radius: 0.5rem;
-    margin-bottom: 1rem;
 }
 
-.room-booking-amount {
-    font-size: 1.5rem;
+.card-content {
+    width: 100%;
+    overflow: hidden;
+}
+
+.amount, .rooms {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.amount {
+    font-size: 1.25rem;
     font-weight: 600;
     color: var(--accent);
 }
 
-.room-booking-count {
+.rooms {
     font-size: 0.875rem;
     color: var(--light);
     opacity: 0.9;

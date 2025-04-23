@@ -2016,12 +2016,7 @@ async function loadStats() {
         
         const pendingEntries = totalGuests - verifiedEntries;
         const registrationRevenue = guests.reduce((sum, guest) => sum + (parseFloat(guest.paid_amount) || 0), 0);
-        const roomBookingElement = document.getElementById('roomBookingRevenue');
-const roomCount = Math.round(roomBookingRevenue/5000);
-roomBookingElement.innerHTML = `
-    <div class="room-booking-amount">Rs.${roomBookingRevenue}</div>
-    <div class="room-booking-count">(${roomCount} Rooms)</div>
-`;
+        const roomBookingRevenue = guests.reduce((sum, guest) => sum + (safeGetGuestProperty(guest, 'has_room_booking', false) ? (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0) : 0), 0);
         const totalRevenue = registrationRevenue + roomBookingRevenue;
         
         // Calculate total PAX (headcount)
@@ -2034,7 +2029,13 @@ roomBookingElement.innerHTML = `
         document.getElementById('verifiedEntries').textContent = verifiedEntries;
         document.getElementById('pendingEntries').textContent = pendingEntries;
         document.getElementById('registrationRevenue').textContent = `Rs.${registrationRevenue}`;
-        document.getElementById('roomBookingRevenue').textContent = `Rs.${roomBookingRevenue} (${Math.round(roomBookingRevenue/5000)} Rooms)`;
+        const roomBookingElement = document.getElementById('roomBookingRevenue');
+        const roomCount = Math.round(roomBookingRevenue/5000);
+        roomBookingElement.innerHTML = `
+            <div class="card-content">
+                <div class="amount">Rs.${roomBookingRevenue}</div>
+                <div class="rooms">(${roomCount} Rooms)</div>
+            </div>`;
         document.getElementById('totalRevenue').textContent = `Rs.${totalRevenue}`;
         document.getElementById('totalPax').textContent = totalPax;
         
