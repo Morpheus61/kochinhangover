@@ -594,40 +594,49 @@
                     </div>
                 </div>
                 
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                    <div class="bg-purple-200 rounded-lg p-2 text-center shadow-md">
-                        <h3 class="text-sm font-bold mb-1 text-purple-800">Total Registrations</h3>
-                        <p class="text-3xl font-bold text-purple-900" id="totalRegistrations">0</p>
+                <div class="flex flex-col gap-4 mb-6">
+                    <!-- Total Registrations -->
+                    <div class="bg-purple-100 rounded-lg p-6 text-center">
+                        <h3 class="text-lg font-semibold mb-2 text-purple-900">Total Registrations</h3>
+                        <p class="text-4xl font-bold text-purple-900" id="totalRegistrations">0</p>
                     </div>
-                    <div class="bg-green-200 rounded-lg p-2 text-center shadow-md">
-                        <h3 class="text-sm font-bold mb-2 text-green-800">Verified Entries</h3>
-                        <p class="text-3xl font-bold text-green-900" id="verifiedEntries">0</p>
+
+                    <!-- Verified Entries -->
+                    <div class="bg-green-100 rounded-lg p-6 text-center">
+                        <h3 class="text-lg font-semibold mb-2 text-green-900">Verified Entries</h3>
+                        <p class="text-4xl font-bold text-green-900" id="verifiedEntries">0</p>
                     </div>
-                    <div class="bg-yellow-200 rounded-lg p-2 text-center shadow-md">
-                        <h3 class="text-sm font-bold mb-2 text-yellow-800">Pending Entries</h3>
-                        <p class="text-3xl font-bold text-yellow-900" id="pendingEntries">0</p>
+
+                    <!-- Pending Entries -->
+                    <div class="bg-yellow-100 rounded-lg p-6 text-center">
+                        <h3 class="text-lg font-semibold mb-2 text-yellow-900">Pending Entries</h3>
+                        <p class="text-4xl font-bold text-yellow-900" id="pendingEntries">0</p>
                     </div>
-                    <div class="bg-blue-200 rounded-lg p-2 text-center shadow-md">
-                        <h3 class="text-sm font-bold mb-2 text-blue-800">Total Revenue</h3>
-                        <p class="text-3xl font-bold text-blue-900" id="totalRevenue">₹0</p>
+
+                    <!-- Total Revenue -->
+                    <div class="bg-blue-100 rounded-lg p-6 text-center">
+                        <h3 class="text-lg font-semibold mb-2 text-blue-900">Total Revenue</h3>
+                        <p class="text-4xl font-bold text-blue-900">Rs.<span id="totalRevenue">0</span></p>
                     </div>
-                </div>
-                
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                    <div class="stats-card room-booking-revenue">
-                        <h3 class="stats-label">Room Booking Revenue</h3>
-                        <div class="stats-value">Rs.<span id="roomBookingRevenue">0</span></div>
-                        <div class="room-count">(<span id="roomCount">0</span> Rooms)</div>
+
+                    <!-- Registration Revenue -->
+                    <div class="bg-purple-100 rounded-lg p-6 text-center">
+                        <h3 class="text-lg font-semibold mb-2 text-purple-900">Registration Revenue</h3>
+                        <p class="text-4xl font-bold text-purple-900">Rs.<span id="registrationRevenue">0</span></p>
                     </div>
-                    <div class="bg-pink-200 rounded-lg p-2 text-center shadow-md">
-                        <h3 class="text-sm font-bold mb-2 text-pink-800">Registration Revenue</h3>
-                        <p class="text-3xl font-bold text-pink-900" id="registrationRevenue">₹0</p>
+
+                    <!-- Room Booking Revenue -->
+                    <div class="bg-pink-100 rounded-lg p-6 text-center">
+                        <h3 class="text-lg font-semibold mb-2 text-pink-900">Room Booking Revenue</h3>
+                        <p class="text-4xl font-bold text-pink-900">Rs.<span id="roomBookingRevenue">0</span></p>
+                        <p class="text-sm text-pink-700" id="roomCount">(0 Rooms)</p>
                     </div>
-                </div>
-                
-                <div class="bg-pink-200 rounded-lg p-4 text-center shadow-md mb-6">
-                    <h3 class="text-sm font-bold mb-2 text-pink-800">Total PAX (Headcount)</h3>
-                    <p class="text-3xl font-bold text-pink-900" id="totalPax">0</p>
+
+                    <!-- Total PAX -->
+                    <div class="bg-pink-100 rounded-lg p-6 text-center">
+                        <h3 class="text-lg font-semibold mb-2 text-pink-900">Total PAX (Headcount)</h3>
+                        <p class="text-4xl font-bold text-pink-900" id="totalPax">0</p>
+                    </div>
                 </div>
                 
                 <h3 class="text-lg font-bold mb-4">Club-wise Statistics</h3>
