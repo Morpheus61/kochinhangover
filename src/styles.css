@@ -155,9 +155,16 @@ tr:hover td {
 /* Stats Card */
 .stats-card {
     background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 0.5rem;
-    padding: 1rem;
-    margin-bottom: 1rem;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 150px;
+    height: 100%;
+    transition: all 0.3s ease;
 }
 
 .stats-card h4 {
@@ -201,77 +208,24 @@ tr:hover td {
 
 /* Room Booking Revenue   */
 /* ====================== */
-#roomBookingRevenue {
-    width: 100%;
-    max-width: 300px;
-    padding: 15px;
-    margin: 0 auto 15px;
-    
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    gap: 0.25rem;
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 0.5rem;
-}
-
-.card-content {
-    width: 100%;
+.room-booking-revenue {
+    height: 150px !important;
+    min-height: 150px !important;
+    max-height: 150px !important;
     overflow: hidden;
 }
 
-.amount, .rooms {
-    white-space: nowrap;
-    text-overflow: ellipsis;
+.room-booking-revenue .stats-value {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
 }
 
-.amount {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--accent);
+.room-booking-revenue .stats-label {
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
 }
 
-.rooms {
+.room-booking-revenue .room-count {
     font-size: 0.875rem;
-    color: var(--light);
-    opacity: 0.9;
-}
-
-
-/* Room Booking Revenue Card - Fixed Size */
-#roomBookingRevenue {
-    /* Match other cards exactly */
-    width: 100%;
-    height: 80px; /* Fixed height to match other cards */
-    padding: 0.75rem 1rem; /* Tighter padding */
-    
-    /* Layout */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0; /* Remove gap */
-    
-    /* Visual Style */
-    background-color: #ffb6c1;
-    border-radius: 0.5rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-#roomBookingRevenue .amount {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #8b0000;
-    line-height: 1;
-    margin-bottom: 0.1rem; /* Small gap between amount and rooms */
-}
-
-#roomBookingRevenue .rooms {
-    font-size: 0.75rem; /* Slightly smaller */
-    font-weight: 500;
-    color: #8b0000;
-    line-height: 1;
-    opacity: 0.9; /* Slightly dimmer */
+    opacity: 0.8;
 }
