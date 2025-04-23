@@ -941,6 +941,8 @@ window.editUser = editUser;
 window.deleteUser = deleteUser;
 window.editGuest = editGuest;
 window.deleteGuest = deleteGuest;
+window.downloadGuestsPDF = downloadGuestsPDF;    // Add this here
+window.downloadGuestsCSV = downloadGuestsCSV;    // And this here
 
 // Initialize QR Scanner
 async function initQRScanner() {
@@ -2014,9 +2016,12 @@ async function loadStats() {
         
         const pendingEntries = totalGuests - verifiedEntries;
         const registrationRevenue = guests.reduce((sum, guest) => sum + (parseFloat(guest.paid_amount) || 0), 0);
-        const roomBookingRevenue = guests.reduce((sum, guest) => 
-            sum + (safeGetGuestProperty(guest, 'has_room_booking', false) ? 
-            (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0) : 0), 0);
+        const roomBookingElement = document.getElementById('roomBookingRevenue');
+const roomCount = Math.round(roomBookingRevenue/5000);
+roomBookingElement.innerHTML = `
+    <div class="room-booking-amount">Rs.${roomBookingRevenue}</div>
+    <div class="room-booking-count">(${roomCount} Rooms)</div>
+`;
         const totalRevenue = registrationRevenue + roomBookingRevenue;
         
         // Calculate total PAX (headcount)
