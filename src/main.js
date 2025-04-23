@@ -2672,7 +2672,9 @@ async function downloadStatsPDF() {
             sum + (safeGetGuestProperty(guest, 'has_room_booking', false) ? 
             (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0) : 0), 0);
         const totalRevenue = registrationRevenue + roomBookingRevenue;
-        const totalPax = guests.reduce((sum, guest) => sum + (guest.entry_type === 'couple' ? 2 : 1), 0);
+        const totalPax = guests.reduce((sum, guest) => {
+            return sum + (guest.entry_type === 'couple' ? 2 : 1);
+        }, 0);
         
         // Function to add a card with better visibility
         function addCard(title, value, x, y, width, height = 25) {
@@ -2830,7 +2832,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoginScreen();
     });
     
-    setupEventListeners();
+    setupEventListeners();  // Call setupEventListeners after app initialization
     
     // Handle hash-based navigation with role-based security
     window.addEventListener('hashchange', async function() {
@@ -2880,33 +2882,7 @@ function formatWhatsAppPaymentInfo(guest) {
 // Make downloadStatsImage globally accessible
 window.downloadStatsImage = downloadStatsImage;
 
-// Add event listeners for download buttons in setupEventListeners and ensure functions are available globally
-function setupEventListeners() {
-    // Existing listeners...
-    
-    // Add download button listeners
-    document.getElementById('downloadGuestsPDFBtn')?.addEventListener('click', () => {
-        if (!currentUser) {
-            alert('Please log in first');
-            return;
-        }
-        downloadGuestsPDF();
-    });
-    
-    document.getElementById('downloadGuestsCSVBtn')?.addEventListener('click', () => {
-        if (!currentUser) {
-            alert('Please log in first');
-            return;
-        }
-        downloadGuestsCSV();
-    });
-    
-    // Make functions available globally
-    window.downloadGuestsPDF = downloadGuestsPDF;
-    window.downloadGuestsCSV = downloadGuestsCSV;
-}
-
-// Make functions available globally
+// Make all functions available globally in one place
 window.editUser = editUser;
 window.deleteUser = deleteUser;
 window.editGuest = editGuest;
