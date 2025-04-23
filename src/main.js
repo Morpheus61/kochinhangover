@@ -2252,15 +2252,15 @@ async function downloadStatsImage() {
                 color: '#8b0000',
                 valueColor: '#8b0000',
                 valueSize: '24px',
-                width: '300px',
-                height: '90px',
+                width: '100%', // Match other cards
+                height: 'auto', // Remove fixed height
                 format: value => {
                     const amountMatch = value.match(/Rs\.(\d+)/);
                     const amount = amountMatch ? parseInt(amountMatch[1]) : 0;
                     const roomCount = Math.round(amount / 5000);
                     return {
                         amount: `Rs.${amount}`,
-                        rooms: roomCount ? `(${roomCount} Rooms)` : ''
+                        rooms: roomCount ? `${roomCount} Rooms` : ''
                     };
                 },
                 isSpecialHeader: true
@@ -2325,23 +2325,32 @@ async function downloadStatsImage() {
             const valueElement = document.createElement('p');
             if (id === 'roomBookingRevenue' && typeof value === 'object') {
                 valueElement.style.cssText = `
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 4px;
-                margin: 0;
-                text-align: center;
-                font-family: 'Poppins', sans-serif;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 4px;
+                    margin: 0;
+                    width: 100%; // Add this
+                    text-align: center;
+                    font-family: 'Poppins', sans-serif;
                 `;
                 valueElement.innerHTML = `
-                    <div style="font-size: ${valueSize}; color: ${valueColor}; font-weight: 600; letter-spacing: 0.5px;">
+                    <div style="font-size: ${valueSize}; 
+                               color: ${valueColor}; 
+                               font-weight: 600;
+                               line-height: 1.2;">
                         ${value.amount}
                     </div>
-                    ${value.rooms ? `<div style="font-size: calc(${valueSize} * 0.8); color: ${valueColor}; font-weight: 500; letter-spacing: 0.5px;">
-                        ${value.rooms}
+                    ${value.rooms ? `<div style="font-size: calc(${valueSize} * 0.8); 
+                                    color: ${valueColor}; 
+                                    font-weight: 500;
+                                    line-height: 1.2;">
+                        (${value.rooms})
                     </div>` : ''}
                 `;
-            } else {
+            }
+
+            else {
                 valueElement.style.cssText = `
                     font-size: ${valueSize};
                     margin: 0;
