@@ -2830,24 +2830,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoginScreen();
     });
     
-    // Add download button listeners
-    document.getElementById('downloadGuestsPDFBtn')?.addEventListener('click', () => {
-        if (!currentUser) {
-            alert('Please log in first');
-            return;
-        }
-        downloadGuestsPDF();
-    });
-    
-    document.getElementById('downloadGuestsCSVBtn')?.addEventListener('click', () => {
-        if (!currentUser) {
-            alert('Please log in first');
-            return;
-        }
-        downloadGuestsCSV();
-    });
-    
-    setupEventListeners(); // Call setupEventListeners after adding download button listeners
+    setupEventListeners();
     
     // Handle hash-based navigation with role-based security
     window.addEventListener('hashchange', async function() {
@@ -2902,10 +2885,7 @@ function setupEventListeners() {
     // Existing listeners...
     
     // Add download button listeners
-    const downloadPDFBtn = document.getElementById('downloadPDFBtn');
-    const downloadCSVBtn = document.getElementById('downloadCSVBtn');
-    
-    if (downloadPDFBtn) downloadPDFBtn.addEventListener('click', () => {
+    document.getElementById('downloadGuestsPDFBtn')?.addEventListener('click', () => {
         if (!currentUser) {
             alert('Please log in first');
             return;
@@ -2913,7 +2893,7 @@ function setupEventListeners() {
         downloadGuestsPDF();
     });
     
-    if (downloadCSVBtn) downloadCSVBtn.addEventListener('click', () => {
+    document.getElementById('downloadGuestsCSVBtn')?.addEventListener('click', () => {
         if (!currentUser) {
             alert('Please log in first');
             return;
@@ -2925,3 +2905,12 @@ function setupEventListeners() {
     window.downloadGuestsPDF = downloadGuestsPDF;
     window.downloadGuestsCSV = downloadGuestsCSV;
 }
+
+// Make functions available globally
+window.editUser = editUser;
+window.deleteUser = deleteUser;
+window.editGuest = editGuest;
+window.deleteGuest = deleteGuest;
+window.downloadGuestsPDF = downloadGuestsPDF;
+window.downloadGuestsCSV = downloadGuestsCSV;
+window.downloadStatsImage = downloadStatsImage;
