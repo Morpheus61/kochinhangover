@@ -286,14 +286,13 @@ async function loadGuestList(searchTerm = '') {
         const isDoorman = userRole?.role === 'doorman';
 
         // Handle download buttons visibility and state for doorman
-        const downloadButtons = document.querySelectorAll('#downloadGuestsPDFBtn, #downloadGuestsCSVBtn, #downloadStatsPDFBtn, #downloadStatsCSVBtn');
+        const downloadButtons = document.querySelectorAll('#downloadGuestsPDFBtn, #downloadGuestsCSVBtn');
         downloadButtons.forEach(button => {
             if (isDoorman) {
                 button.style.display = 'none';
-                button.disabled = true;
             } else {
                 button.style.display = '';
-                button.disabled = false;
+                button.classList.remove('hidden');
             }
         });
 
@@ -2435,14 +2434,13 @@ async function downloadGuestsPDF() {
             .order('created_at', { ascending: false });
         
         if (error) {
-            console.error('Error loading stats:', error);
-            alert('Failed to load statistics');
+            console.error('Error loading guests:', error);
+            alert('Failed to load guest list');
             return;
         }
         
         // Create PDF document
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        const doc = new window.jspdf.jsPDF();
         
         // Define colors
         const darkColor = 40;
@@ -2652,8 +2650,7 @@ async function downloadStatsPDF() {
         }
 
         // Create PDF document
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        const doc = new window.jspdf.jsPDF();
         
         // Define colors
         const darkColor = 40;
@@ -2832,7 +2829,25 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Failed to initialize app:', error);
         showLoginScreen();
     });
-    setupEventListeners();
+    
+    // Add download button listeners
+    document.getElementById('downloadGuestsPDFBtn')?.addEventListener('click', () => {
+        if (!currentUser) {
+            alert('Please log in first');
+            return;
+        }
+        downloadGuestsPDF();
+    });
+    
+    document.getElementById('downloadGuestsCSVBtn')?.addEventListener('click', () => {
+        if (!currentUser) {
+            alert('Please log in first');
+            return;
+        }
+        downloadGuestsCSV();
+    });
+    
+    setupEventListeners(); // Call setupEventListeners after adding download button listeners
     
     // Handle hash-based navigation with role-based security
     window.addEventListener('hashchange', async function() {
@@ -2881,3 +2896,32 @@ function formatWhatsAppPaymentInfo(guest) {
 
 // Make downloadStatsImage globally accessible
 window.downloadStatsImage = downloadStatsImage;
+
+// Add event listeners for download buttons in setupEventListeners and ensure functions are available globally
+function setupEventListeners() {
+    // Existing listeners...
+    
+    // Add download button listeners
+    const downloadPDFBtn = document.getElementById('downloadPDFBtn');
+    const downloadCSVBtn = document.getElementById('downloadCSVBtn');
+    
+    if (downloadPDFBtn) downloadPDFBtn.addEventListener('click', () => {
+        if (!currentUser) {
+            alert('Please log in first');
+            return;
+        }
+        downloadGuestsPDF();
+    });
+    
+    if (downloadCSVBtn) downloadCSVBtn.addEventListener('click', () => {
+        if (!currentUser) {
+            alert('Please log in first');
+            return;
+        }
+        downloadGuestsCSV();
+    });
+    
+    // Make functions available globally
+    window.downloadGuestsPDF = downloadGuestsPDF;
+    window.downloadGuestsCSV = downloadGuestsCSV;
+}

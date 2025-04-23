@@ -244,7 +244,7 @@ tr:hover td {
 #roomBookingRevenue {
     /* Match other cards exactly */
     width: 100%;
-    min-height: auto; /* Remove fixed height */
+    height: 80px; /* Fixed height to match other cards */
     padding: 0.75rem 1rem; /* Tighter padding */
     
     /* Layout */
@@ -252,7 +252,7 @@ tr:hover td {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.1rem; /* Reduced gap between lines */
+    gap: 0; /* Remove gap */
     
     /* Visual Style */
     background-color: #ffb6c1;
@@ -261,16 +261,17 @@ tr:hover td {
 }
 
 #roomBookingRevenue .amount {
-    font-size: 1.25rem; /* Slightly smaller */
+    font-size: 1.25rem;
     font-weight: 600;
     color: #8b0000;
-    line-height: 1; /* Tighter line height */
+    line-height: 1;
+    margin-bottom: 0.1rem; /* Small gap between amount and rooms */
 }
 
 #roomBookingRevenue .rooms {
-    font-size: 0.8rem;
+    font-size: 0.75rem; /* Slightly smaller */
     font-weight: 500;
     color: #8b0000;
-    line-height: 1; /* Tighter line height */
-    margin-top: 0.1rem; /* Minimal spacing */
+    line-height: 1;
+    opacity: 0.9; /* Slightly dimmer */
 }
