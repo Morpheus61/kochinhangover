@@ -239,58 +239,38 @@ tr:hover td {
     opacity: 0.9;
 }
 
-/* ================================== */
-/* Room Booking Revenue Card - Enhanced */
-/* ================================== */
+
+/* Room Booking Revenue Card - Fixed Size */
 #roomBookingRevenue {
+    /* Match other cards exactly */
+    width: 100%;
+    min-height: auto; /* Remove fixed height */
+    padding: 0.75rem 1rem; /* Tighter padding */
+    
     /* Layout */
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.25rem;
-    
-    /* Sizing */
-    width: 100%;
-    min-height: 90px;
-    padding: 1rem;
+    gap: 0.1rem; /* Reduced gap between lines */
     
     /* Visual Style */
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: #ffb6c1;
     border-radius: 0.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    
-    /* Typography */
-    text-align: center;
-    text-transform: uppercase;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 #roomBookingRevenue .amount {
-    font-size: 1.5rem;
+    font-size: 1.25rem; /* Slightly smaller */
     font-weight: 600;
-    color: var(--accent);
-    line-height: 1.2;
-    letter-spacing: 0.5px;
+    color: #8b0000;
+    line-height: 1; /* Tighter line height */
 }
 
 #roomBookingRevenue .rooms {
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     font-weight: 500;
-    color: var(--light);
-    opacity: 0.9;
-    line-height: 1.2;
-}
-
-/* Ensure consistency with stats cards */
-.stats-card#roomBookingRevenue {
-    background-color: #ffb6c1; /* Override for this specific card */
-}
-
-.stats-card#roomBookingRevenue .amount {
-    color: #8b0000; /* Dark red for better contrast */
-}
-
-.stats-card#roomBookingRevenue .rooms {
     color: #8b0000;
-    opacity: 0.8;
+    line-height: 1; /* Tighter line height */
+    margin-top: 0.1rem; /* Minimal spacing */
 }

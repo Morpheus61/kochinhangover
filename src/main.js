@@ -2512,8 +2512,11 @@ async function downloadGuestsPDF() {
             doc.text(`Rs.${guest.paid_amount || 0} / Rs.${guest.total_amount || 0}`, xPos + 2, yPos);
             xPos += colWidths[3];
             
-            // Status
-            doc.text(guest.status || 'pending', xPos + 2, yPos);
+            // Status with payment verification
+            const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
+            const isPaid = (guest.paid_amount || 0) >= expectedAmount;
+            const status = isPaid ? 'verified' : (guest.status || 'pending');
+            doc.text(status, xPos + 2, yPos);
             
             yPos += rowHeight;
             
@@ -2554,10 +2557,10 @@ async function downloadGuestsPDF() {
         doc.text(`Verified Entries: ${verifiedGuests} (${verifiedPax} PAX)`, 15, yPos + 20);
         
         // Save the PDF
-        doc.save('kochin-hangover-guest-list.pdf');
-        
+        doc.save(`kochin-hangover-guests-${new Date().toISOString().slice(0,10)}.pdf`);
+
     } catch (error) {
-        console.error('Error generating PDF:', error);
+        console.error('Failed to generate PDF:', error);
         alert('Failed to generate PDF. Please try again.');
     }
 }
@@ -2580,46 +2583,45 @@ async function downloadGuestsCSV() {
         // Fetch all guests
         const { data: guests, error } = await supabase
             .from('guests')
-            .select('*');
+            .select('*')
+            .order('created_at', { ascending: false });
         
         if (error) {
-            console.error('Error fetching guests:', error);
-            alert('Error generating CSV: ' + error.message);
+            console.error('Error loading guests:', error);
+            alert('Failed to load guest list');
             return;
         }
+
+        // Prepare data for CSV
+        const csvData = guests.map(guest => ({
+            'Guest Name': guest.guest_name || '',
+            'Club Name': guest.club_name || '',
+            'Entry Type': guest.entry_type === 'stag' ? 'Stag' : 'Couple',
+            'Room Booking': safeGetGuestProperty(guest, 'has_room_booking', false) ? 'Yes' : 'No',
+            'Total Amount': guest.total_amount || 0,
+            'Paid Amount': guest.paid_amount || 0,
+            'Payment Status': (guest.paid_amount || 0) >= (guest.entry_type === 'stag' ? 2750 : 4750) ? 'Paid' : 'Pending',
+            'Status': guest.status || 'pending',
+            'Created At': new Date(guest.created_at).toLocaleString()
+        }));
+
+        // Generate CSV using PapaParse
+        const csv = Papa.unparse(csvData);
         
-        // Convert to CSV
-        const headers = ['Guest Name', 'Club Name', 'Mobile Number', 'Entry Type', 'Paid Amount', 'Total Amount', 'Status', 'Created At'];
-        const csvData = guests.map(guest => [
-            guest.guest_name,
-            guest.club_name || 'N/A',
-            guest.mobile_number,
-            guest.entry_type === 'stag' ? 'Stag' : 'Couple',
-            guest.paid_amount,
-            guest.total_amount,
-            guest.status,
-            new Date(guest.created_at).toLocaleString()
-        ]);
-        
-        // Use PapaParse to generate CSV
-        const csv = Papa.unparse({
-            fields: headers,
-            data: csvData
-        });
-        
-        // Create download link
+        // Create and trigger download
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', 'kochin-hangover-guest-list.csv');
+        link.setAttribute('download', `kochin-hangover-guests-${new Date().toISOString().slice(0,10)}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
+        URL.revokeObjectURL(url);
+
     } catch (error) {
-        console.error('Error generating CSV:', error);
-        alert('Failed to generate CSV');
+        console.error('Failed to generate CSV:', error);
+        alert('Failed to generate CSV. Please try again.');
     }
 }
 
