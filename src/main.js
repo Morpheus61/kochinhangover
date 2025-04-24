@@ -2552,7 +2552,7 @@ async function downloadGuestsPDF() {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         doc.text(`Total Registrations: ${totalGuests} (${totalPax} PAX)`, 15, yPos + 5);
-        doc.text(`Verified Entries: ${verifiedGuests} (${verifiedPax} PAX)`, 15, yPos + 20);
+        doc.text(`Verified Entries(Arrived): ${verifiedGuests} (${verifiedPax} PAX)`, 15, yPos + 20);
         
         // Save the PDF
         doc.save(`kochin-hangover-guests-${new Date().toISOString().slice(0,10)}.pdf`);
