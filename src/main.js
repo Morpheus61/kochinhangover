@@ -2029,8 +2029,8 @@ async function loadStats() {
         document.getElementById('totalRegistrations').textContent = totalGuests;
         document.getElementById('verifiedEntries').textContent = verifiedEntries;
         document.getElementById('pendingEntries').textContent = pendingEntries;
-        document.getElementById('totalRevenue').textContent = `Rs.${totalRevenue.toLocaleString()}`;
-        document.getElementById('registrationRevenue').textContent = `Rs.${registrationRevenue.toLocaleString()}`;
+        document.getElementById('totalRevenue').textContent = totalRevenue.toLocaleString();
+        document.getElementById('registrationRevenue').textContent = registrationRevenue.toLocaleString();
         
         // Room booking with proper display logic
         const roomBookingElement = document.getElementById('roomBookingRevenue');
@@ -2213,7 +2213,10 @@ async function downloadStatsImage() {
                 bg: '#e6f3ff',
                 color: '#0047ab',
                 valueColor: '#0047ab',
-                valueSize: '28px'
+                valueSize: '28px',
+                format: value => {
+                    return `Rs.${value}`;
+                }
             },
             {
                 id: 'verifiedEntries',
@@ -2221,7 +2224,10 @@ async function downloadStatsImage() {
                 bg: '#98fb98',
                 color: '#006400',
                 valueColor: '#006400',
-                valueSize: '28px'
+                valueSize: '28px',
+                format: value => {
+                    return `Rs.${value}`;
+                }
             },
             {
                 id: 'pendingEntries',
@@ -2229,7 +2235,10 @@ async function downloadStatsImage() {
                 bg: '#fafad2',
                 color: '#8b4513',
                 valueColor: '#8b4513',
-                valueSize: '28px'
+                valueSize: '28px',
+                format: value => {
+                    return `Rs.${value}`;
+                }
             },
             {
                 id: 'totalRevenue',
@@ -2239,8 +2248,7 @@ async function downloadStatsImage() {
                 valueColor: '#00008b',
                 valueSize: '28px',
                 format: value => {
-                    const match = value.match(/Rs\.(\d+)/);
-                    return match ? value : `Rs.${value}`;
+                    return `Rs.${value}`;
                 }
             },
             {
@@ -2251,8 +2259,7 @@ async function downloadStatsImage() {
                 valueColor: '#4b0082',
                 valueSize: '28px',
                 format: value => {
-                    const match = value.match(/Rs\.(\d+)/);
-                    return match ? value : `Rs.${value}`;
+                    return `Rs.${value}`;
                 }
             },
             {
@@ -2265,11 +2272,10 @@ async function downloadStatsImage() {
                 width: '100%', // Match other cards
                 height: 'auto', // Remove fixed height
                 format: value => {
-                    // Special handling for room booking (extract existing formatted values)
-                    const amount = value.match(/Rs\.([\d,]+)/)?.[0] || 'Rs.0';
-                    const roomCount = Math.round(parseInt(amount.replace(/[^\d]/g, '')) / 5000);
+                    const numericValue = parseInt(value.replace(/[^\d]/g, ''));
+                    const roomCount = Math.round(numericValue / 5000);
                     return {
-                        amount: amount,
+                        amount: `Rs.${value}`,
                         rooms: roomCount > 0 ? `${roomCount} ${roomCount === 1 ? 'Room' : 'Rooms'}` : ''
                     };
                 },
@@ -2716,12 +2722,12 @@ async function downloadStatsPDF() {
         // Second row
         startY += cardHeight + 5;
         addCard('Pending Entries', pendingEntries.toString(), margin, startY, cardWidth, cardHeight);
-        addCard('Total Revenue', `Rs.${totalRevenue}`, margin + cardWidth + 10, startY, cardWidth, cardHeight);
+        addCard('Total Revenue', totalRevenue.toLocaleString(), margin + cardWidth + 10, startY, cardWidth, cardHeight);
         
         // Third row
         startY += cardHeight + 5;
-        addCard('Registration Revenue', `Rs.${registrationRevenue}`, margin, startY, cardWidth, cardHeight);
-        addCard('Room Booking Revenue', `Rs.${roomBookingRevenue}`, margin + cardWidth + 10, startY, cardWidth, cardHeight);
+        addCard('Registration Revenue', registrationRevenue.toLocaleString(), margin, startY, cardWidth, cardHeight);
+        addCard('Room Booking Revenue', roomBookingRevenue.toLocaleString(), margin + cardWidth + 10, startY, cardWidth, cardHeight);
         
         // Fourth row - Full width card
         startY += cardHeight + 5;
