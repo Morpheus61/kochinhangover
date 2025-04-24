@@ -2277,7 +2277,7 @@ async function downloadStatsImage() {
                     const numericValue = parseInt(cleanValue.replace(/[^\d]/g, ''));
                     const roomCount = Math.round(numericValue / 5000);
                     return {
-                        amount: `Rs.${cleanValue}`,  // Add Rs. prefix here
+                        amount: `${cleanValue}`,  // Add Rs. prefix here
                         rooms: roomCount > 0 ? `${roomCount} ${roomCount === 1 ? 'Room' : 'Rooms'}` : ''
                     };
                 },
@@ -2363,7 +2363,7 @@ async function downloadStatsImage() {
                                     color: ${valueColor}; 
                                     font-weight: 500;
                                     line-height: 1.2;">
-                        (${value.rooms})
+                        ${value.rooms}
                     </div>` : ''}
                 `;
             }
