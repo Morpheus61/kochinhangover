@@ -2183,7 +2183,7 @@ async function downloadStatsImage() {
             top: 0;
             font-family: 'Poppins', sans-serif;
         `;
-
+        
         // Header with exact app styling
         const header = document.createElement('h2');
         header.textContent = 'KOCHIN HANGOVER STATISTICS';
@@ -2290,15 +2290,19 @@ async function downloadStatsImage() {
             }
         ];
 
-        // Create each card with exact styling from app
-        const CARD_MIN_HEIGHT = '90px'; // consistent min height
-        const CARD_MAX_HEIGHT = '120px'; // consistent max height
-        const CARD_TITLE_FONT_SIZE = '24px';
-        const CARD_TITLE_LETTER_SPACING = '2px';
-        const CARD_TITLE_MARGIN_BOTTOM = '12px';
-        const CARD_VALUE_FONT_SIZE = '48px';
-        const CARD_VALUE_FONT_WEIGHT = 'bold';
-        const CARD_VALUE_LETTER_SPACING = '2px';
+        // Create each card with exact styling from app (closer to live mobile)
+        const CARD_PADDING = '12px 10px'; // Matches mobile
+        const CARD_BORDER_RADIUS = '16px';
+        const CARD_GAP = '4px'; // Tighter vertical space between cards
+        const CARD_TITLE_FONT_SIZE = '18px';
+        const CARD_TITLE_FONT_WEIGHT = '600';
+        const CARD_TITLE_LETTER_SPACING = '1px';
+        const CARD_TITLE_MARGIN_BOTTOM = '4px';
+        const CARD_VALUE_FONT_SIZE = '32px';
+        const CARD_VALUE_FONT_WEIGHT = '700';
+        const CARD_VALUE_MARGIN_BOTTOM = '0px';
+        const CARD_ROOMCOUNT_FONT_SIZE = '14px';
+        const CARD_ROOMCOUNT_FONT_WEIGHT = '500';
 
         cards.forEach(({ id, title, bg, color, valueColor, valueSize, format, width, height }) => {
             let value = document.getElementById(id)?.textContent || '0';
@@ -2309,33 +2313,27 @@ async function downloadStatsImage() {
             const card = document.createElement('div');
             card.style.cssText = `
                 background-color: ${bg};
-                padding: 15px;
-                border-radius: 10px;
+                padding: ${CARD_PADDING};
+                border-radius: ${CARD_BORDER_RADIUS};
                 width: ${width || '100%'};
-                min-height: ${CARD_MIN_HEIGHT};
-                max-height: ${CARD_MAX_HEIGHT};
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                box-shadow: 0 2px 4px rgba(44, 0, 44, 0.07);
             `;
 
             const heading = document.createElement('h3');
             heading.textContent = title;
             heading.style.cssText = `
                 font-size: ${CARD_TITLE_FONT_SIZE};
-                margin: 0 0 ${CARD_TITLE_MARGIN_BOTTOM} 0;
-                font-weight: 600;
+                font-weight: ${CARD_TITLE_FONT_WEIGHT};
                 color: ${color};
+                margin: 0 0 ${CARD_TITLE_MARGIN_BOTTOM} 0;
                 text-align: center;
-                text-transform: uppercase;
+                text-transform: none;
                 letter-spacing: ${CARD_TITLE_LETTER_SPACING};
                 font-family: 'Poppins', sans-serif;
-                white-space: pre;
-                font-synthesis: none;
-                -webkit-text-size-adjust: 100%;
-                text-rendering: geometricPrecision;
             `;
 
             const valueElement = document.createElement('p');
@@ -2344,21 +2342,15 @@ async function downloadStatsImage() {
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    gap: 4px;
+                    gap: 2px;
                     margin: 0;
                     width: 100%;
                     text-align: center;
                     font-family: 'Poppins', sans-serif;
                 `;
                 valueElement.innerHTML = `
-                    <div style="font-size: ${CARD_VALUE_FONT_SIZE}; 
-                                color: ${valueColor}; 
-                                font-weight: ${CARD_VALUE_FONT_WEIGHT};
-                                letter-spacing: ${CARD_VALUE_LETTER_SPACING};
-                                line-height: 1.2;">
-                        ${value.amount}
-                    </div>
-                    ${value.rooms ? `<div style="font-size: 24px; color: ${valueColor}; font-weight: 500; line-height: 1.2;">${value.rooms}</div>` : ''}
+                    <span style="font-size: ${CARD_VALUE_FONT_SIZE}; color: ${valueColor}; font-weight: ${CARD_VALUE_FONT_WEIGHT}; margin-bottom: ${CARD_VALUE_MARGIN_BOTTOM};">${value.amount}</span>
+                    ${value.rooms ? `<span style="font-size: ${CARD_ROOMCOUNT_FONT_SIZE}; color: ${valueColor}; font-weight: ${CARD_ROOMCOUNT_FONT_WEIGHT};">${value.rooms}</span>` : ''}
                 `;
             } else {
                 valueElement.style.cssText = `
@@ -2367,7 +2359,6 @@ async function downloadStatsImage() {
                     font-weight: ${CARD_VALUE_FONT_WEIGHT};
                     color: ${valueColor};
                     text-align: center;
-                    letter-spacing: ${CARD_VALUE_LETTER_SPACING};
                     font-family: 'Poppins', sans-serif;
                 `;
                 valueElement.textContent = typeof value === 'string' ? value : value.amount;
@@ -2377,16 +2368,14 @@ async function downloadStatsImage() {
             container.appendChild(card);
         });
 
-        // Arrange cards in a single column layout
+        // Arrange cards in a single column layout with reduced gap
         const gridContainer = document.createElement('div');
         gridContainer.style.cssText = `
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: ${CARD_GAP};
             width: 100%;
         `;
-        
-        // Move all cards into the grid container
         while (container.children.length > 1) {
             gridContainer.appendChild(container.children[1]);
         }
