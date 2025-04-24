@@ -2033,13 +2033,9 @@ async function loadStats() {
         document.getElementById('registrationRevenue').textContent = registrationRevenue.toLocaleString();
         
         // Room booking with proper display logic
-        const roomBookingElement = document.getElementById('roomBookingRevenue');
-        const roomCount = Math.round(roomBookingRevenue/5000);
-        roomBookingElement.innerHTML = `
-            <div class="card-content">
-                <div class="amount">Rs.${roomBookingRevenue.toLocaleString()}</div>
-                ${roomCount > 0 ? `<div class="rooms">${roomCount} ${roomCount === 1 ? 'Room' : 'Rooms'}</div>` : ''}
-            </div>`;
+        const roomCount = Math.round(roomBookingRevenue / 5000);
+        document.getElementById('roomBookingRevenue').textContent = roomBookingRevenue.toLocaleString();
+        document.getElementById('roomCount').textContent = roomCount > 0 ? `${roomCount} ${roomCount === 1 ? 'Room' : 'Rooms'}` : '';
         
         document.getElementById('totalPax').textContent = totalPax;
         
@@ -2272,12 +2268,12 @@ async function downloadStatsImage() {
                 width: '100%', // Match other cards
                 height: 'auto', // Remove fixed height
                 format: value => {
-                    // Remove any existing Rs. and get clean number
-                    const cleanValue = value.replace(/Rs\./g, '').trim();
-                    const numericValue = parseInt(cleanValue.replace(/[^\d]/g, ''));
+                    // Clean number, then format with Rs. and commas
+                    const numericValue = parseInt(value.replace(/[^\d]/g, ''));
+                    const formattedAmount = isNaN(numericValue) ? 'Rs.0' : `Rs.${numericValue.toLocaleString()}`;
                     const roomCount = Math.round(numericValue / 5000);
                     return {
-                        amount: `${cleanValue}`,  // Add Rs. prefix here
+                        amount: formattedAmount,
                         rooms: roomCount > 0 ? `${roomCount} ${roomCount === 1 ? 'Room' : 'Rooms'}` : ''
                     };
                 },
