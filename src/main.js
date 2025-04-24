@@ -2291,6 +2291,15 @@ async function downloadStatsImage() {
         ];
 
         // Create each card with exact styling from app
+        const CARD_MIN_HEIGHT = '90px'; // consistent min height
+        const CARD_MAX_HEIGHT = '120px'; // consistent max height
+        const CARD_TITLE_FONT_SIZE = '24px';
+        const CARD_TITLE_LETTER_SPACING = '2px';
+        const CARD_TITLE_MARGIN_BOTTOM = '12px';
+        const CARD_VALUE_FONT_SIZE = '48px';
+        const CARD_VALUE_FONT_WEIGHT = 'bold';
+        const CARD_VALUE_LETTER_SPACING = '2px';
+
         cards.forEach(({ id, title, bg, color, valueColor, valueSize, format, width, height }) => {
             let value = document.getElementById(id)?.textContent || '0';
             if (format) {
@@ -2303,7 +2312,8 @@ async function downloadStatsImage() {
                 padding: 15px;
                 border-radius: 10px;
                 width: ${width || '100%'};
-                height: ${height || 'auto'};
+                min-height: ${CARD_MIN_HEIGHT};
+                max-height: ${CARD_MAX_HEIGHT};
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -2312,30 +2322,22 @@ async function downloadStatsImage() {
             `;
 
             const heading = document.createElement('h3');
-            if (id === 'roomBookingRevenue') {
-                heading.innerHTML = `
-                    <div style="margin-bottom: 2px;">ROOM BOOKING REVENUE</div>
-                    
-                `;
-            } else {
-                heading.textContent = title;
-            }
+            heading.textContent = title;
             heading.style.cssText = `
-                font-size: 14px;
-                margin: 0 0 8px 0;
+                font-size: ${CARD_TITLE_FONT_SIZE};
+                margin: 0 0 ${CARD_TITLE_MARGIN_BOTTOM} 0;
                 font-weight: 600;
                 color: ${color};
                 text-align: center;
                 text-transform: uppercase;
-                word-spacing: 3px;
-                letter-spacing: 0.5px;
+                letter-spacing: ${CARD_TITLE_LETTER_SPACING};
                 font-family: 'Poppins', sans-serif;
-                white-space: pre; /* More aggressive than pre-wrap */
-    font-synthesis: none; /* Prevent browser interference */
-    -webkit-text-size-adjust: 100%; /* Disable iOS scaling */
-    text-rendering: geometricPrecision; /* Better spacing */
+                white-space: pre;
+                font-synthesis: none;
+                -webkit-text-size-adjust: 100%;
+                text-rendering: geometricPrecision;
             `;
-            
+
             const valueElement = document.createElement('p');
             if (id === 'roomBookingRevenue' && typeof value === 'object') {
                 valueElement.style.cssText = `
@@ -2344,34 +2346,28 @@ async function downloadStatsImage() {
                     align-items: center;
                     gap: 4px;
                     margin: 0;
-                    width: 100%; // Add this
+                    width: 100%;
                     text-align: center;
                     font-family: 'Poppins', sans-serif;
                 `;
                 valueElement.innerHTML = `
-                    <div style="font-size: ${valueSize}; 
-                               color: ${valueColor}; 
-                               font-weight: 600;
-                               line-height: 1.2;">
+                    <div style="font-size: ${CARD_VALUE_FONT_SIZE}; 
+                                color: ${valueColor}; 
+                                font-weight: ${CARD_VALUE_FONT_WEIGHT};
+                                letter-spacing: ${CARD_VALUE_LETTER_SPACING};
+                                line-height: 1.2;">
                         ${value.amount}
                     </div>
-                    ${value.rooms ? `<div style="font-size: calc(${valueSize} * 0.8); 
-                                    color: ${valueColor}; 
-                                    font-weight: 500;
-                                    line-height: 1.2;">
-                        ${value.rooms}
-                    </div>` : ''}
+                    ${value.rooms ? `<div style="font-size: 24px; color: ${valueColor}; font-weight: 500; line-height: 1.2;">${value.rooms}</div>` : ''}
                 `;
-            }
-
-            else {
+            } else {
                 valueElement.style.cssText = `
-                    font-size: ${valueSize};
+                    font-size: ${CARD_VALUE_FONT_SIZE};
                     margin: 0;
-                    font-weight: 600;
+                    font-weight: ${CARD_VALUE_FONT_WEIGHT};
                     color: ${valueColor};
                     text-align: center;
-                    letter-spacing: 0.5px;
+                    letter-spacing: ${CARD_VALUE_LETTER_SPACING};
                     font-family: 'Poppins', sans-serif;
                 `;
                 valueElement.textContent = typeof value === 'string' ? value : value.amount;
