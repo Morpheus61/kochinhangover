@@ -2295,11 +2295,11 @@ async function downloadStatsImage() {
         const CARD_BORDER_RADIUS = '16px';
         const CARD_GAP = '4px'; // Tighter vertical space between cards
         const CARD_TITLE_FONT_SIZE = '14px';
-        const CARD_TITLE_FONT_WEIGHT = '600';
+        const CARD_TITLE_FONT_WEIGHT = '500';
         const CARD_TITLE_LETTER_SPACING = '1px';
         const CARD_TITLE_MARGIN_BOTTOM = '4px';
-        const CARD_VALUE_FONT_SIZE = '28px';
-        const CARD_VALUE_FONT_WEIGHT = '700';
+        const CARD_VALUE_FONT_SIZE = '24px';
+        const CARD_VALUE_FONT_WEIGHT = '600';
         const CARD_VALUE_MARGIN_BOTTOM = '0px';
         const CARD_ROOMCOUNT_FONT_SIZE = '14px';
         const CARD_ROOMCOUNT_FONT_WEIGHT = '500';
@@ -2890,3 +2890,7 @@ window.deleteGuest = deleteGuest;
 window.downloadGuestsPDF = downloadGuestsPDF;
 window.downloadGuestsCSV = downloadGuestsCSV;
 window.downloadStatsImage = downloadStatsImage;
+
+// Guest List PDF and CSV download buttons
+document.getElementById('downloadGuestsPDFBtn')?.addEventListener('click', downloadGuestsPDF);
+document.getElementById('downloadGuestsCSVBtn')?.addEventListener('click', downloadGuestsCSV);
