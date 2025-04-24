@@ -2029,15 +2029,18 @@ async function loadStats() {
         document.getElementById('totalRegistrations').textContent = totalGuests;
         document.getElementById('verifiedEntries').textContent = verifiedEntries;
         document.getElementById('pendingEntries').textContent = pendingEntries;
-        document.getElementById('totalRevenue').textContent = `Rs.${totalRevenue}`;
-        document.getElementById('registrationRevenue').textContent = `Rs.${registrationRevenue}`;
+        document.getElementById('totalRevenue').textContent = `Rs.${totalRevenue.toLocaleString()}`;
+        document.getElementById('registrationRevenue').textContent = `Rs.${registrationRevenue.toLocaleString()}`;
+        
+        // Room booking with proper display logic
         const roomBookingElement = document.getElementById('roomBookingRevenue');
         const roomCount = Math.round(roomBookingRevenue/5000);
         roomBookingElement.innerHTML = `
             <div class="card-content">
-                <div class="amount">Rs.${roomBookingRevenue}</div>
-                ${roomCount > 0 ? `<div class="rooms">${roomCount} Rooms</div>` : ''}
+                <div class="amount">Rs.${roomBookingRevenue.toLocaleString()}</div>
+                ${roomCount > 0 ? `<div class="rooms">${roomCount} ${roomCount === 1 ? 'Room' : 'Rooms'}</div>` : ''}
             </div>`;
+        
         document.getElementById('totalPax').textContent = totalPax;
         
         // Calculate club-wise stats
@@ -2262,12 +2265,12 @@ async function downloadStatsImage() {
                 width: '100%', // Match other cards
                 height: 'auto', // Remove fixed height
                 format: value => {
-                    const amountMatch = value.match(/Rs\.(\d+)/);
-                    const amount = amountMatch ? amountMatch[1] : value.replace(/[^\d]/g, '');
-                    const roomCount = Math.round(parseInt(amount) / 5000);
+                    // Special handling for room booking (extract existing formatted values)
+                    const amount = value.match(/Rs\.([\d,]+)/)?.[0] || 'Rs.0';
+                    const roomCount = Math.round(parseInt(amount.replace(/[^\d]/g, '')) / 5000);
                     return {
-                        amount: amountMatch ? value : `Rs.${amount}`,
-                        rooms: roomCount > 0 ? `${roomCount} Rooms` : ''
+                        amount: amount,
+                        rooms: roomCount > 0 ? `${roomCount} ${roomCount === 1 ? 'Room' : 'Rooms'}` : ''
                     };
                 },
                 isSpecialHeader: true
@@ -2678,7 +2681,7 @@ async function downloadStatsPDF() {
         const registrationRevenue = guests.reduce((sum, guest) => sum + (parseFloat(guest.paid_amount) || 0), 0);
         const roomBookingRevenue = guests.reduce((sum, guest) => 
             sum + (safeGetGuestProperty(guest, 'has_room_booking', false) ? 
-            (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0) : 0), 0);
+            (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0): 0), 0);
         const totalRevenue = registrationRevenue + roomBookingRevenue;
         const totalPax = guests.reduce((sum, guest) => {
             return sum + (guest.entry_type === 'couple' ? 2 : 1);
