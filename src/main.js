@@ -2211,7 +2211,7 @@ async function downloadStatsImage() {
                 valueColor: '#0047ab',
                 valueSize: '28px',
                 format: value => {
-                    return `Rs.${value}`;
+                    return `${value}`;
                 }
             },
             {
@@ -2222,7 +2222,7 @@ async function downloadStatsImage() {
                 valueColor: '#006400',
                 valueSize: '28px',
                 format: value => {
-                    return `Rs.${value}`;
+                    return `${value}`;
                 }
             },
             {
@@ -2233,7 +2233,7 @@ async function downloadStatsImage() {
                 valueColor: '#8b4513',
                 valueSize: '28px',
                 format: value => {
-                    return `Rs.${value}`;
+                    return `${value}`;
                 }
             },
             {
@@ -2295,11 +2295,11 @@ async function downloadStatsImage() {
         const CARD_BORDER_RADIUS = '16px';
         const CARD_GAP = '4px'; // Tighter vertical space between cards
         const CARD_TITLE_FONT_SIZE = '18px';
-        const CARD_TITLE_FONT_WEIGHT = '600';
+        const CARD_TITLE_FONT_WEIGHT = '500';
         const CARD_TITLE_LETTER_SPACING = '1px';
         const CARD_TITLE_MARGIN_BOTTOM = '4px';
         const CARD_VALUE_FONT_SIZE = '32px';
-        const CARD_VALUE_FONT_WEIGHT = '700';
+        const CARD_VALUE_FONT_WEIGHT = '500';
         const CARD_VALUE_MARGIN_BOTTOM = '0px';
         const CARD_ROOMCOUNT_FONT_SIZE = '14px';
         const CARD_ROOMCOUNT_FONT_WEIGHT = '500';
@@ -2361,7 +2361,7 @@ async function downloadStatsImage() {
                     text-align: center;
                     font-family: 'Poppins', sans-serif;
                 `;
-                valueElement.textContent = typeof value === 'string' ? value : value.amount;
+                valueElement.textContent = value;
             }
             card.appendChild(heading);
             card.appendChild(valueElement);
@@ -2507,7 +2507,7 @@ async function downloadGuestsPDF() {
             xPos += colWidths[2];
             
             // Payment
-            doc.text(`Rs.${guest.paid_amount || 0} / Rs.${guest.total_amount || 0}`, xPos + 2, yPos);
+            doc.text(`${guest.paid_amount || 0} / ${guest.total_amount || 0}`, xPos + 2, yPos);
             xPos += colWidths[3];
             
             // Status with payment verification
