@@ -2272,10 +2272,12 @@ async function downloadStatsImage() {
                 width: '100%', // Match other cards
                 height: 'auto', // Remove fixed height
                 format: value => {
-                    const numericValue = parseInt(value.replace(/[^\d]/g, ''));
+                    // Remove any existing Rs. and get clean number
+                    const cleanValue = value.replace(/Rs\./g, '').trim();
+                    const numericValue = parseInt(cleanValue.replace(/[^\d]/g, ''));
                     const roomCount = Math.round(numericValue / 5000);
                     return {
-                        amount: `${value}`,
+                        amount: cleanValue,  // Return clean value without Rs.
                         rooms: roomCount > 0 ? `${roomCount} ${roomCount === 1 ? 'Room' : 'Rooms'}` : ''
                     };
                 },
