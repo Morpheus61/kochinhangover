@@ -2015,7 +2015,9 @@ async function loadStats() {
         
         const pendingEntries = totalGuests - verifiedEntries;
         const registrationRevenue = guests.reduce((sum, guest) => sum + (parseFloat(guest.paid_amount) || 0), 0);
-        const roomBookingRevenue = guests.reduce((sum, guest) => sum + (safeGetGuestProperty(guest, 'has_room_booking', false) ? (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0) : 0), 0);
+        const roomBookingRevenue = guests.reduce((sum, guest) => 
+            sum + (safeGetGuestProperty(guest, 'has_room_booking', false) ? 
+            (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0) : 0), 0);
         const totalRevenue = registrationRevenue + roomBookingRevenue;
         
         // Calculate total PAX (headcount)
@@ -2027,15 +2029,15 @@ async function loadStats() {
         document.getElementById('totalRegistrations').textContent = totalGuests;
         document.getElementById('verifiedEntries').textContent = verifiedEntries;
         document.getElementById('pendingEntries').textContent = pendingEntries;
+        document.getElementById('totalRevenue').textContent = `Rs.${totalRevenue}`;
         document.getElementById('registrationRevenue').textContent = `Rs.${registrationRevenue}`;
         const roomBookingElement = document.getElementById('roomBookingRevenue');
         const roomCount = Math.round(roomBookingRevenue/5000);
         roomBookingElement.innerHTML = `
             <div class="card-content">
                 <div class="amount">Rs.${roomBookingRevenue}</div>
-                <div class="rooms">(${roomCount} Rooms)</div>
+                ${roomCount > 0 ? `<div class="rooms">${roomCount} Rooms</div>` : ''}
             </div>`;
-        document.getElementById('totalRevenue').textContent = `Rs.${totalRevenue}`;
         document.getElementById('totalPax').textContent = totalPax;
         
         // Calculate club-wise stats
@@ -2205,9 +2207,9 @@ async function downloadStatsImage() {
             {
                 id: 'totalRegistrations',
                 title: 'TOTAL REGISTRATIONS',
-                bg: '#e6e6fa',
-                color: '#4b0082',
-                valueColor: '#4b0082',
+                bg: '#e6f3ff',
+                color: '#0047ab',
+                valueColor: '#0047ab',
                 valueSize: '28px'
             },
             {
@@ -2233,7 +2235,10 @@ async function downloadStatsImage() {
                 color: '#00008b',
                 valueColor: '#00008b',
                 valueSize: '28px',
-                format: value => `Rs.${value.replace('Rs.', '').replace('s.', '').trim()}`
+                format: value => {
+                    const match = value.match(/Rs\.(\d+)/);
+                    return match ? value : `Rs.${value}`;
+                }
             },
             {
                 id: 'registrationRevenue',
@@ -2242,12 +2247,15 @@ async function downloadStatsImage() {
                 color: '#4b0082',
                 valueColor: '#4b0082',
                 valueSize: '28px',
-                format: value => `Rs.${value.replace('Rs.', '').replace('s.', '').trim()}`
+                format: value => {
+                    const match = value.match(/Rs\.(\d+)/);
+                    return match ? value : `Rs.${value}`;
+                }
             },
             {
                 id: 'roomBookingRevenue',
                 title: 'ROOM BOOKING REVENUE',
-                bg: '#ffb6c1',
+                bg: '#ffc0cb',
                 color: '#8b0000',
                 valueColor: '#8b0000',
                 valueSize: '24px',
@@ -2255,11 +2263,11 @@ async function downloadStatsImage() {
                 height: 'auto', // Remove fixed height
                 format: value => {
                     const amountMatch = value.match(/Rs\.(\d+)/);
-                    const amount = amountMatch ? parseInt(amountMatch[1]) : 0;
-                    const roomCount = Math.round(amount / 5000);
+                    const amount = amountMatch ? amountMatch[1] : value.replace(/[^\d]/g, '');
+                    const roomCount = Math.round(parseInt(amount) / 5000);
                     return {
-                        amount: `Rs.${amount}`,
-                        rooms: roomCount ? `${roomCount} Rooms` : ''
+                        amount: amountMatch ? value : `Rs.${amount}`,
+                        rooms: roomCount > 0 ? `${roomCount} Rooms` : ''
                     };
                 },
                 isSpecialHeader: true
