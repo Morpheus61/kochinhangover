@@ -2037,7 +2037,7 @@ async function loadStats() {
         const roomCount = Math.round(roomBookingRevenue/5000);
         roomBookingElement.innerHTML = `
             <div class="card-content">
-                <div class="amount">Rs.${roomBookingRevenue.toLocaleString()}</div>
+                <div class="amount">${roomBookingRevenue.toLocaleString()}</div>
                 ${roomCount > 0 ? `<div class="rooms">${roomCount} ${roomCount === 1 ? 'Room' : 'Rooms'}</div>` : ''}
             </div>`;
         
@@ -2275,7 +2275,7 @@ async function downloadStatsImage() {
                     const numericValue = parseInt(value.replace(/[^\d]/g, ''));
                     const roomCount = Math.round(numericValue / 5000);
                     return {
-                        amount: `Rs.${value}`,
+                        amount: `${value}`,
                         rooms: roomCount > 0 ? `${roomCount} ${roomCount === 1 ? 'Room' : 'Rooms'}` : ''
                     };
                 },
