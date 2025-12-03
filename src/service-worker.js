@@ -1,23 +1,17 @@
 // Cache name with version
-const CACHE_NAME = 'kochin-hangover-cache-v1';
+const CACHE_NAME = 'rock4one-cache-v1';
 
 // Files to cache
 const CACHE_FILES = [
   './',
   'index.html',
   'main.js',
-  'assets/kochin-logo.png',
-  'assets/kochin-logo.svg',
-  'icons/icon-72x72.png',
-  'icons/icon-96x96.png',
-  'icons/icon-128x128.png',
-  'icons/icon-144x144.png',
-  'icons/icon-152x152.png',
-  'icons/icon-192x192.png',
-  'icons/icon-384x384.png',
-  'icons/icon-512x512.png',
+  'icons/android-chrome-192x192.png',
+  'icons/android-chrome-512x512.png',
   'icons/apple-touch-icon.png',
-  'favicon.ico',
+  'icons/favicon-16x16.png',
+  'icons/favicon-32x32.png',
+  'icons/favicon.ico',
   'manifest.json'
 ];
 
