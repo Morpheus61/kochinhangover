@@ -2823,19 +2823,18 @@ async function downloadStatsCSV() {
     }
 }
 
-// Register service worker for PWA functionality - DISABLED
-// Service worker temporarily disabled due to loading issues
-// if ('serviceWorker' in navigator) {
-//     window.addEventListener('load', () => {
-//         navigator.serviceWorker.register('/service-worker.js')
-//             .then(registration => {
-//                 console.log('Service Worker registered with scope:', registration.scope);
-//             })
-//             .catch(error => {
-//                 console.error('Service Worker registration failed:', error);
-//             });
-//     });
-// }
+// Register service worker for PWA functionality
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+            .then(registration => {
+                console.log('Service Worker registered with scope:', registration.scope);
+            })
+            .catch(error => {
+                console.error('Service Worker registration failed:', error);
+            });
+    });
+}
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {

@@ -1,0 +1,8 @@
+# Service Worker headers
+/service-worker.js
+  Content-Type: application/javascript; charset=utf-8
+  Service-Worker-Allowed: /
+
+/sw.js
+  Content-Type: application/javascript; charset=utf-8
+  Service-Worker-Allowed: /
