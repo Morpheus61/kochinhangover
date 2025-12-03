@@ -1,554 +1,989 @@
-// Initialize Supabase client
-import { createClient } from '@supabase/supabase-js';
-import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-import QRCode from 'qrcode';
-import html2canvas from 'html2canvas';
+// =====================================================
+// ROCK 4 ONE - Main Application v2.0
+// Multi-Seller Workflow with Payment Verification
+// =====================================================
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+import QRCode from 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/+esm';
+
+// Supabase Configuration
+const supabaseUrl = 'https://nybbovgdsvbwabuqthbd.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55YmJvdmdkc3Zid2FidXF0aGJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3NTU5NTIsImV4cCI6MjA4MDMzMTk1Mn0.g-1eRhGpiiOICp0tTPjsvAcuIUYur1NIqw1AOt1tugw';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Initialize app state
+// Global State
 let currentUser = null;
-let guests = [];
-let users = [];
-let qrScanner = null;
+let settings = {};
+let currentGuestForPass = null;
 
-// Constants for entry prices
-const ENTRY_PRICES = {
-    stag: 2750,
-    couple: 4750
-};
+// =====================================================
+// INITIALIZATION
+// =====================================================
 
-// Show login screen
-function showLoginScreen() {
-    const loginScreen = document.getElementById('loginScreen');
-    const mainApp = document.getElementById('mainApp');
-    
-    if (loginScreen) loginScreen.classList.remove('hidden');
-    if (mainApp) mainApp.classList.add('hidden');
-}
-
-// Show main app
-function showApp() {
-    const loginScreen = document.getElementById('loginScreen');
-    const mainApp = document.getElementById('mainApp');
-    
-    if (loginScreen) loginScreen.classList.add('hidden');
-    if (mainApp) mainApp.classList.remove('hidden');
-}
-
-// Handle login
-async function handleLogin(user) {
-    try {
-        currentUser = user;
-        sessionStorage.setItem('currentUser', JSON.stringify(user));
-        showApp();
-        await setupNavigation();
-        await showTab('registration');
-    } catch (error) {
-        console.error("Login handling failed:", error);
-        showLoginScreen();
-    }
-}
-
-// Handle logout
-async function handleLogout() {
-    try {
-        // No need to call Supabase Auth signOut since we're using direct database authentication
-        currentUser = null;
-        sessionStorage.removeItem('currentUser');
-        showLoginScreen();
-    } catch (error) {
-        console.error('Logout error:', error);
-    }
-}
-
-// Initialize app
-async function initializeApp() {
+document.addEventListener('DOMContentLoaded', async () => {
     // Check for existing session
-    const session = JSON.parse(sessionStorage.getItem('currentUser'));
-    
-    if (session) {
-        // Use the stored user directly since we're using database authentication
-        currentUser = session;
-        await handleLogin(currentUser);
-        return;
+    const savedUser = sessionStorage.getItem('rock4one_user');
+    if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        await initializeApp();
     }
     
-    showLoginScreen();
-}
+    // Setup event listeners
+    setupEventListeners();
+});
 
-// Setup navigation based on user role
-async function setupNavigation() {
+async function initializeApp() {
     if (!currentUser) return;
+    
+    // Load settings
+    await loadSettings();
+    
+    // Update UI for role
+    document.body.className = `rock4one-bg role-${currentUser.role}`;
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+    
+    // Update user display
+    document.getElementById('userName').textContent = currentUser.full_name || currentUser.username;
+    document.getElementById('userRole').textContent = formatRole(currentUser.role);
+    document.getElementById('userRole').className = `role-badge role-${currentUser.role}`;
+    
+    // Show first appropriate tab
+    showDefaultTab();
+    
+    // Load data based on role
+    await loadRoleData();
+}
 
-    const { data: userRole, error } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', currentUser.id)
-        .single();
+function formatRole(role) {
+    const roles = {
+        'super_admin': 'Super Admin',
+        'admin': 'Admin',
+        'seller': 'Seller'
+    };
+    return roles[role] || role;
+}
 
-    if (error) {
-        console.error('Error fetching user role:', error);
-        return;
+function showDefaultTab() {
+    let defaultTab;
+    switch(currentUser.role) {
+        case 'seller':
+            defaultTab = 'register';
+            break;
+        case 'super_admin':
+            defaultTab = 'verification-queue';
+            break;
+        case 'admin':
+            defaultTab = 'view-registrations';
+            break;
+        default:
+            defaultTab = 'register';
     }
+    showTab(defaultTab);
+}
 
-    const isStaff = userRole?.role === 'staff';  // Committee Member login
-    const isAdmin = userRole?.role === 'admin';
-    const isDoorman = userRole?.role === 'doorman';
-
-    // Show/hide user management button based on role
-    document.getElementById('usersBtn')?.classList.toggle('hidden', !isAdmin);
-    
-    // Update user role display
-    const userRoleDisplay = document.getElementById('userRoleDisplay');
-    if (userRoleDisplay) {
-        if (isAdmin) {
-            userRoleDisplay.textContent = 'Logged in as Admin';
-            userRoleDisplay.classList.add('bg-purple-700');
-            userRoleDisplay.classList.remove('bg-blue-600', 'bg-green-600');
-        } else if (isStaff) {
-            userRoleDisplay.textContent = 'Logged in as Committee Member';
-            userRoleDisplay.classList.add('bg-blue-600');
-            userRoleDisplay.classList.remove('bg-purple-700', 'bg-green-600');
-        } else if (isDoorman) {
-            userRoleDisplay.textContent = 'Logged in as Entry Check';
-            userRoleDisplay.classList.add('bg-green-600');
-            userRoleDisplay.classList.remove('bg-purple-700', 'bg-blue-600');
-        }
-    }
-    
-    // Reset all navigation buttons and tabs visibility first
-    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.add('hidden'));
-    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
-    
-    // Handle download buttons visibility
-    const downloadPdfBtn = document.getElementById('downloadPdfBtn');
-    const downloadCsvBtn = document.getElementById('downloadCsvBtn');
-    
-    if (downloadPdfBtn) {
-        downloadPdfBtn.classList.toggle('hidden', isDoorman);
-        downloadPdfBtn.disabled = isDoorman;
-    }
-    
-    if (downloadCsvBtn) {
-        downloadCsvBtn.classList.toggle('hidden', isDoorman);
-        downloadCsvBtn.disabled = isDoorman;
-    }
-    
-    // Admin: Full Access to all features
-    if (isAdmin) {
-        // Show all navigation buttons
-        document.getElementById('newRegistrationBtn')?.classList.remove('hidden');
-        document.getElementById('entryVerificationBtn')?.classList.remove('hidden');
-        document.getElementById('guestListBtn')?.classList.remove('hidden');
-        document.getElementById('statsBtn')?.classList.remove('hidden');
-        
-        // Auto-navigate to registration tab for admin users
-        showTab('registration');
-    }
-    
-    // Staff (Committee Member): Access to Registration, Guests and Stats
-    else if (isStaff) {
-        // Show registration, guests and stats buttons
-        document.getElementById('guestListBtn')?.classList.remove('hidden');
-        document.getElementById('statsBtn')?.classList.remove('hidden');
-        
-        // Auto-navigate to guests tab for committee members
-        showTab('guests');
-    }
-    
-    // Doorman: Access to Verification and Registered Guest List
-    else if (isDoorman) {
-        // Show only verification and guest list buttons
-        document.getElementById('entryVerificationBtn')?.classList.remove('hidden');
-        document.getElementById('guestListBtn')?.classList.remove('hidden');
-        
-        // Auto-navigate to verification tab for doorman users
-        showTab('verification');
+async function loadRoleData() {
+    switch(currentUser.role) {
+        case 'seller':
+            await loadMySales();
+            updateRegistrationForm();
+            break;
+        case 'super_admin':
+            await Promise.all([
+                loadVerificationQueue(),
+                loadAllRegistrations(),
+                loadSellers(),
+                loadStatistics()
+            ]);
+            updateRegistrationForm();
+            break;
+        case 'admin':
+            await Promise.all([
+                loadAdminRegistrations(),
+                loadAdminSellerStats(),
+                loadStatistics()
+            ]);
+            break;
     }
 }
 
-// Show specific tab
-async function showTab(tabId) {
-    // Get current user role
-    const { data: userRole, error } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', currentUser.id)
-        .single();
+// =====================================================
+// SETTINGS MANAGEMENT
+// =====================================================
 
-    if (error) {
-        console.error('Error fetching user role:', error);
-        return;
-    }
-
-    const isStaff = userRole?.role === 'staff' || userRole?.role === 'committee';
-    const isAdmin = userRole?.role === 'admin';
-    const isDoorman = userRole?.role === 'doorman';
-
-    // Role-based access control for tabs
-    if (isStaff && !['guests', 'stats'].includes(tabId)) {
-        // Staff/Committee can access registration, guests and stats tabs
-        tabId = 'guests';
-    } else if (isDoorman && !['verification', 'guests'].includes(tabId)) {
-        // Doorman can only access verification and guests tabs
-        tabId = 'verification';
-    }
-
-    // Clean up QR scanner if we're switching away from verification tab
-    if (qrScanner && tabId !== 'verification') {
-        console.log('Cleaning up QR scanner when switching tabs');
-        try {
-            // Stop the scanner
-            qrScanner.clear();
-            qrScanner = null;
-            
-            // Stop all video streams
-            const videoElements = document.querySelectorAll('video');
-            videoElements.forEach(video => {
-                if (video.srcObject) {
-                    const tracks = video.srcObject.getTracks();
-                    tracks.forEach(track => track.stop());
-                    video.srcObject = null;
-                }
-            });
-            
-            // Remove any scanner-related elements
-            document.querySelectorAll('.html5-qrcode-element').forEach(el => el.remove());
-        } catch (e) {
-            console.error('Error cleaning up QR scanner during tab switch:', e);
-        }
-    }
-
-    // Hide all tabs
-    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
-    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-
-    // Show selected tab
-    document.getElementById(tabId)?.classList.remove('hidden');
-    document.querySelector(`[data-tab="${tabId}"]`)?.classList.add('active');
-
-    // Special handling for specific tabs
-    if (tabId === 'guests') {
-        await loadGuestList();
-    } else if (tabId === 'stats') {
-        await loadStats();
-    } else if (tabId === 'verification') {
-        const hasPermission = await checkCameraPermissions();
-        if (hasPermission) {
-            initQRScanner();
-        } else {
-            document.getElementById('qrScanner').innerHTML = `
-                <div class="text-center p-8">
-                    <i class="fas fa-video-slash text-4xl mb-4 text-red-400"></i>
-                    <h3 class="text-xl font-bold mb-2">Camera Access Required</h3>
-                    <p class="mb-4">Please enable camera permissions to scan QR codes.</p>
-                    <button onclick="showTab('verification')" class="rock4one-button">
-                        Retry
-                    </button>
-                </div>
-            `;
-        }
-    } else if (tabId === 'users' && isAdmin) {
-        await loadUsers();
-    }
-
-    // Update URL hash for navigation
-    window.location.hash = tabId;
-}
-
-// Load guest list
-async function loadGuestList(searchTerm = '') {
+async function loadSettings() {
     try {
-        const { data: guests, error } = await supabase
-            .from('guests')
-            .select('*')
-            .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        const tbody = document.getElementById('guestListTableBody');
-        if (!tbody) return;
-        
-        // Get current user role
-        const { data: userRole, error: roleError } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', currentUser.id)
-            .single();
-        
-        if (roleError) throw roleError;
-        
-        const isAdmin = userRole?.role === 'admin';
-        const isStaff = userRole?.role === 'staff';  // Committee Member login
-        const isDoorman = userRole?.role === 'doorman';
-
-        // Handle download buttons visibility and state for doorman
-        const downloadButtons = document.querySelectorAll('#downloadGuestsPDFBtn, #downloadGuestsCSVBtn');
-        downloadButtons.forEach(button => {
-            if (isDoorman) {
-                button.style.display = 'none';
-            } else {
-                button.style.display = '';
-                button.classList.remove('hidden');
-            }
-        });
-
-        // Update table headers based on role
-        const paymentHeader = document.getElementById('paymentHeader');
-        if (paymentHeader) {
-            paymentHeader.style.display = isDoorman ? 'none' : '';
-        }
-
-        // Update actions header based on role
-        const actionsHeader = document.getElementById('actionsHeader');
-        if (actionsHeader) {
-            actionsHeader.style.display = isAdmin ? '' : 'none';
-        }
-        
-        // Filter guests based on search term if provided
-        let filteredGuests = guests;
-        if (searchTerm && searchTerm.trim() !== '') {
-            const term = searchTerm.toLowerCase().trim();
-            filteredGuests = guests.filter(guest => {
-                const guestName = guest.guest_name ? guest.guest_name.toLowerCase() : '';
-                const clubName = guest.club_name ? guest.club_name.toLowerCase() : '';
-                
-                return guestName.includes(term) || clubName.includes(term);
-            });
-        }
-        
-        tbody.innerHTML = filteredGuests.map(guest => `
-            <tr class="border-b border-gray-700">
-                <td class="py-3 px-4">${guest.guest_name || ''}</td>
-                <td class="py-3 px-4">${guest.club_name || ''}</td>
-                <td class="py-3 px-4">${guest.entry_type === 'stag' ? 'Stag' : 'Couple'}${safeGetGuestProperty(guest, 'has_room_booking', false) ? ' + Room' : ''}</td>
-                ${!isDoorman ? `<td class="py-3 px-4 payment-column">${formatPaymentDisplay(guest)}</td>` : ''}
-                <td class="py-3 px-4">
-                    ${getStatusBadge(guest)}
-                </td>
-                ${isAdmin ? `
-                <td class="py-3 px-4">
-                    <button class="text-blue-400 hover:text-blue-600 mr-2" onclick="editGuest('${guest.id}')">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="text-red-400 hover:text-red-600 mr-2" onclick="deleteGuest('${guest.id}')">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                    <button class="whatsapp-share text-green-400 hover:text-green-600" data-guest-id="${guest.id}">
-                        <i class="fab fa-whatsapp"></i>
-                    </button>
-                </td>
-                ` : ''}
-            </tr>
-        `).join('');
-
-        // Calculate totals
-        const totalRegistrations = filteredGuests.length;
-        const totalPax = filteredGuests.reduce((sum, guest) => {
-            return sum + (guest.entry_type === 'couple' ? 2 : 1);
-        }, 0);
-
-        // Count verified guests (actual attendance)
-        const verifiedGuests = filteredGuests.filter(guest => guest.status === 'verified').length;
-        const verifiedPax = filteredGuests.filter(guest => guest.status === 'verified')
-            .reduce((sum, guest) => sum + (guest.entry_type === 'couple' ? 2 : 1), 0);
-
-        // Add total row with adjusted colspan based on role
-        const totalColspan = isDoorman ? 2 : (isAdmin ? 3 : 3); // Adjust colspan based on visible columns
-        tbody.innerHTML += `
-            <tr class="border-t-2 border-pink-500 bg-purple-900 bg-opacity-30 font-bold">
-                <td class="py-3 px-4" colspan="2">Total</td>
-                <td class="py-3 px-4">${totalRegistrations} Registrations</td>
-                <td class="py-3 px-4" colspan="${totalColspan}">${totalPax} PAX (Headcount)</td>
-            </tr>
-            <tr class="bg-green-900 bg-opacity-30 font-bold">
-                <td class="py-3 px-4" colspan="2">Verified (Arrived)</td>
-                <td class="py-3 px-4">${verifiedGuests} Guests</td>
-                <td class="py-3 px-4" colspan="${totalColspan}">${verifiedPax} PAX (Headcount)</td>
-            </tr>
-        `;
-        
-        // Re-attach event listeners for WhatsApp sharing (only for admin)
-        if (isAdmin) {
-            document.querySelectorAll('.whatsapp-share').forEach(button => {
-                button.addEventListener('click', function() {
-                    const guestId = this.getAttribute('data-guest-id');
-                    if (guestId) {
-                        showWhatsAppShareModal(guestId);
-                    }
-                });
-            });
-        }
-        
-    } catch (error) {
-        console.error('Error loading guest list:', error);
-    }
-}
-
-// Helper function to generate status badge with enhanced information
-function getStatusBadge(guest) {
-    // Check if guest has paid in full
-    const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
-    const isFullyPaid = parseFloat(guest.paid_amount) >= expectedAmount;
-    
-    // Determine status color and text
-    let statusColor = '';
-    let statusText = '';
-    let verifiedIcon = '';
-    
-    if (guest.status === 'verified') {
-        // Guest has been verified (arrived at event)
-        verifiedIcon = '<i class="fas fa-check-circle mr-1"></i>';
-        
-        if (isFullyPaid) {
-            // Fully paid and verified
-            statusColor = 'bg-green-500';
-            statusText = 'VERIFIED (PAID)';
-        } else {
-            // Partially paid but verified
-            statusColor = 'bg-yellow-500';
-            statusText = 'VERIFIED (PARTIAL)';
-        }
-    } else if (guest.status === 'paid' || isFullyPaid) {
-        // Fully paid but not verified
-        statusColor = 'bg-blue-500';
-        statusText = 'PAID';
-    } else if (guest.status === 'partially_paid') {
-        // Partially paid
-        statusColor = 'bg-yellow-500';
-        statusText = 'PARTIAL';
-    } else {
-        // Pending
-        statusColor = 'bg-red-500';
-        statusText = 'PENDING';
-    }
-    
-    return `<span class="px-2 py-1 rounded-full text-xs ${statusColor}">${verifiedIcon}${statusText}</span>`;
-}
-
-// Helper function to format payment display
-function formatPaymentDisplay(guest) {
-    const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
-    const paidAmount = guest.paid_amount || 0;
-    const roomBookingAmount = safeGetGuestProperty(guest, 'room_booking_amount', 0) || 0;
-    
-    // If there's a room booking, show both amounts separately
-    if (roomBookingAmount > 0) {
-        // For fully paid registration
-        if (paidAmount >= expectedAmount) {
-            return `Rs.${paidAmount} + Rs.${roomBookingAmount}`;
-        }
-        // For partially paid registration
-        return `Rs.${paidAmount}/Rs.${expectedAmount} + Rs.${roomBookingAmount}`;
-    }
-    
-    // No room booking, just show registration amount
-    // For fully paid guests, only show the amount received
-    if (paidAmount >= expectedAmount) {
-        return `Rs.${paidAmount}`;
-    }
-    
-    // For partially paid guests, show the format: paid/total
-    return `Rs.${paidAmount}/Rs.${expectedAmount}`;
-}
-
-// Helper function to safely access guest properties with fallbacks for missing columns
-function safeGetGuestProperty(guest, property, defaultValue) {
-    // If the property exists on the guest object, return it
-    if (guest && property in guest) {
-        return guest[property];
-    }
-    // Otherwise return the default value
-    return defaultValue;
-}
-
-// Load users list
-async function loadUsers() {
-    try {
-        const { data: users, error } = await supabase
-            .from('users')
+        const { data, error } = await supabase
+            .from('settings')
             .select('*');
         
         if (error) throw error;
         
-        const tbody = document.getElementById('usersList');
-        if (!tbody) return;
-        
-        tbody.innerHTML = users.map(user => `
-            <tr class="border-b border-gray-700">
-                <td class="py-3 px-4">${user.username || ''}</td>
-                <td class="py-3 px-4">${user.role || ''}</td>
-                <td class="py-3 px-4">
-                    <button class="text-blue-400 hover:text-blue-600 mr-2 edit-user-btn" data-user-id="${user.id}">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="text-red-400 hover:text-red-600 mr-2 delete-user-btn" data-user-id="${user.id}">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-
-        // Attach event listeners to the edit and delete buttons
-        document.querySelectorAll('.edit-user-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const userId = this.getAttribute('data-user-id');
-                editUser(userId);
-            });
+        // Convert to key-value object
+        settings = {};
+        data.forEach(s => {
+            settings[s.setting_key] = s.setting_value;
         });
         
-        document.querySelectorAll('.delete-user-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const userId = this.getAttribute('data-user-id');
-                deleteUser(userId);
-            });
-        });
+        // Update UI with settings
+        updateUIWithSettings();
         
     } catch (error) {
-        console.error('Error loading users list:', error);
+        console.error('Error loading settings:', error);
     }
 }
 
-// Add user function
-async function addUser(username, password, role) {
-    try {
-        // Check if username already exists
-        const { data: existingUsers, error: checkError } = await supabase
-            .from('users')
-            .select('id')
-            .eq('username', username);
+function updateUIWithSettings() {
+    // Update entry type options with prices
+    const stagPrice = settings.stag_price || '2750';
+    const couplePrice = settings.couple_price || '4750';
+    
+    const entryTypeSelect = document.getElementById('entryType');
+    if (entryTypeSelect) {
+        entryTypeSelect.innerHTML = `
+            <option value="">Select entry type</option>
+            <option value="stag">Stag - ₹${stagPrice}</option>
+            <option value="couple">Couple - ₹${couplePrice}</option>
+        `;
+    }
+    
+    // Update UPI display for sellers
+    const upiDisplay = document.getElementById('displayUpiId');
+    if (upiDisplay) {
+        upiDisplay.textContent = settings.upi_id || 'Not configured';
+    }
+    
+    // Update settings form if super admin
+    if (currentUser?.role === 'super_admin') {
+        document.querySelectorAll('#settingsForm [data-key]').forEach(input => {
+            const key = input.dataset.key;
+            if (settings[key] !== undefined) {
+                input.value = settings[key];
+            }
+        });
+    }
+}
 
-        if (checkError) throw checkError;
+async function saveSettings(e) {
+    e.preventDefault();
+    
+    try {
+        const updates = [];
+        document.querySelectorAll('#settingsForm [data-key]').forEach(input => {
+            updates.push({
+                setting_key: input.dataset.key,
+                setting_value: input.value,
+                updated_at: new Date().toISOString(),
+                updated_by: currentUser.id
+            });
+        });
         
-        if (existingUsers && existingUsers.length > 0) {
-            throw new Error('Username already exists');
+        for (const update of updates) {
+            const { error } = await supabase
+                .from('settings')
+                .update({ 
+                    setting_value: update.setting_value,
+                    updated_at: update.updated_at,
+                    updated_by: update.updated_by
+                })
+                .eq('setting_key', update.setting_key);
+            
+            if (error) throw error;
         }
         
-        // Insert new user
-        const { data, error } = await supabase
+        await loadSettings();
+        showToast('Settings saved successfully!', 'success');
+        
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        showToast('Failed to save settings', 'error');
+    }
+}
+
+// =====================================================
+// AUTHENTICATION
+// =====================================================
+
+async function handleLogin(e) {
+    e.preventDefault();
+    
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errorDiv = document.getElementById('loginError');
+    
+    try {
+        const { data: users, error } = await supabase
             .from('users')
-            .insert([{ username, password, role }])
+            .select('*')
+            .eq('username', username)
+            .eq('password', password)
+            .eq('is_active', true);
+        
+        if (error) throw error;
+        
+        if (!users || users.length === 0) {
+            throw new Error('Invalid username or password');
+        }
+        
+        currentUser = users[0];
+        sessionStorage.setItem('rock4one_user', JSON.stringify(currentUser));
+        
+        errorDiv.classList.add('hidden');
+        await initializeApp();
+        
+    } catch (error) {
+        console.error('Login error:', error);
+        errorDiv.textContent = error.message || 'Login failed';
+        errorDiv.classList.remove('hidden');
+    }
+}
+
+function handleLogout() {
+    currentUser = null;
+    sessionStorage.removeItem('rock4one_user');
+    document.body.className = 'rock4one-bg';
+    document.getElementById('mainApp').classList.add('hidden');
+    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('loginForm').reset();
+}
+
+// =====================================================
+// NAVIGATION
+// =====================================================
+
+function showTab(tabId) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.add('hidden');
+    });
+    
+    // Remove active from all nav tabs
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.classList.remove('active');
+        tab.classList.add('secondary');
+    });
+    
+    // Show selected tab
+    const targetTab = document.getElementById(`tab-${tabId}`);
+    if (targetTab) {
+        targetTab.classList.remove('hidden');
+    }
+    
+    // Activate nav button
+    const navBtn = document.querySelector(`.nav-tab[data-tab="${tabId}"]`);
+    if (navBtn) {
+        navBtn.classList.add('active');
+        navBtn.classList.remove('secondary');
+    }
+    
+    // Refresh data for certain tabs
+    refreshTabData(tabId);
+}
+
+async function refreshTabData(tabId) {
+    switch(tabId) {
+        case 'verification-queue':
+            await loadVerificationQueue();
+            break;
+        case 'all-registrations':
+            await loadAllRegistrations();
+            break;
+        case 'my-sales':
+            await loadMySales();
+            break;
+        case 'seller-management':
+            await loadSellers();
+            break;
+        case 'statistics':
+            await loadStatistics();
+            break;
+        case 'view-registrations':
+            await loadAdminRegistrations();
+            break;
+        case 'view-sellers':
+            await loadAdminSellerStats();
+            break;
+    }
+}
+
+// =====================================================
+// SELLER: REGISTRATION FORM
+// =====================================================
+
+function updateRegistrationForm() {
+    const entryType = document.getElementById('entryType');
+    const paymentMode = document.getElementById('paymentMode');
+    const priceDisplay = document.getElementById('priceDisplay');
+    const ticketPrice = document.getElementById('ticketPrice');
+    const paymentRefSection = document.getElementById('paymentRefSection');
+    const paymentReference = document.getElementById('paymentReference');
+    const refLabel = document.getElementById('refLabel');
+    
+    // Update price display
+    if (entryType.value) {
+        const price = entryType.value === 'stag' 
+            ? (settings.stag_price || '2750') 
+            : (settings.couple_price || '4750');
+        ticketPrice.textContent = price;
+        priceDisplay.classList.remove('hidden');
+    } else {
+        priceDisplay.classList.add('hidden');
+    }
+    
+    // Show/hide payment reference based on mode
+    if (paymentMode.value === 'upi' || paymentMode.value === 'bank_transfer') {
+        paymentRefSection.classList.remove('hidden');
+        paymentReference.required = true;
+        refLabel.textContent = paymentMode.value === 'upi' ? 'UTR Number' : 'Transaction Reference';
+    } else {
+        paymentRefSection.classList.add('hidden');
+        paymentReference.required = false;
+    }
+}
+
+async function handleRegistration(e) {
+    e.preventDefault();
+    
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Submitting...';
+    
+    try {
+        const entryType = document.getElementById('entryType').value;
+        const ticketPrice = entryType === 'stag' 
+            ? parseInt(settings.stag_price || 2750) 
+            : parseInt(settings.couple_price || 4750);
+        
+        const guestData = {
+            guest_name: document.getElementById('guestName').value.trim(),
+            mobile_number: document.getElementById('guestMobile').value.trim(),
+            entry_type: entryType,
+            payment_mode: document.getElementById('paymentMode').value,
+            payment_reference: document.getElementById('paymentReference')?.value.trim() || null,
+            ticket_price: ticketPrice,
+            registered_by: currentUser.id,
+            status: 'pending_verification'
+        };
+        
+        const { data, error } = await supabase
+            .from('guests')
+            .insert([guestData])
             .select();
         
         if (error) throw error;
         
-        // Reload users list
-        await loadUsers();
+        // Reset form
+        e.target.reset();
+        document.getElementById('priceDisplay').classList.add('hidden');
+        document.getElementById('paymentRefSection').classList.add('hidden');
         
-        return data;
+        showToast('Registration submitted successfully!', 'success');
+        
+        // Refresh my sales
+        await loadMySales();
+        
     } catch (error) {
-        console.error('Error adding user:', error);
-        throw error;
+        console.error('Registration error:', error);
+        showToast('Failed to submit registration: ' + error.message, 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Submit Registration';
     }
 }
 
-// Edit user function
-async function editUser(userId) {
+// =====================================================
+// SELLER: MY SALES
+// =====================================================
+
+async function loadMySales() {
     try {
-        // Get user data
+        const { data: guests, error } = await supabase
+            .from('guests')
+            .select('*')
+            .eq('registered_by', currentUser.id)
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        // Update stats
+        const total = guests.length;
+        const pending = guests.filter(g => g.status === 'pending_verification').length;
+        const verified = guests.filter(g => !['pending_verification', 'rejected'].includes(g.status)).length;
+        const totalAmount = guests
+            .filter(g => !['pending_verification', 'rejected'].includes(g.status))
+            .reduce((sum, g) => sum + (g.ticket_price || 0), 0);
+        
+        document.getElementById('myTotalCount').textContent = total;
+        document.getElementById('myPendingCount').textContent = pending;
+        document.getElementById('myVerifiedCount').textContent = verified;
+        document.getElementById('myTotalAmount').textContent = `₹${totalAmount.toLocaleString()}`;
+        
+        // Render table
+        const tbody = document.getElementById('mySalesTableBody');
+        if (guests.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-500">No registrations yet</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = guests.map(g => `
+            <tr>
+                <td class="font-semibold">${escapeHtml(g.guest_name)}</td>
+                <td>${g.mobile_number}</td>
+                <td class="capitalize">${g.entry_type}</td>
+                <td>₹${g.ticket_price?.toLocaleString()}</td>
+                <td class="capitalize">${formatPaymentMode(g.payment_mode)}</td>
+                <td>${getStatusBadge(g.status)}</td>
+                <td class="text-sm text-gray-400">${formatDate(g.created_at)}</td>
+            </tr>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Error loading my sales:', error);
+    }
+}
+
+// =====================================================
+// SUPER ADMIN: VERIFICATION QUEUE
+// =====================================================
+
+async function loadVerificationQueue(filter = 'all') {
+    try {
+        let query = supabase
+            .from('guests')
+            .select(`
+                *,
+                seller:registered_by(username, full_name)
+            `)
+            .eq('status', 'pending_verification')
+            .order('created_at', { ascending: true });
+        
+        if (filter !== 'all') {
+            query = query.eq('payment_mode', filter);
+        }
+        
+        const { data: guests, error } = await query;
+        
+        if (error) throw error;
+        
+        // Update pending badge
+        const pendingBadge = document.getElementById('pendingBadge');
+        if (pendingBadge) {
+            pendingBadge.textContent = guests.length;
+            pendingBadge.style.display = guests.length > 0 ? 'inline' : 'none';
+        }
+        
+        const tbody = document.getElementById('verificationQueueBody');
+        if (guests.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-gray-500">No pending verifications 🎉</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = guests.map(g => `
+            <tr data-payment="${g.payment_mode}">
+                <td class="font-semibold">${escapeHtml(g.guest_name)}</td>
+                <td>${g.mobile_number}</td>
+                <td class="capitalize">${g.entry_type}</td>
+                <td class="font-semibold text-yellow-400">₹${g.ticket_price?.toLocaleString()}</td>
+                <td>${formatPaymentMode(g.payment_mode)}</td>
+                <td class="text-sm">${g.payment_reference || '-'}</td>
+                <td class="text-sm">${g.seller?.full_name || g.seller?.username || 'Unknown'}</td>
+                <td>
+                    <button onclick="showVerifyModal('${g.id}')" class="rock4one-button success text-xs py-1 px-2 mr-1">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button onclick="quickReject('${g.id}')" class="rock4one-button danger text-xs py-1 px-2">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Error loading verification queue:', error);
+    }
+}
+
+window.showVerifyModal = async function(guestId) {
+    try {
+        const { data: guest, error } = await supabase
+            .from('guests')
+            .select(`*, seller:registered_by(username, full_name)`)
+            .eq('id', guestId)
+            .single();
+        
+        if (error) throw error;
+        
+        document.getElementById('verifyGuestId').value = guestId;
+        document.getElementById('verifyGuestInfo').innerHTML = `
+            <div class="space-y-2">
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Guest:</span>
+                    <span class="font-semibold">${escapeHtml(guest.guest_name)}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Mobile:</span>
+                    <span>${guest.mobile_number}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Entry:</span>
+                    <span class="capitalize">${guest.entry_type}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Amount:</span>
+                    <span class="text-yellow-400 font-bold">₹${guest.ticket_price?.toLocaleString()}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Payment:</span>
+                    <span>${formatPaymentMode(guest.payment_mode)}</span>
+                </div>
+                ${guest.payment_reference ? `
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Reference:</span>
+                    <span class="font-mono text-sm">${guest.payment_reference}</span>
+                </div>
+                ` : ''}
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Seller:</span>
+                    <span>${guest.seller?.full_name || guest.seller?.username}</span>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('verifyNotes').value = '';
+        openModal('verifyModal');
+        
+    } catch (error) {
+        console.error('Error loading guest for verification:', error);
+        showToast('Failed to load guest details', 'error');
+    }
+};
+
+async function handleVerification(e) {
+    e.preventDefault();
+    
+    const guestId = document.getElementById('verifyGuestId').value;
+    const notes = document.getElementById('verifyNotes').value;
+    
+    try {
+        const { error } = await supabase
+            .from('guests')
+            .update({
+                status: 'payment_verified',
+                verified_by: currentUser.id,
+                verified_at: new Date().toISOString(),
+                verification_notes: notes || null
+            })
+            .eq('id', guestId);
+        
+        if (error) throw error;
+        
+        closeModal('verifyModal');
+        showToast('Payment verified successfully!', 'success');
+        await loadVerificationQueue();
+        
+        // Ask to generate pass
+        if (confirm('Generate and send guest pass now?')) {
+            await generateAndShowPass(guestId);
+        }
+        
+    } catch (error) {
+        console.error('Error verifying payment:', error);
+        showToast('Failed to verify payment', 'error');
+    }
+}
+
+window.rejectPayment = async function() {
+    const guestId = document.getElementById('verifyGuestId').value;
+    const notes = document.getElementById('verifyNotes').value;
+    
+    if (!confirm('Are you sure you want to reject this payment?')) return;
+    
+    try {
+        const { error } = await supabase
+            .from('guests')
+            .update({
+                status: 'rejected',
+                verified_by: currentUser.id,
+                verified_at: new Date().toISOString(),
+                verification_notes: notes || 'Payment rejected'
+            })
+            .eq('id', guestId);
+        
+        if (error) throw error;
+        
+        closeModal('verifyModal');
+        showToast('Payment rejected', 'warning');
+        await loadVerificationQueue();
+        
+    } catch (error) {
+        console.error('Error rejecting payment:', error);
+        showToast('Failed to reject payment', 'error');
+    }
+};
+
+window.quickReject = async function(guestId) {
+    if (!confirm('Reject this registration?')) return;
+    
+    try {
+        const { error } = await supabase
+            .from('guests')
+            .update({
+                status: 'rejected',
+                verified_by: currentUser.id,
+                verified_at: new Date().toISOString(),
+                verification_notes: 'Quick rejected'
+            })
+            .eq('id', guestId);
+        
+        if (error) throw error;
+        
+        showToast('Registration rejected', 'warning');
+        await loadVerificationQueue();
+        
+    } catch (error) {
+        console.error('Error rejecting:', error);
+        showToast('Failed to reject', 'error');
+    }
+};
+
+// =====================================================
+// SUPER ADMIN: ALL REGISTRATIONS
+// =====================================================
+
+let allRegistrationsCache = [];
+let currentStatusFilter = 'all';
+
+async function loadAllRegistrations(statusFilter = 'all') {
+    currentStatusFilter = statusFilter;
+    
+    try {
+        let query = supabase
+            .from('guests')
+            .select(`*, seller:registered_by(username, full_name)`)
+            .order('created_at', { ascending: false });
+        
+        if (statusFilter !== 'all') {
+            query = query.eq('status', statusFilter);
+        }
+        
+        const { data: guests, error } = await query;
+        
+        if (error) throw error;
+        
+        allRegistrationsCache = guests;
+        renderAllRegistrations(guests);
+        
+    } catch (error) {
+        console.error('Error loading all registrations:', error);
+    }
+}
+
+function renderAllRegistrations(guests) {
+    const tbody = document.getElementById('allRegistrationsBody');
+    
+    if (guests.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-gray-500">No registrations found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = guests.map(g => `
+        <tr>
+            <td class="font-semibold">${escapeHtml(g.guest_name)}</td>
+            <td>${g.mobile_number}</td>
+            <td class="capitalize">${g.entry_type}</td>
+            <td>₹${g.ticket_price?.toLocaleString()}</td>
+            <td>${formatPaymentMode(g.payment_mode)}</td>
+            <td class="text-sm">${g.seller?.full_name || g.seller?.username || '-'}</td>
+            <td>${getStatusBadge(g.status)}</td>
+            <td>
+                ${getActionButtons(g)}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function getActionButtons(guest) {
+    const buttons = [];
+    
+    if (guest.status === 'pending_verification') {
+        buttons.push(`<button onclick="showVerifyModal('${guest.id}')" class="rock4one-button success text-xs py-1 px-2" title="Verify"><i class="fas fa-check"></i></button>`);
+    }
+    
+    if (['payment_verified', 'pass_generated'].includes(guest.status)) {
+        buttons.push(`<button onclick="generateAndShowPass('${guest.id}')" class="rock4one-button text-xs py-1 px-2" title="Generate Pass"><i class="fas fa-qrcode"></i></button>`);
+    }
+    
+    if (guest.status === 'pass_sent') {
+        buttons.push(`<button onclick="resendPass('${guest.id}')" class="rock4one-button secondary text-xs py-1 px-2" title="Resend"><i class="fab fa-whatsapp"></i></button>`);
+    }
+    
+    return buttons.join(' ') || '-';
+}
+
+// =====================================================
+// PASS GENERATION & WHATSAPP
+// =====================================================
+
+window.generateAndShowPass = async function(guestId) {
+    try {
+        const { data: guest, error } = await supabase
+            .from('guests')
+            .select('*')
+            .eq('id', guestId)
+            .single();
+        
+        if (error) throw error;
+        
+        currentGuestForPass = guest;
+        
+        // Generate QR Code
+        const qrData = JSON.stringify({
+            id: guest.id,
+            name: guest.guest_name,
+            type: guest.entry_type,
+            ts: Date.now()
+        });
+        
+        const qrCodeDataURL = await QRCode.toDataURL(qrData, {
+            width: 200,
+            margin: 2,
+            color: { dark: '#0a0a0a', light: '#ffffff' }
+        });
+        
+        // Render pass preview
+        const eventName = settings.event_name || 'Rock 4 One';
+        const eventTagline = settings.event_tagline || 'Harmony for Humanity';
+        const eventDate = settings.event_date || 'TBD';
+        const eventVenue = settings.event_venue || 'TBD';
+        
+        document.getElementById('guestPassPreview').innerHTML = `
+            <div id="passForDownload" style="
+                width: 100%;
+                max-width: 400px;
+                margin: 0 auto;
+                padding: 20px;
+                background: linear-gradient(135deg, #0a0a0a, #1a1a1a);
+                border: 4px solid #d4a853;
+                border-radius: 16px;
+                color: white;
+                font-family: Arial, sans-serif;
+            ">
+                <div style="text-align: center; border-bottom: 2px solid #d4a853; padding-bottom: 15px; margin-bottom: 15px;">
+                    <h1 style="
+                        font-size: 28px;
+                        font-weight: bold;
+                        margin: 0;
+                        background: linear-gradient(135deg, #d4a853, #f5d76e);
+                        -webkit-background-clip: text;
+                        background-clip: text;
+                        color: transparent;
+                        letter-spacing: 2px;
+                    ">${eventName.toUpperCase()}</h1>
+                    <p style="color: #d4a853; font-size: 12px; letter-spacing: 2px; margin: 5px 0 0;">${eventTagline}</p>
+                    <p style="color: #f5d76e; font-size: 18px; margin: 10px 0 0;">🎫 GUEST PASS</p>
+                </div>
+                
+                <div style="display: flex; gap: 20px;">
+                    <div style="flex: 1;">
+                        <div style="margin-bottom: 12px;">
+                            <p style="color: #d4a853; font-size: 11px; margin: 0;">NAME</p>
+                            <p style="font-size: 18px; font-weight: bold; margin: 2px 0 0;">${escapeHtml(guest.guest_name)}</p>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <p style="color: #d4a853; font-size: 11px; margin: 0;">MOBILE</p>
+                            <p style="font-size: 16px; margin: 2px 0 0;">${guest.mobile_number}</p>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <p style="color: #d4a853; font-size: 11px; margin: 0;">ENTRY TYPE</p>
+                            <p style="font-size: 16px; font-weight: bold; margin: 2px 0 0; text-transform: uppercase;">${guest.entry_type}</p>
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="background: white; padding: 8px; border-radius: 8px; border: 2px solid #d4a853;">
+                            <img src="${qrCodeDataURL}" alt="QR Code" style="width: 120px; height: 120px;">
+                        </div>
+                        <p style="color: #888; font-size: 10px; margin-top: 5px;">Scan at entry</p>
+                    </div>
+                </div>
+                
+                <div style="border-top: 2px solid #d4a853; margin-top: 15px; padding-top: 15px; text-align: center;">
+                    <p style="color: #d4a853; font-size: 12px; margin: 0;">📅 ${eventDate}</p>
+                    <p style="color: #d4a853; font-size: 12px; margin: 5px 0 0;">📍 ${eventVenue}</p>
+                </div>
+                
+                <div style="text-align: center; margin-top: 15px; color: #666; font-size: 20px;">
+                    🎸 🎵 🎸 🎵 🎸
+                </div>
+            </div>
+        `;
+        
+        // Update guest status
+        await supabase
+            .from('guests')
+            .update({
+                status: 'pass_generated',
+                pass_generated_at: new Date().toISOString()
+            })
+            .eq('id', guestId);
+        
+        openModal('passModal');
+        
+    } catch (error) {
+        console.error('Error generating pass:', error);
+        showToast('Failed to generate pass', 'error');
+    }
+};
+
+window.sendWhatsApp = async function() {
+    if (!currentGuestForPass) return;
+    
+    try {
+        // Download pass first
+        await downloadPass();
+        
+        // Format phone number
+        let phone = currentGuestForPass.mobile_number.replace(/\D/g, '');
+        if (phone.length === 10) phone = '91' + phone;
+        
+        const eventName = settings.event_name || 'Rock 4 One';
+        const eventDate = settings.event_date || 'TBD';
+        const eventVenue = settings.event_venue || 'TBD';
+        
+        const message = `🎸 *${eventName.toUpperCase()} - GUEST PASS* 🎸
+
+Hello ${currentGuestForPass.guest_name}!
+
+Your registration is confirmed! ✅
+
+📋 *Details:*
+• Name: ${currentGuestForPass.guest_name}
+• Entry: ${currentGuestForPass.entry_type.toUpperCase()}
+• Mobile: ${currentGuestForPass.mobile_number}
+
+📅 Date: ${eventDate}
+📍 Venue: ${eventVenue}
+
+Please show this pass and QR code at the entrance.
+
+See you at the event! 🎵
+
+_Harmony for Humanity_`;
+        
+        const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+        
+        // Update status
+        await supabase
+            .from('guests')
+            .update({
+                status: 'pass_sent',
+                pass_sent_at: new Date().toISOString()
+            })
+            .eq('id', currentGuestForPass.id);
+        
+        closeModal('passModal');
+        showToast('Pass sent via WhatsApp!', 'success');
+        
+        // Refresh data
+        await loadAllRegistrations(currentStatusFilter);
+        
+    } catch (error) {
+        console.error('Error sending WhatsApp:', error);
+        showToast('Failed to send WhatsApp', 'error');
+    }
+};
+
+window.downloadPass = async function() {
+    const passElement = document.getElementById('passForDownload');
+    if (!passElement || !currentGuestForPass) return;
+    
+    try {
+        const canvas = await html2canvas(passElement, {
+            backgroundColor: '#0a0a0a',
+            scale: 2
+        });
+        
+        const link = document.createElement('a');
+        link.download = `rock4one-pass-${currentGuestForPass.guest_name.replace(/\s+/g, '-').toLowerCase()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        
+    } catch (error) {
+        console.error('Error downloading pass:', error);
+        showToast('Failed to download pass', 'error');
+    }
+};
+
+window.resendPass = async function(guestId) {
+    await generateAndShowPass(guestId);
+};
+
+// =====================================================
+// SUPER ADMIN: SELLER MANAGEMENT
+// =====================================================
+
+async function loadSellers() {
+    try {
+        // Get all users
+        const { data: users, error: userError } = await supabase
+            .from('users')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (userError) throw userError;
+        
+        // Get seller stats
+        const { data: stats, error: statsError } = await supabase
+            .from('seller_stats')
+            .select('*');
+        
+        // Merge data
+        const usersWithStats = users.map(u => {
+            const stat = stats?.find(s => s.seller_id === u.id) || {};
+            return { ...u, ...stat };
+        });
+        
+        const tbody = document.getElementById('sellersTableBody');
+        tbody.innerHTML = usersWithStats.map(u => `
+            <tr>
+                <td class="font-semibold">${escapeHtml(u.username)}</td>
+                <td>${escapeHtml(u.full_name || '-')}</td>
+                <td>${u.mobile_number || '-'}</td>
+                <td><span class="role-badge role-${u.role}">${formatRole(u.role)}</span></td>
+                <td>${u.total_registrations || 0}</td>
+                <td class="text-green-400">₹${(u.total_verified_amount || 0).toLocaleString()}</td>
+                <td>
+                    <span class="text-xs px-2 py-1 rounded ${u.is_active ? 'bg-green-600' : 'bg-red-600'}">
+                        ${u.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                </td>
+                <td>
+                    <button onclick="editUser('${u.id}')" class="rock4one-button secondary text-xs py-1 px-2 mr-1">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="toggleUserStatus('${u.id}', ${!u.is_active})" class="rock4one-button ${u.is_active ? 'danger' : 'success'} text-xs py-1 px-2">
+                        <i class="fas fa-${u.is_active ? 'ban' : 'check'}"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Error loading sellers:', error);
+    }
+}
+
+window.showAddUserModal = function() {
+    document.getElementById('userModalTitle').textContent = 'Add User';
+    document.getElementById('userForm').reset();
+    document.getElementById('editUserId').value = '';
+    document.getElementById('userPassword').required = true;
+    document.getElementById('passwordHint').textContent = 'Min 6 characters';
+    openModal('userModal');
+};
+
+window.editUser = async function(userId) {
+    try {
         const { data: user, error } = await supabase
             .from('users')
             .select('*')
@@ -557,2351 +992,411 @@ async function editUser(userId) {
         
         if (error) throw error;
         
-        // Create edit form modal
-        const modal = document.createElement('div');
-        modal.className = 'modal flex items-center justify-center';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold rock4one-header">Edit User</h3>
-                    <button class="text-gray-300 hover:text-white close-modal-btn">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                
-                <form id="editUserForm">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Username</label>
-                            <input type="text" id="editUsername" class="rock4one-input w-full" value="${user.username}" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Password</label>
-                            <input type="password" id="editPassword" class="rock4one-input w-full" placeholder="Leave blank to keep current password">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Role</label>
-                            <select id="editRole" class="rock4one-input w-full" required>
-                                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
-                                <option value="staff" ${user.role === 'staff' ? 'selected' : ''}>Staff</option>
-                                <option value="doorman" ${user.role === 'doorman' ? 'selected' : ''}>Doorman</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-6 flex space-x-4 sticky bottom-0 bg-[#0a0a0a] py-4">
-                        <button type="submit" class="rock4one-button flex-1">
-                            <i class="fas fa-save mr-2"></i> Save Changes
-                        </button>
-                        <button type="button" class="rock4one-button bg-gray-600 flex-1 close-modal-btn">
-                            Cancel
-                        </button>
-                    </div>
-                </form>
-            </div>
-        `;
+        document.getElementById('userModalTitle').textContent = 'Edit User';
+        document.getElementById('editUserId').value = userId;
+        document.getElementById('userUsername').value = user.username;
+        document.getElementById('userPassword').value = '';
+        document.getElementById('userPassword').required = false;
+        document.getElementById('passwordHint').textContent = 'Leave blank to keep current';
+        document.getElementById('userFullName').value = user.full_name || '';
+        document.getElementById('userMobile').value = user.mobile_number || '';
+        document.getElementById('userRole').value = user.role;
         
-        document.body.appendChild(modal);
-        
-        // Add event listener to close modal
-        modal.querySelectorAll('.close-modal-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.body.removeChild(modal);
-            });
-        });
-        
-        // Add event listener to form submit
-        document.getElementById('editUserForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const username = document.getElementById('editUsername').value;
-            const password = document.getElementById('editPassword').value;
-            const role = document.getElementById('editRole').value;
-            
-            try {
-                // Update user
-                const updateData = {
-                    username,
-                    role
-                };
-                
-                // Only update password if it's not empty
-                if (password) {
-                    updateData.password = password;
-                }
-                
-                const { error: updateError } = await supabase
-                    .from('users')
-                    .update(updateData)
-                    .eq('id', userId);
-                
-                if (updateError) throw updateError;
-                
-                // Remove modal
-                document.body.removeChild(modal);
-                
-                // Reload users list
-                await loadUsers();
-                
-                alert('User updated successfully!');
-            } catch (error) {
-                console.error('Error updating user:', error);
-                alert('Error updating user: ' + error.message);
-            }
-        });
+        openModal('userModal');
         
     } catch (error) {
-        console.error('Error editing user:', error);
-        alert('Error editing user: ' + error.message);
+        console.error('Error loading user:', error);
+        showToast('Failed to load user', 'error');
+    }
+};
+
+async function handleUserForm(e) {
+    e.preventDefault();
+    
+    const userId = document.getElementById('editUserId').value;
+    const isEdit = !!userId;
+    
+    const userData = {
+        username: document.getElementById('userUsername').value.trim(),
+        full_name: document.getElementById('userFullName').value.trim() || null,
+        mobile_number: document.getElementById('userMobile').value.trim() || null,
+        role: document.getElementById('userRole').value
+    };
+    
+    const password = document.getElementById('userPassword').value;
+    if (password) {
+        userData.password = password;
+    }
+    
+    try {
+        if (isEdit) {
+            const { error } = await supabase
+                .from('users')
+                .update(userData)
+                .eq('id', userId);
+            
+            if (error) throw error;
+            showToast('User updated successfully!', 'success');
+        } else {
+            if (!password) {
+                showToast('Password is required for new users', 'error');
+                return;
+            }
+            userData.password = password;
+            userData.created_by = currentUser.id;
+            
+            const { error } = await supabase
+                .from('users')
+                .insert([userData]);
+            
+            if (error) throw error;
+            showToast('User created successfully!', 'success');
+        }
+        
+        closeModal('userModal');
+        await loadSellers();
+        
+    } catch (error) {
+        console.error('Error saving user:', error);
+        showToast('Failed to save user: ' + error.message, 'error');
     }
 }
 
-// Delete user function
-async function deleteUser(userId) {
+window.toggleUserStatus = async function(userId, newStatus) {
+    const action = newStatus ? 'activate' : 'deactivate';
+    if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+    
     try {
-        // Confirm deletion
-        if (!confirm('Are you sure you want to delete this user?')) {
-            return;
-        }
-        
-        // Delete user
         const { error } = await supabase
             .from('users')
-            .delete()
+            .update({ is_active: newStatus })
             .eq('id', userId);
         
         if (error) throw error;
         
-        // Reload users list
-        await loadUsers();
-        
-        alert('User deleted successfully!');
-    } catch (error) {
-        console.error('Error deleting user:', error);
-        alert('Error deleting user: ' + error.message);
-    }
-}
-
-// Edit guest function - CORRECTED VERSION
-async function editGuest(guestId) {
-    try {
-        // Get guest data
-        const { data: guest, error } = await supabase
-            .from('guests')
-            .select('*')
-            .eq('id', guestId)
-            .single();
-        
-        if (error) throw error;
-        
-        // Create edit form modal
-        const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 flex items-start justify-center z-50 bg-black bg-opacity-75 overflow-y-auto py-8';
-        modal.innerHTML = `
-            <div class="bg-[#1e1433] p-6 rounded-lg max-w-md w-full mx-4 my-8 shadow-xl">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-white">Edit Guest</h3>
-                    <button class="text-gray-300 hover:text-white close-modal-btn">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-                
-                <form id="editGuestForm" class="space-y-4">
-                    <div class="grid grid-cols-4 gap-4 items-center">
-                        <label for="editGuestName" class="text-white col-span-1">Guest Name</label>
-                        <input type="text" id="editGuestName" class="form-control col-span-3 bg-white text-black border border-gray-300 rounded px-3 py-2" 
-                               value="${guest.guest_name || ''}" required>
-                    </div>
-                    
-                    <div class="grid grid-cols-4 gap-4 items-center">
-                        <label for="editClubName" class="text-white col-span-1">Club Name</label>
-                        <input type="text" id="editClubName" class="form-control col-span-3 bg-white text-black border border-gray-300 rounded px-3 py-2" 
-                               value="${guest.club_name || ''}">
-                    </div>
-                    
-                    <div class="grid grid-cols-4 gap-4 items-center">
-                        <label for="editMobileNumber" class="text-white col-span-1">Mobile Number</label>
-                        <input type="tel" id="editMobileNumber" class="form-control col-span-3 bg-white text-black border border-gray-300 rounded px-3 py-2" 
-                               value="${guest.mobile_number || ''}" required>
-                    </div>
-                    
-                    <div class="grid grid-cols-4 gap-4 items-center">
-                        <label for="editEntryType" class="text-white col-span-1">Entry Type</label>
-                        <select id="editEntryType" class="form-control col-span-3 bg-white text-black border border-gray-300 rounded px-3 py-2" required>
-                            <option value="stag" ${guest.entry_type === 'stag' ? 'selected' : ''}>Stag</option>
-                            <option value="couple" ${guest.entry_type === 'couple' ? 'selected' : ''}>Couple</option>
-                        </select>
-                    </div>
-                    
-                    <div class="grid grid-cols-4 gap-4 items-center">
-                        <label for="editPaymentMode" class="text-white col-span-1">Payment Mode</label>
-                        <select id="editPaymentMode" class="form-control col-span-3 bg-white text-black border border-gray-300 rounded px-3 py-2" required>
-                            <option value="full_payment" ${guest.payment_mode === 'full_payment' ? 'selected' : ''}>Full Payment</option>
-                            <option value="partial_payment" ${guest.payment_mode === 'partial_payment' ? 'selected' : ''}>Partial Payment</option>
-                        </select>
-                    </div>
-                    
-                    <div id="editPartialPaymentContainer" class="grid grid-cols-4 gap-4 items-center" style="display: ${guest.payment_mode === 'partial_payment' ? 'grid' : 'none'}">
-                        <label for="editPaidAmount" class="text-white col-span-1">Paid Amount</label>
-                        <input type="number" id="editPaidAmount" class="form-control col-span-3 bg-white text-black border border-gray-300 rounded px-3 py-2" 
-                               value="${guest.paid_amount || 0}">
-                    </div>
-                    
-                    <div class="grid grid-cols-4 gap-4 items-center">
-                        <label for="editHasRoomBooking" class="text-white col-span-1">Room Booking</label>
-                        <select id="editHasRoomBooking" class="form-control col-span-3 bg-white text-black border border-gray-300 rounded px-3 py-2" required>
-                            <option value="false" ${!guest.has_room_booking ? 'selected' : ''}>No</option>
-                            <option value="true" ${guest.has_room_booking ? 'selected' : ''}>Yes</option>
-                        </select>
-                    </div>
-                    
-                    <div id="editRoomBookingContainer" class="grid grid-cols-4 gap-4 items-center" style="display: ${guest.has_room_booking ? 'grid' : 'none'}">
-                        <label for="editRoomBookingAmount" class="text-white col-span-1">Room Booking Amount</label>
-                        <input type="number" id="editRoomBookingAmount" class="form-control col-span-3 bg-white text-black border border-gray-300 rounded px-3 py-2" 
-                               value="${guest.room_booking_amount || ''}">
-                    </div>
-                    
-                    <div class="flex justify-end space-x-3 mt-6">
-                        <button type="button" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 close-modal-btn">
-                            Cancel
-                        </button>
-                        <button type="button" id="saveGuestBtn" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
-                            Save
-                        </button>
-                    </div>
-                </form>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        // Close modal handler
-        const closeButtons = modal.querySelectorAll('.close-modal-btn');
-        closeButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                document.body.removeChild(modal);
-            });
-        });
-        
-        // Show/hide partial payment field
-        document.getElementById('editPaymentMode').addEventListener('change', function() {
-            document.getElementById('editPartialPaymentContainer').style.display = 
-                this.value === 'partial_payment' ? 'grid' : 'none';
-        });
-        
-        // Show/hide room booking amount field
-        document.getElementById('editHasRoomBooking').addEventListener('change', function() {
-            document.getElementById('editRoomBookingContainer').style.display = 
-                this.value === 'true' ? 'grid' : 'none';
-        });
-        
-        // Save button handler with all fixes
-        document.getElementById('saveGuestBtn').addEventListener('click', async () => {
-            // Get form values
-            const guestName = document.getElementById('editGuestName').value.trim();
-            const clubName = document.getElementById('editClubName').value.trim();
-            const mobileNumber = document.getElementById('editMobileNumber').value.trim();
-            const entryType = document.getElementById('editEntryType').value;
-            const paymentMode = document.getElementById('editPaymentMode').value;
-            const hasRoomBooking = document.getElementById('editHasRoomBooking').value === 'true';
-            const roomBookingAmountInput = document.getElementById('editRoomBookingAmount').value.trim();
-            const roomBookingAmount = hasRoomBooking ? parseFloat(roomBookingAmountInput) || 0 : 0;
-            
-            // Validate inputs
-            if (!guestName) {
-                alert('Please enter guest name');
-                return;
-            }
-            
-            if (!mobileNumber || !/^\d{10}$/.test(mobileNumber)) {
-                alert('Please enter a valid 10-digit mobile number');
-                return;
-            }
-            
-            // Calculate amounts
-            const expectedAmount = entryType === 'stag' ? 2750 : 4750;
-            let paidAmount;
-            
-            if (paymentMode === 'partial_payment') {
-                const paidAmountInput = document.getElementById('editPaidAmount').value.trim();
-                paidAmount = parseFloat(paidAmountInput) || 0;
-                if (paidAmount < 0 || paidAmount >= expectedAmount) {
-                    alert(`Partial payment must be between 0 and ${expectedAmount - 1}`);
-                    return;
-                }
-            } else {
-                paidAmount = expectedAmount;
-            }
-            
-            if (hasRoomBooking && (isNaN(roomBookingAmount) || roomBookingAmount < 0)) {
-                alert('Please enter a valid room booking amount');
-                return;
-            }
-            
-            try {
-                // Determine status
-                let finalStatus;
-                if (paidAmount >= expectedAmount) {
-                    finalStatus = 'paid';
-                } else if (paidAmount > 0) {
-                    finalStatus = 'partially_paid';
-                } else {
-                    finalStatus = 'pending';
-                }
-                
-                // Prepare update data
-                const updateData = {
-                    guest_name: guestName,
-                    club_name: clubName,
-                    mobile_number: mobileNumber,
-                    entry_type: entryType,
-                    status: finalStatus,
-                    payment_mode: paymentMode,
-                    paid_amount: paidAmount,
-                    has_room_booking: hasRoomBooking,
-                    total_amount: expectedAmount,
-                    room_booking_amount: hasRoomBooking ? roomBookingAmount : null
-                };
-                
-                // Perform update
-                const { error: updateError } = await supabase
-                    .from('guests')
-                    .update(updateData)
-                    .eq('id', guestId);
-
-                if (updateError) throw updateError;
-
-                // Close edit modal
-                document.body.removeChild(modal);
-
-                // Refresh guest list
-                await loadGuestList();
-                // Refresh stats
-                await loadStats();
-                
-                // Show success notification
-                const successModal = document.createElement('div');
-                successModal.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50';
-                successModal.innerHTML = `
-                    <div class="bg-[#0a0a0a] p-6 rounded-lg max-w-md w-full">
-                        <div class="text-center mb-4">
-                            <i class="fas fa-check-circle text-green-400 text-4xl mb-2"></i>
-                            <h3 class="text-xl font-bold">Guest Updated</h3>
-                        </div>
-                        <p class="mb-6 text-center">Changes saved successfully!</p>
-                        <button onclick="this.closest('.fixed').remove()" class="rock4one-button w-full">
-                            OK
-                        </button>
-                    </div>
-                `;
-                document.body.appendChild(successModal);
-                
-            } catch (error) {
-                console.error('Error updating guest:', error);
-                alert('Error updating guest: ' + error.message);
-            }
-        });
+        showToast(`User ${action}d successfully!`, 'success');
+        await loadSellers();
         
     } catch (error) {
-        console.error('Error editing guest:', error);
-        alert('Error editing guest: ' + error.message);
-    }
-}
-
-// Delete guest function
-async function deleteGuest(guestId) {
-    try {
-        // Confirm deletion
-        if (!confirm('Are you sure you want to delete this guest?')) {
-            return;
-        }
-        
-        // Delete guest
-        const { error } = await supabase
-            .from('guests')
-            .delete()
-            .eq('id', guestId);
-        
-        if (error) throw error;
-        
-        // Reload guest list and stats
-        await loadGuestList();
-        await loadStats();
-        
-        alert('Guest deleted successfully!');
-    } catch (error) {
-        console.error('Error deleting guest:', error);
-        alert('Error deleting guest: ' + error.message);
-    }
-}
-
-// Make the functions available globally
-window.editUser = editUser;
-window.deleteUser = deleteUser;
-window.editGuest = editGuest;
-window.deleteGuest = deleteGuest;
-window.downloadGuestsPDF = downloadGuestsPDF;    // Add this here
-window.downloadGuestsCSV = downloadGuestsCSV;    // And this here
-
-// Initialize QR Scanner
-async function initQRScanner() {
-    console.log('Initializing QR scanner...');
-    
-    // First, ensure we completely stop and remove any existing scanner
-    if (qrScanner) {
-        try {
-            console.log('Clearing existing scanner instance');
-            qrScanner.clear();
-            qrScanner = null;
-        } catch (e) {
-            console.error('Error clearing previous scanner instance:', e);
-        }
-    }
-    
-    // Additional thorough cleanup for any leftover elements
-    try {
-        // Stop all video streams
-        const videoElements = document.querySelectorAll('video');
-        videoElements.forEach(video => {
-            if (video.srcObject) {
-                const tracks = video.srcObject.getTracks();
-                tracks.forEach(track => {
-                    console.log('Stopping video track:', track.id);
-                    track.stop();
-                });
-                video.srcObject = null;
-            }
-        });
-        
-        // Remove any existing scanner elements completely
-        const qrReaderElement = document.getElementById('qr-reader');
-        if (qrReaderElement) {
-            qrReaderElement.remove();
-        }
-        
-        // Remove any other scanner-related elements that might be left behind
-        document.querySelectorAll('.html5-qrcode-element').forEach(el => el.remove());
-    } catch (e) {
-        console.error('Error during thorough cleanup:', e);
-    }
-
-    // Get the QR scanner container element
-    const qrScannerContainer = document.getElementById('qrScanner');
-    
-    // If the container doesn't exist, return early
-    if (!qrScannerContainer) {
-        console.error('QR Scanner container not found');
-        return;
-    }
-    
-    // Clear any existing content
-    qrScannerContainer.innerHTML = '<div id="qr-reader" style="width:100%"></div>';
-
-    // Create new scanner with a slight delay to ensure DOM is ready
-    setTimeout(() => {
-        try {
-            console.log('Creating new scanner instance');
-            qrScanner = new Html5QrcodeScanner(
-                "qr-reader", 
-                {
-                    fps: 10,
-                    qrbox: { width: 250, height: 250 },
-                    aspectRatio: 1.0,
-                    showTorchButtonIfSupported: true,
-                    showZoomSliderIfSupported: true,
-                    defaultZoomValueIfSupported: 2,
-                    formatsToSupport: [ 
-                        Html5QrcodeSupportedFormats.QR_CODE
-                    ]
-                },
-                /* verbose= */ false // Disable verbose logging
-            );
-            
-            // Render the scanner with our success and error handlers
-            qrScanner.render(onScanSuccess, onScanError);
-            
-            console.log('QR scanner initialized successfully');
-        } catch (error) {
-            console.error('Scanner initialization failed:', error);
-            qrScannerContainer.innerHTML = `
-                <div class="error-message p-4 bg-red-800 rounded-lg text-center">
-                    <p class="mb-4">Failed to initialize scanner: ${error.message}</p>
-                    <button onclick="initQRScanner()" class="rock4one-button">
-                        Retry Scanner Initialization
-                    </button>
-                </div>
-            `;
-        }
-    }, 300); // Delay to ensure DOM is ready
-}
-
-// Separate success handler with better error handling
-async function onScanSuccess(decodedText) {
-    try {
-        console.log('QR Code detected:', decodedText);
-        
-        if (!decodedText?.trim()) {
-            console.log('Empty QR code content - ignoring');
-            return; // Just ignore empty scans instead of showing an error
-        }
-
-        // For debugging - log the exact QR code content
-        console.log('QR Code content (length ' + decodedText.length + '):', JSON.stringify(decodedText));
-        
-        let guestData;
-        try {
-            guestData = JSON.parse(decodedText);
-            console.log('Successfully parsed QR data:', guestData);
-        } catch (parseError) {
-            console.error('Failed to parse QR code JSON:', parseError);
-            
-            // Silently ignore common non-guest QR codes without showing errors
-            if (decodedText.includes('http') || decodedText.includes('www')) {
-                console.log('Ignoring URL QR code');
-                return;
-            }
-            
-            // Silently ignore malformed JSON without showing errors
-            if (decodedText.includes('{') && decodedText.includes('}')) {
-                console.log('Ignoring malformed JSON QR code');
-                return;
-            }
-            
-            // Silently ignore other invalid formats without showing errors
-            console.log('Ignoring invalid QR code format');
-            return;
-        }
-        
-        // Validate the parsed data silently without showing errors
-        if (!guestData || !guestData.id) {
-            console.log('Invalid guest data in QR code - ignoring');
-            return;
-        }
-        
-        // Get the latest guest data from Supabase
-        console.log('Fetching guest with ID:', guestData.id);
-        
-        const { data: guest, error } = await supabase
-            .from('guests')
-            .select('*')
-            .eq('id', guestData.id)
-            .single();
-        
-        if (error) {
-            console.error('Supabase error:', error);
-            return; // Silently ignore database errors
-        }
-        
-        if (!guest) {
-            console.log('Guest not found - ignoring');
-            return; // Silently ignore missing guests
-        }
-        
-        // Calculate expected amount and payment status
-        const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
-        const isFullyPaid = parseFloat(guest.paid_amount) >= expectedAmount;
-        
-        // Show verification result modal
-        const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4';
-        modal.innerHTML = `
-            <div class="bg-[#0a0a0a] p-6 rounded-lg max-w-md w-full">
-                <div class="text-center mb-6">
-                    <i class="fas ${isFullyPaid ? 'fa-check-circle text-green-400' : 'fa-exclamation-triangle text-yellow-400'} text-5xl"></i>
-                    <h3 class="text-2xl font-bold mt-4 ${isFullyPaid ? 'text-green-400' : 'text-yellow-400'}">
-                        ${isFullyPaid ? 'VERIFIED' : 'PAYMENT PENDING'}
-                    </h3>
-                </div>
-                
-                <div class="space-y-4 mb-6">
-                    <div class="flex justify-between">
-                        <span class="text-gray-300">Full Name</span>
-                        <span class="font-bold">${guest.guest_name}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-300">Club Name</span>
-                        <span class="font-bold">${guest.club_name || 'N/A'}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-300">Entry Type</span>
-                        <span class="font-bold">${guest.entry_type.toUpperCase()}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-300">Payment Status</span>
-                        <span class="font-bold ${isFullyPaid ? 'text-green-400' : 'text-yellow-400'}">
-                            ${isFullyPaid ? 'PAID IN FULL' : 'PARTIAL PAYMENT'}
-                        </span>
-                    </div>
-                    ${!isFullyPaid ? `
-                    <div class="flex justify-between">
-                        <span class="text-gray-300">Amount Due</span>
-                        <span class="font-bold text-red-400">₹${expectedAmount - guest.paid_amount}</span>
-                    </div>
-                    ` : ''}
-                </div>
-                
-                <div class="flex space-x-4">
-                    ${isFullyPaid ? 
-                        `<button onclick="verifyGuest('${guest.id}')" class="rock4one-button flex-1 bg-green-600">
-                            <i class="fas fa-check mr-2"></i> Allow Entry
-                        </button>` : 
-                        `<button class="rock4one-button bg-yellow-600 flex-1 cursor-not-allowed" disabled>
-                            <i class="fas fa-ban mr-2"></i> Entry Denied
-                        </button>`
-                    }
-                    <button onclick="this.closest('.fixed').remove(); qrScanner.resume();" class="rock4one-button bg-gray-700 flex-1">
-                        Close
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        qrScanner.pause();
-        
-    } catch (error) {
-        console.error('QR code processing error:', error);
-        // Only show errors for critical issues, not for normal scanning operations
-        if (error.message && (
-            error.message.includes('permission') || 
-            error.message.includes('camera') ||
-            error.message.includes('hardware')
-        )) {
-            showErrorModal(error.message);
-        } else {
-            // Just log other errors without showing a modal
-            console.log('Non-critical scanning error (ignored):', error.message);
-        }
-        
-        // Resume scanning after a short delay
-        setTimeout(() => {
-            if (qrScanner) {
-                qrScanner.resume();
-            }
-        }, 500);
-    }
-}
-
-// Separate error handler
-function onScanError(errorMessage) {
-    console.log('Scanner error:', errorMessage);
-    // Don't show any error modal for normal scanning errors
-    // These errors are expected during normal scanning operation
-}
-
-// Helper function to show errors
-function showErrorModal(message) {
-    // Skip showing errors for common scanning messages that aren't actual errors
-    if (message === 'Unknown error' || 
-        message.includes('No QR code found') || 
-        message.includes('scanning ongoing') ||
-        message.toLowerCase().includes('qr code format') ||
-        message.toLowerCase().includes('not found')) {
-        console.log('Ignoring non-critical scanning message:', message);
-        return;
-    }
-    
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75';
-    modal.innerHTML = `
-        <div class="bg-[#0a0a0a] p-6 rounded-lg max-w-md w-full">
-            <div class="text-center mb-4">
-                <i class="fas fa-exclamation-triangle text-red-400 text-4xl mb-2"></i>
-                <h3 class="text-xl font-bold">Scanning Error</h3>
-            </div>
-            <p class="mb-6 text-center">${message}</p>
-            <button onclick="this.closest('.fixed').remove()" class="rock4one-button w-full">
-                OK
-            </button>
-        </div>
-    `;
-    document.body.appendChild(modal);
-}
-
-// Add debugging information
-function addDebugInfo() {
-    const debugInfo = document.createElement('div');
-    debugInfo.id = 'qrDebugInfo';
-    debugInfo.className = 'text-xs text-gray-400 mt-4 p-2 bg-gray-800 rounded';
-    debugInfo.innerHTML = `
-        <h4 class="font-bold mb-1">Scanner Debug Info</h4>
-        <div>Browser: ${navigator.userAgent}</div>
-        <div>Supports camera: ${!!navigator.mediaDevices}</div>
-        <div>Supports QR scanning: ${!!window.Html5QrcodeScanner}</div>
-    `;
-    document.getElementById('qrScanner').appendChild(debugInfo);
-}
-
-// Request camera permissions before initializing scanner
-async function checkCameraPermissions() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        stream.getTracks().forEach(track => track.stop());
-        return true;
-    } catch (error) {
-        console.error('Camera permission denied:', error);
-        return false;
-    }
-}
-
-// Verify guest entry
-window.verifyGuest = async function(guestId) {
-    try {
-        if (!guestId) {
-            console.error('Missing guest ID in verifyGuest function');
-            return;
-        }
-
-        console.log('Verifying guest with ID:', guestId);
-        
-        // Get guest data
-        const { data: guest, error: getError } = await supabase
-            .from('guests')
-            .select('*')
-            .eq('id', guestId)
-            .single();
-        
-        if (getError) {
-            console.error('Error fetching guest data:', getError);
-            // Handle the error silently without showing an alert
-            return;
-        }
-        
-        if (!guest) {
-            console.error('Guest not found with ID:', guestId);
-            // Handle the error silently without showing an alert
-            return;
-        }
-        
-        console.log('Successfully fetched guest data:', guest);
-        
-        // Update guest status to verified regardless of user role
-        // This ensures the status is always updated when a valid QR code is scanned
-        const { error: updateError } = await supabase
-            .from('guests')
-            .update({ status: 'verified' })
-            .eq('id', guestId);
-        
-        if (updateError) {
-            console.error('Error updating guest status:', updateError);
-            // Handle the error silently without showing an alert
-            return;
-        }
-        
-        console.log('Successfully updated guest status to verified');
-        
-        // Show success message without using alert
-        const successModal = document.createElement('div');
-        successModal.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75';
-        successModal.innerHTML = `
-            <div class="bg-[#0a0a0a] p-6 rounded-lg max-w-md w-full">
-                <div class="text-center mb-4">
-                    <i class="fas fa-check-circle text-green-400 text-4xl mb-2"></i>
-                    <h3 class="text-xl font-bold text-green-400">Success</h3>
-                </div>
-                <p class="mb-6 text-center">Guest entry verified successfully!</p>
-                <button onclick="this.closest('.fixed').remove(); if(qrScanner) qrScanner.resume();" class="rock4one-button w-full bg-green-600">
-                    OK
-                </button>
-            </div>
-        `;
-        
-        // Close any existing modals first
-        const existingModals = document.querySelectorAll('.fixed');
-        existingModals.forEach(modal => modal.remove());
-        
-        // Show the success modal
-        document.body.appendChild(successModal);
-        
-        // Resume scanning after a delay
-        setTimeout(() => {
-            if (qrScanner) {
-                qrScanner.resume();
-            }
-        }, 3000); // Give the user 3 seconds to see the success message
-        
-    } catch (error) {
-        console.error('Error in verifyGuest function:', error);
-        
-        // Handle the error silently without showing an alert
-        // Close any existing modals
-        const modal = document.querySelector('.fixed');
-        if (modal) {
-            modal.remove();
-        }
-        
-        // Resume scanning
-        if (qrScanner) {
-            qrScanner.resume();
-        }
+        console.error('Error toggling user status:', error);
+        showToast('Failed to update user', 'error');
     }
 };
 
-// Setup event listeners
-function setupEventListeners() {
-    // Login form
-    document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        const errorText = document.getElementById('loginError');
+// =====================================================
+// ADMIN: READ-ONLY VIEWS
+// =====================================================
 
-        try {
-            // Check credentials against users table
-            const { data: users, error } = await supabase
-                .from('users')
-                .select('*')
-                .eq('username', username)
-                .eq('password', password);
-
-            if (error) throw error;
-            if (!users || users.length === 0) {
-                throw new Error('Invalid username or password');
-            }
-
-            // Skip Supabase Auth and use the database user directly
-            const user = {
-                id: users[0].id,
-                username: users[0].username,
-                role: users[0].role
-            };
-
-            // Store user info in session
-            sessionStorage.setItem('currentUser', JSON.stringify(user));
-            currentUser = user;
-
-            // Show main app and initialize components
-            showApp();
-            await setupNavigation();
-            
-            // Clear any existing hash to prevent unauthorized access
-            window.location.hash = '';
-            
-        } catch (error) {
-            console.error('Login error:', error);
-            if (errorText) {
-                errorText.textContent = error.message || 'Invalid credentials';
-                errorText.classList.remove('hidden');
-            }
-        }
-    });
-
-    // Logout button
-    document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
-
-    // Navigation buttons
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const tabId = this.getAttribute('data-tab');
-            showTab(tabId);
-        });
-    });
-
-    // Stats screenshot button
-    // Only keeping the better-formatted version below
-    document.getElementById('downloadStatsImageBtn')?.addEventListener('click', downloadStatsImage);
-
-    // Individual navigation buttons (for backward compatibility)
-    document.getElementById('newRegistrationBtn')?.addEventListener('click', () => showTab('registration'));
-    document.getElementById('entryVerificationBtn')?.addEventListener('click', () => showTab('verification'));
-    document.getElementById('guestListBtn')?.addEventListener('click', () => showTab('guests'));
-    document.getElementById('statsBtn')?.addEventListener('click', () => showTab('stats'));
-    document.getElementById('usersBtn')?.addEventListener('click', () => showTab('users'));
-
-    // Entry type change handler
-    document.getElementById('entryType')?.addEventListener('change', updateAmount);
-
-    // Guest search input - simplified implementation
-    const searchInput = document.getElementById('guestSearchInput');
-    if (searchInput) {
-        // Clear any existing search input
-        searchInput.value = '';
-        
-        // Set attributes to prevent password managers from interfering
-        searchInput.setAttribute('autocomplete', 'off');
-        searchInput.setAttribute('data-lpignore', 'true');
-        searchInput.setAttribute('data-form-type', 'search');
-        
-        // Simple input handler without cloning or complex focus management
-        searchInput.addEventListener('input', function() {
-            const searchValue = this.value;
-            
-            // Use requestAnimationFrame to ensure UI updates before search
-            requestAnimationFrame(() => {
-                loadGuestList(searchValue);
-            });
-        });
-    }
-    
-    // Registration form
-    document.getElementById('registrationForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        // Add a submission lock to prevent multiple submissions
-        const submitButton = e.target.querySelector('button[type="submit"]');
-        if (submitButton.disabled) return; // If already submitting, exit early
-        
-        // Disable the button and change text to show processing
-        submitButton.disabled = true;
-        const originalButtonText = submitButton.innerHTML;
-        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
-        
-        try {
-            const formData = {
-                guest_name: document.getElementById('guestName').value,
-                club_name: document.getElementById('clubName').value,
-                mobile_number: document.getElementById('mobileNumber').value,
-                entry_type: document.getElementById('entryType').value,
-                payment_mode: document.getElementById('paymentMode').value,
-                total_amount: document.getElementById('entryType').value === 'stag' ? 2750 : 4750,
-                paid_amount: document.getElementById('paymentMode').value === 'partial' ? 
-                    Number(document.getElementById('paidAmount').value) : 
-                    (document.getElementById('entryType').value === 'stag' ? 2750 : 4750),
-                status: document.getElementById('paymentMode').value === 'partial' ? 'partially_paid' : 'paid'
-            };
-
-            // Add room booking fields if they exist in the form
-            const roomBookingSelect = document.getElementById('roomBooking');
-            if (roomBookingSelect) {
-                formData.has_room_booking = roomBookingSelect.value === 'yes';
-                
-                if (formData.has_room_booking) {
-                    const roomBookingAmountInput = document.getElementById('roomBookingAmount');
-                    if (roomBookingAmountInput) {
-                        formData.room_booking_amount = Number(roomBookingAmountInput.value) || 0;
-                    }
-                }
-            }
-            
-            // Validate required fields
-            if (!formData.guest_name || !formData.mobile_number || !formData.entry_type || !formData.payment_mode) {
-                throw new Error('Please fill in all required fields');
-            }
-            
-            // Insert into Supabase
-            const { data, error } = await supabase
-                .from('guests')
-                .insert([formData])
-                .select();
-
-            if (error) throw error;
-
-            // Reset form
-            e.target.reset();
-            updateAmount();
-            document.getElementById('partialPaymentSection').classList.add('hidden');
-            document.getElementById('paidAmount').removeAttribute('required');
-            document.getElementById('roomBookingSection').classList.add('hidden');
-            document.getElementById('roomBookingAmount').removeAttribute('required');
-            
-            // Reload lists
-            await loadGuestList();
-            await loadStats();
-            
-            alert('Guest registered successfully!');
-            
-        } catch (error) {
-            console.error('Registration error:', error);
-            alert(error.message || 'Failed to register guest');
-        } finally {
-            // Re-enable the button and restore original text regardless of success/failure
-            submitButton.disabled = false;
-            submitButton.innerHTML = originalButtonText;
-        }
-    });
-
-    // Payment mode change handler
-    document.getElementById('paymentMode')?.addEventListener('change', function() {
-        const partialSection = document.getElementById('partialPaymentSection');
-        const paidAmountInput = document.getElementById('paidAmount');
-        
-        if (this.value === 'partial') {
-            partialSection.classList.remove('hidden');
-            paidAmountInput.setAttribute('required', 'required');
-        } else {
-            partialSection.classList.add('hidden');
-            paidAmountInput.removeAttribute('required');
-        }
-    });
-
-    // Room booking change handler
-    document.getElementById('roomBooking')?.addEventListener('change', function() {
-        const roomBookingSection = document.getElementById('roomBookingSection');
-        const roomBookingAmountInput = document.getElementById('roomBookingAmount');
-        
-        if (this.value === 'yes') {
-            roomBookingSection.classList.remove('hidden');
-            roomBookingAmountInput.setAttribute('required', 'required');
-        } else {
-            roomBookingSection.classList.add('hidden');
-            roomBookingAmountInput.removeAttribute('required');
-            roomBookingAmountInput.value = '';
-        }
-    });
-
-    // Add user form handler
-    document.getElementById('addUserForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const username = document.getElementById('createUsername').value;
-        const password = document.getElementById('createPassword').value;
-        const role = document.getElementById('createRole').value;
-        const errorText = document.getElementById('addUserError');
-        
-        try {
-            await addUser(username, password, role);
-            
-            // Reset form
-            e.target.reset();
-            
-            // Hide error message if visible
-            if (errorText) {
-                errorText.classList.add('hidden');
-            }
-            
-            alert('User added successfully!');
-            
-        } catch (error) {
-            console.error('Error adding user:', error);
-            if (errorText) {
-                errorText.textContent = error.message || 'Failed to add user';
-                errorText.classList.remove('hidden');
-            }
-        }
-    });
-    
-    // WhatsApp share buttons
-    document.addEventListener('click', async function(e) {
-        if (e.target.closest('.whatsapp-share')) {
-            const button = e.target.closest('.whatsapp-share');
-            const guestId = button.getAttribute('data-guest-id');
-            
-            try {
-                // Get guest data
-                const { data: guest, error } = await supabase
-                    .from('guests')
-                    .select('*')
-                    .eq('id', guestId)
-                    .single();
-                
-                if (error) throw error;
-                
-                // Format the mobile number for WhatsApp
-                let mobileNumber = guest.mobile_number;
-                
-                // Remove any spaces, dashes, or parentheses
-                mobileNumber = mobileNumber.replace(/[\s\-()]/g, '');
-                
-                // If the number doesn't start with '+', add the India country code
-                if (!mobileNumber.startsWith('+')) {
-                    // If it starts with 0, replace the 0 with +91
-                    if (mobileNumber.startsWith('0')) {
-                        mobileNumber = '+91' + mobileNumber.substring(1);
-                    } else {
-                        // Otherwise, just add +91
-                        mobileNumber = '+91' + mobileNumber;
-                    }
-                }
-                
-                // Create guest pass data for QR code
-                const qrData = JSON.stringify({
-                    id: guest.id,
-                    name: guest.guest_name,
-                    timestamp: new Date().toISOString()
-                });
-                
-                // Generate QR code
-                const qrCodeDataURL = await QRCode.toDataURL(qrData, {
-                    width: 300,
-                    margin: 2,
-                    color: {
-                        dark: '#0a0a0a',
-                        light: '#ffffff'
-                    }
-                });
-                
-                // Create a temporary div to generate the guest pass image
-                const tempDiv = document.createElement('div');
-                tempDiv.className = 'guest-pass-container';
-                tempDiv.style.width = '600px';
-                tempDiv.style.height = '800px';
-                tempDiv.style.position = 'absolute';
-                tempDiv.style.left = '-9999px';
-                tempDiv.innerHTML = `
-                    <div style="
-                        width: 600px;
-                        padding: 20px;
-                        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-                        border-radius: 20px;
-                        border: 8px solid #d4a853;
-                        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-                        color: white;
-                        font-family: Arial, sans-serif;
-                        position: relative;
-                        overflow: hidden;
-                    ">
-                        <!-- Decorative elements -->
-                        <div style="
-                            position: absolute;
-                            top: -50px;
-                            left: -50px;
-                            width: 150px;
-                            height: 150px;
-                            border-radius: 50%;
-                            background: rgba(212, 168, 83, 0.15);
-                        "></div>
-                        <div style="
-                            position: absolute;
-                            bottom: -50px;
-                            right: -50px;
-                            width: 150px;
-                            height: 150px;
-                            border-radius: 50%;
-                            background: rgba(201, 48, 44, 0.15);
-                        "></div>
-                        
-                        <!-- Header -->
-                        <div style="
-                            text-align: center;
-                            margin-bottom: 20px;
-                            padding-bottom: 15px;
-                            border-bottom: 2px solid #d4a853;
-                        ">
-                            <h1 style="
-                                font-size: 36px;
-                                font-weight: bold;
-                                margin: 0;
-                                background: linear-gradient(135deg, #d4a853, #f5d76e);
-                                -webkit-background-clip: text;
-                                background-clip: text;
-                                color: transparent;
-                                text-transform: uppercase;
-                                letter-spacing: 3px;
-                                word-spacing: 2px;
-                                font-family: 'Poppins', sans-serif;
-                            ">ROCK 4 ONE</h1>
-                            <p style="
-                                font-size: 14px;
-                                margin: 5px 0 0;
-                                color: #d4a853;
-                                letter-spacing: 3px;
-                                text-transform: uppercase;
-                            ">Harmony for Humanity</p>
-                            <h2 style="
-                                font-size: 24px;
-                                margin: 10px 0 0;
-                                color: #f5d76e;
-                            ">Guest Pass</h2>
-                        </div>
-                        
-                        <!-- Content -->
-                        <div style="display: flex;">
-                            <!-- Guest Info -->
-                            <div style="width: 60%; padding-right: 20px;">
-                                <div style="margin-bottom: 15px;">
-                                    <p style="font-size: 14px; margin: 0; color: #d4a853;">Full Name</p>
-                                    <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0;">${guest.guest_name}</p>
-                                </div>
-                                
-                                <div style="margin-bottom: 15px;">
-                                    <p style="font-size: 14px; margin: 0; color: #d4a853;">Club Name</p>
-                                    <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0;">${guest.club_name || 'N/A'}</p>
-                                </div>
-                                
-                                <div style="margin-bottom: 15px;">
-                                    <p style="font-size: 14px; margin: 0; color: #d4a853;">Mobile Number</p>
-                                    <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0;">${guest.mobile_number}</p>
-                                </div>
-                                
-                                <div style="margin-bottom: 15px;">
-                                    <p style="font-size: 14px; margin: 0; color: #d4a853;">Entry Type</p>
-                                    <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0;">${guest.entry_type === 'stag' ? 'STAG' : 'COUPLE'}${safeGetGuestProperty(guest, 'has_room_booking', false) ? ' + ROOM' : ''}</p>
-                                </div>
-                                
-                                <div style="margin-bottom: 15px;">
-                                    <p style="font-size: 14px; margin: 0; color: #d4a853;">Status</p>
-                                    <p style="
-                                        font-size: 24px; 
-                                        font-weight: bold; 
-                                        margin: 5px 0 0;
-                                        color: ${guest.status === 'verified' ? '#4ade80' : 
-                                        guest.status === 'paid' ? '#3b82f6' : 
-                                        guest.status === 'partially_paid' ? '#f59e0b' : '#ef4444'};
-                                    ">
-                                        ${guest.status || 'pending'}
-                                    </p>
-                                </div>
-                            </div>
-                            
-                            <!-- QR Code -->
-                            <div style="
-                                width: 40%;
-                                display: flex;
-                                flex-direction: column;
-                                align-items: center;
-                                justify-content: center;
-                            ">
-                                <div style="
-                                    background: white;
-                                    padding: 10px;
-                                    border-radius: 10px;
-                                    border: 3px solid #d4a853;
-                                ">
-                                    <img src="${qrCodeDataURL}" alt="QR Code" style="width: 180px; height: 180px;">
-                                </div>
-                                <p style="
-                                    text-align: center;
-                                    font-size: 14px;
-                                    margin-top: 10px;
-                                    color: #f5d76e;
-                                ">Scan this QR code at the entrance</p>
-                            </div>
-                        </div>
-                        
-                        <!-- Footer -->
-                        <div style="
-                            margin-top: 20px;
-                            padding-top: 15px;
-                            border-top: 2px solid #d4a853;
-                            text-align: center;
-                        ">
-                            <p style="font-size: 16px; margin: 5px 0; color: #d4a853;">Date: TBD</p>
-                            <p style="font-size: 16px; margin: 5px 0; color: #d4a853;">Venue: TBD</p>
-                        </div>
-                        
-                        <!-- Decorative icons -->
-                        <div style="
-                            display: flex;
-                            justify-content: space-between;
-                            margin-top: 15px;
-                            color: #d4a853;
-                            font-size: 20px;
-                        ">
-                            <span>🎸</span>
-                            <span>🎵</span>
-                            <span>🎸</span>
-                            <span>🎵</span>
-                            <span>🎸</span>
-                        </div>
-                    </div>
-                `;
-                
-                document.body.appendChild(tempDiv);
-                
-                // Use html2canvas to convert the div to an image
-                const canvas = await html2canvas(tempDiv);
-                const imageDataURL = canvas.toDataURL('image/png');
-                
-                // Remove the temporary div
-                document.body.removeChild(tempDiv);
-                
-                // Store the image data URL for later use
-                const guestPassImageUrl = imageDataURL;
-                const guestPassFileName = `rock4one-pass-${guest.guest_name.replace(/\s+/g, '-').toLowerCase()}.png`;
-                
-                // Create WhatsApp share message
-                const message = `ROCK 4 ONE - GUEST PASS
-
-Name: ${guest.guest_name}
-Club: ${guest.club_name || ''}
-Mobile: ${guest.mobile_number}
-Entry Type: ${guest.entry_type === 'stag' ? 'STAG' : 'COUPLE'}${safeGetGuestProperty(guest, 'has_room_booking', false) ? ' + ROOM' : ''}${formatWhatsAppPaymentInfo(guest)}
-
-Harmony for Humanity 🎸
-
-Please show this pass at the entrance.`;
-                
-                // Remove any existing modals first
-                const existingModals = document.querySelectorAll('.fixed.inset-0.flex.items-center.justify-center.z-50');
-                existingModals.forEach(modal => {
-                    if (modal && modal.parentNode) {
-                        modal.parentNode.removeChild(modal);
-                    }
-                });
-                
-                // Check if user is on mobile device
-                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                
-                // Create appropriate modal based on device type
-                const modal = document.createElement('div');
-                modal.id = 'whatsappShareModal';
-                modal.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75';
-                
-                if (isMobile) {
-                    // Mobile version
-                    modal.innerHTML = `
-                        <div class="rock4one-container p-6 max-w-md mx-auto">
-                            <h3 class="text-xl font-bold mb-4 rock4one-header">Share Guest Pass</h3>
-                            <p class="mb-4">The guest pass image has been downloaded to your device.</p>
-                            <p class="mb-4">After clicking "Open WhatsApp", please:</p>
-                            <ol class="list-decimal pl-6 mb-6">
-                                <li class="mb-2">Send the text message first</li>
-                                <li class="mb-2">Tap the attachment icon in WhatsApp</li>
-                                <li class="mb-2">Select "Gallery" or "Documents"</li>
-                                <li class="mb-2">Find and select the downloaded guest pass image</li>
-                            </ol>
-                            <div class="flex justify-between">
-                                <button id="openWhatsAppBtn" class="rock4one-button flex-1 bg-green-600">
-                                    <i class="fab fa-whatsapp mr-2"></i> Open WhatsApp
-                                </button>
-                                <button id="closeShareModalBtn" class="rock4one-button bg-gray-600 flex-1">
-                                    Close
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    // Desktop version with copyable message
-                    modal.innerHTML = `
-                        <div class="rock4one-container p-6 max-w-md mx-auto">
-                            <h3 class="text-xl font-bold mb-4 rock4one-header">Share Guest Pass</h3>
-                            <p class="mb-4">The guest pass image has been downloaded to your device.</p>
-                            <p class="mb-4">For WhatsApp Desktop:</p>
-                            <ol class="list-decimal pl-6 mb-6">
-                                <li class="mb-2">Click the button below to open WhatsApp</li>
-                                <li class="mb-2">Copy the message by clicking "Select & Copy Message"</li>
-                                <li class="mb-2">Paste the message into WhatsApp</li>
-                                <li class="mb-2">Attach the downloaded guest pass image</li>
-                            </ol>
-                            
-                            <div class="bg-gray-100 p-3 rounded mb-4 text-black overflow-auto" style="max-height: 120px;">
-                                <pre id="whatsappMessage" class="whitespace-pre-wrap text-sm font-mono">${message}</pre>
-                            </div>
-                            
-                            <div class="flex justify-between mb-3">
-                                <button id="copyMessageBtn" class="rock4one-button flex-1 bg-blue-600">
-                                    <i class="fas fa-copy mr-2"></i> Select & Copy Message
-                                </button>
-                            </div>
-                            
-                            <div class="flex justify-between">
-                                <button id="openWhatsAppBtn" class="rock4one-button flex-1 bg-green-600">
-                                    <i class="fab fa-whatsapp mr-2"></i> Open WhatsApp
-                                </button>
-                                <button id="closeShareModalBtn" class="rock4one-button bg-gray-600 flex-1">
-                                    Close
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                document.body.appendChild(modal);
-                
-                // Flag to track if download has been triggered
-                let downloadTriggered = false;
-                
-                // Function to trigger download only once
-                const triggerDownload = () => {
-                    if (!downloadTriggered) {
-                        // Create a temporary link for download
-                        const downloadLink = document.createElement('a');
-                        downloadLink.href = guestPassImageUrl;
-                        downloadLink.download = guestPassFileName;
-                        
-                        // Trigger download programmatically
-                        document.body.appendChild(downloadLink);
-                        downloadLink.click();
-                        document.body.removeChild(downloadLink);
-                        
-                        downloadTriggered = true;
-                    }
-                };
-                
-                // Do NOT download immediately - will download only when user chooses to share
-                
-                // Helper function for safely removing the modal
-                const safeRemoveModal = () => {
-                    try {
-                        if (modal && modal.parentNode) {
-                            modal.parentNode.removeChild(modal);
-                        }
-                    } catch (err) {
-                        console.error('Error removing modal:', err);
-                    }
-                };
-                
-                // For desktop: handle copy message functionality
-                if (!isMobile && document.getElementById('copyMessageBtn')) {
-                    document.getElementById('copyMessageBtn').onclick = function() {
-                        const messageElement = document.getElementById('whatsappMessage');
-                        if (messageElement) {
-                            // Select and copy the message text
-                            const range = document.createRange();
-                            range.selectNodeContents(messageElement);
-                            const selection = window.getSelection();
-                            selection.removeAllRanges();
-                            selection.addRange(range);
-                            document.execCommand('copy');
-                            selection.removeAllRanges();
-                            
-                            // Show confirmation
-                            this.innerHTML = '<i class="fas fa-check mr-2"></i> Copied!';
-                            setTimeout(() => {
-                                this.innerHTML = '<i class="fas fa-copy mr-2"></i> Select & Copy Message';
-                            }, 1500);
-                        }
-                    };
-                }
-                
-                // Only trigger download when user explicitly chooses to share
-                document.getElementById('openWhatsAppBtn').onclick = function() {
-                    triggerDownload();
-                    
-                    // Close modal
-                    if (modal && modal.parentNode) {
-                        modal.parentNode.removeChild(modal);
-                    }
-                    
-                    // Format the number for WhatsApp
-                    const whatsappNumber = mobileNumber.replace('+', '');
-                    
-                    // Track sharing state to prevent duplicates
-                    let isSharing = false;
-                    
-                    if (isMobile) {
-                        const whatsappUrl = `whatsapp://send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`;
-                        // Direct app opening without browser fallback
-                        window.location.href = whatsappUrl;
-                    } else {
-                        // Desktop handling - open WhatsApp Web directly
-                        window.open(`https://web.whatsapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`, '_blank');
-                    }
-                };
-                
-                // Close button just closes the modal
-                document.getElementById('closeShareModalBtn').onclick = function() {
-                    safeRemoveModal();
-                    // No download here since it was already done when the modal opened
-                };
-                
-            } catch (error) {
-                console.error('Error sharing guest pass:', error);
-                alert('Failed to share guest pass. Please try again.');
-            }
-        }
-    });
-}
-
-// Update amount based on entry type
-window.updateAmount = function() {
-    const entryType = document.getElementById('entryType').value;
-    const totalAmountDisplay = document.getElementById('totalAmountDisplay');
-    const paidAmountInput = document.getElementById('paidAmount');
-    const totalAmount = entryType === 'stag' ? 2750 : 4750;
-    
-    if (totalAmountDisplay) {
-        totalAmountDisplay.textContent = `/ ₹${totalAmount} total`;
-    }
-    
-    if (paidAmountInput) {
-        paidAmountInput.max = totalAmount - 100;
-    }
-}
-
-// Load statistics
-async function loadStats() {
+async function loadAdminRegistrations() {
     try {
-        // Fetch all guests
         const { data: guests, error } = await supabase
             .from('guests')
-            .select('*');
-        
-        if (error) {
-            console.error('Error loading stats:', error);
-            alert('Failed to load statistics');
-            return;
-        }
-        
-        // Calculate total stats
-        const totalGuests = guests.length;
-        
-        // Count verified entries based on full payment
-        const verifiedEntries = guests.filter(guest => {
-            const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
-            const isPaidInFull = parseFloat(guest.paid_amount) >= expectedAmount;
-            return isPaidInFull; // Guest has paid in full
-        }).length;
-        
-        const pendingEntries = totalGuests - verifiedEntries;
-        const registrationRevenue = guests.reduce((sum, guest) => sum + (parseFloat(guest.paid_amount) || 0), 0);
-        const roomBookingRevenue = guests.reduce((sum, guest) => 
-            sum + (safeGetGuestProperty(guest, 'has_room_booking', false) ? 
-            (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0) : 0), 0);
-        const totalRevenue = registrationRevenue + roomBookingRevenue;
-        
-        // Calculate total PAX (headcount)
-        const totalPax = guests.reduce((sum, guest) => {
-            return sum + (guest.entry_type === 'couple' ? 2 : 1);
-        }, 0);
-
-        // Update summary stats
-        document.getElementById('totalRegistrations').textContent = totalGuests;
-        document.getElementById('verifiedEntries').textContent = verifiedEntries;
-        document.getElementById('pendingEntries').textContent = pendingEntries;
-        document.getElementById('totalRevenue').textContent = totalRevenue.toLocaleString();
-        document.getElementById('registrationRevenue').textContent = registrationRevenue.toLocaleString();
-        
-        // Room booking with proper display logic
-        const roomCount = Math.round(roomBookingRevenue / 5000);
-        document.getElementById('roomBookingRevenue').textContent = roomBookingRevenue.toLocaleString();
-        document.getElementById('roomCount').textContent = roomCount > 0 ? `${roomCount} ${roomCount === 1 ? 'Room' : 'Rooms'}` : '';
-        
-        document.getElementById('totalPax').textContent = totalPax;
-        
-        // Calculate club-wise stats
-        const clubStats = {};
-        guests.forEach(guest => {
-            const clubName = guest.club_name || 'No Club Specified';
-            
-            if (!clubStats[clubName]) {
-                clubStats[clubName] = {
-                    registrations: 0,
-                    totalAmount: 0,
-                    paidAmount: 0,
-                    guests: []
-                };
-            }
-            
-            clubStats[clubName].registrations++;
-            clubStats[clubName].totalAmount += guest.total_amount || 0;
-            clubStats[clubName].paidAmount += guest.paid_amount || 0;
-            clubStats[clubName].guests.push(guest);
-        });
-        
-        // Sort clubs by registrations (descending)
-        const sortedClubs = Object.entries(clubStats)
-            .sort((a, b) => b[1].registrations - a[1].registrations);
-        
-        // Update club stats table
-        const statsTableBody = document.getElementById('statsTableBody');
-        if (statsTableBody) {
-            statsTableBody.innerHTML = sortedClubs.map(([clubName, stats], index) => `
-                <tr class="border-b border-gray-700 club-row" data-club-index="${index}">
-                    <td class="py-3 px-4">${clubName}</td>
-                    <td class="py-3 px-4">${stats.registrations}</td>
-                    <td class="py-3 px-4">Rs.${stats.totalAmount}</td>
-                    <td class="py-3 px-4">Rs.${stats.paidAmount}</td>
-                    <td class="py-3 px-4">
-                        <button class="text-blue-400 hover:text-blue-600 view-club-guests">
-                            <i class="fas fa-eye"></i> View Guests
-                        </button>
-                    </td>
-                </tr>
-                <tr class="club-guests-row hidden" id="club-guests-${index}">
-                    <td colspan="5" class="py-3 px-4 bg-gray-800">
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full">
-                                <thead>
-                                    <tr class="border-b border-gray-700">
-                                        <th class="py-2 px-2 text-left text-sm">Name</th>
-                                        <th class="py-2 px-2 text-left text-sm">Mobile</th>
-                                        <th class="py-2 px-2 text-left text-sm">Entry Type</th>
-                                        <th class="py-2 px-2 text-left text-sm">Status</th>
-                                        <th class="py-2 px-2 text-left text-sm">Payment</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${stats.guests.map(guest => `
-                                        <tr class="border-b border-gray-700">
-                                            <td class="py-2 px-2 text-sm">${guest.guest_name}</td>
-                                            <td class="py-2 px-2 text-sm">${guest.mobile_number}</td>
-                                            <td class="py-2 px-2 text-sm">${guest.entry_type === 'stag' ? 'Stag' : 'Couple'}${safeGetGuestProperty(guest, 'has_room_booking', false) ? ' + Room' : ''}</td>
-                                            <td class="py-2 px-2 text-sm">
-                                                <span class="px-2 py-1 rounded-full text-xs ${
-                                                    guest.status === 'verified' ? 'bg-green-500' :
-                                                    guest.status === 'paid' ? 'bg-blue-500' :
-                                                    guest.status === 'partially_paid' ? 'bg-yellow-500' :
-                                                    'bg-red-500'
-                                                }">
-                                                    ${guest.status || 'pending'}
-                                                </span>
-                                            </td>
-                                            <td class="py-2 px-2 text-sm">Rs.${guest.paid_amount} / Rs.${guest.total_amount}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-
-            // Add event listeners to view club guests buttons
-            document.querySelectorAll('.view-club-guests').forEach(button => {
-                button.addEventListener('click', function() {
-                    const row = this.closest('tr');
-                    const clubIndex = row.getAttribute('data-club-index');
-                    const guestsRow = document.getElementById(`club-guests-${clubIndex}`);
-                    
-                    // Toggle the visibility of the guests row
-                    guestsRow.classList.toggle('hidden');
-                    
-                    // Update the button icon
-                    const icon = this.querySelector('i');
-                    if (guestsRow.classList.contains('hidden')) {
-                        icon.className = 'fas fa-eye';
-                        this.innerHTML = '<i class="fas fa-eye"></i> View Guests';
-                    } else {
-                        icon.className = 'fas fa-eye-slash';
-                        this.innerHTML = '<i class="fas fa-eye-slash"></i> Hide Guests';
-                    }
-                });
-            });
-        }
-        
-    } catch (error) {
-        console.error('Error loading stats:', error);
-        alert('Failed to load statistics');
-    }
-}
-
-async function downloadStatsImage() {
-    try {
-        // Check user permissions
-        const { data: userRole } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', currentUser.id)
-            .single();
-
-        if (userRole?.role === 'doorman') {
-            alert('Access denied. You do not have permission to download statistics.');
-            return;
-        }
-
-        // First load the Poppins font
-        const fontLink = document.createElement('link');
-        fontLink.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap';
-        fontLink.rel = 'stylesheet';
-        document.head.appendChild(fontLink);
-
-        // Wait for fonts to load
-        await document.fonts.ready;
-
-        // Create container with explicit font styling
-        const container = document.createElement('div');
-        container.style.cssText = `
-            background: #0a0a0a;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            width: 300px;
-            position: fixed;
-            left: -9999px;
-            top: 0;
-            font-family: 'Poppins', sans-serif;
-        `;
-        
-        // Header with exact app styling
-        const header = document.createElement('h2');
-        header.textContent = 'KOCHIN HANGOVER STATISTICS';
-        header.style.cssText = `
-            text-align: center;
-            font-size: 20px;
-            font-weight: bold;
-            margin: 0 0 15px 0;
-            color: #ffffff;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            word-spacing: 2px;
-            font-family: 'Poppins', sans-serif;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        `;
-        container.appendChild(header);
-
-        // Define all cards with their IDs and styles to match app
-        const cards = [
-            {
-                id: 'totalRegistrations',
-                title: 'TOTAL REGISTRATIONS',
-                bg: '#e6f3ff',
-                color: '#0047ab',
-                valueColor: '#0047ab',
-                valueSize: '28px',
-                format: value => {
-                    return `${value}`;
-                }
-            },
-            {
-                id: 'verifiedEntries',
-                title: 'VERIFIED ENTRIES',
-                bg: '#98fb98',
-                color: '#006400',
-                valueColor: '#006400',
-                valueSize: '28px',
-                format: value => {
-                    return `${value}`;
-                }
-            },
-            {
-                id: 'pendingEntries',
-                title: 'PENDING ENTRIES',
-                bg: '#fafad2',
-                color: '#8b4513',
-                valueColor: '#8b4513',
-                valueSize: '28px',
-                format: value => {
-                    return `${value}`;
-                }
-            },
-            {
-                id: 'totalRevenue',
-                title: 'TOTAL REVENUE',
-                bg: '#add8e6',
-                color: '#00008b',
-                valueColor: '#00008b',
-                valueSize: '28px',
-                format: value => {
-                    return `Rs.${value}`;
-                }
-            },
-            {
-                id: 'registrationRevenue',
-                title: 'REGISTRATION REVENUE',
-                bg: '#e6e6fa',
-                color: '#4b0082',
-                valueColor: '#4b0082',
-                valueSize: '28px',
-                format: value => {
-                    return `Rs.${value}`;
-                }
-            },
-            {
-                id: 'roomBookingRevenue',
-                title: 'ROOM BOOKING REVENUE',
-                bg: '#ffc0cb',
-                color: '#8b0000',
-                valueColor: '#8b0000',
-                valueSize: '24px',
-                width: '100%', // Match other cards
-                height: 'auto', // Remove fixed height
-                format: value => {
-                    // Clean number, then format with Rs. and commas
-                    const numericValue = parseInt(value.replace(/[^\d]/g, ''));
-                    const formattedAmount = isNaN(numericValue) ? 'Rs.0' : `Rs.${numericValue.toLocaleString()}`;
-                    const roomCount = Math.round(numericValue / 5000);
-                    return {
-                        amount: formattedAmount,
-                        rooms: roomCount > 0 ? `${roomCount} ${roomCount === 1 ? 'Room' : 'Rooms'}` : ''
-                    };
-                },
-                isSpecialHeader: true
-            },
-            {
-                id: 'totalPax',
-                title: 'TOTAL PAX (HEADCOUNT)',
-                bg: '#ffc0cb',
-                color: '#8b008b',
-                valueColor: '#8b008b',
-                valueSize: '28px',
-                fullWidth: true
-            }
-        ];
-
-        // Create each card with exact styling from app (closer to live mobile)
-        const CARD_PADDING = '12px 10px'; // Matches mobile
-        const CARD_BORDER_RADIUS = '16px';
-        const CARD_GAP = '4px'; // Tighter vertical space between cards
-        const CARD_TITLE_FONT_SIZE = '14px';
-        const CARD_TITLE_FONT_WEIGHT = '500';
-        const CARD_TITLE_LETTER_SPACING = '1px';
-        const CARD_TITLE_MARGIN_BOTTOM = '4px';
-        const CARD_VALUE_FONT_SIZE = '24px';
-        const CARD_VALUE_FONT_WEIGHT = '600';
-        const CARD_VALUE_MARGIN_BOTTOM = '0px';
-        const CARD_ROOMCOUNT_FONT_SIZE = '14px';
-        const CARD_ROOMCOUNT_FONT_WEIGHT = '500';
-
-        cards.forEach(({ id, title, bg, color, valueColor, valueSize, format, width, height }) => {
-            let value = document.getElementById(id)?.textContent || '0';
-            if (format) {
-                value = format(value);
-            }
-            
-            const card = document.createElement('div');
-            card.style.cssText = `
-                background-color: ${bg};
-                padding: ${CARD_PADDING};
-                border-radius: ${CARD_BORDER_RADIUS};
-                width: ${width || '100%'};
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 2px 4px rgba(44, 0, 44, 0.07);
-            `;
-
-            const heading = document.createElement('h3');
-            heading.textContent = title;
-            heading.style.cssText = `
-                font-size: ${CARD_TITLE_FONT_SIZE};
-                font-weight: ${CARD_TITLE_FONT_WEIGHT};
-                color: ${color};
-                margin: 0 0 ${CARD_TITLE_MARGIN_BOTTOM} 0;
-                text-align: center;
-                text-transform: none;
-                letter-spacing: ${CARD_TITLE_LETTER_SPACING};
-                font-family: 'Poppins', sans-serif;
-            `;
-
-            const valueElement = document.createElement('p');
-            if (id === 'roomBookingRevenue' && typeof value === 'object') {
-                valueElement.style.cssText = `
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 2px;
-                    margin: 0;
-                    width: 100%;
-                    text-align: center;
-                    font-family: 'Poppins', sans-serif;
-                `;
-                valueElement.innerHTML = `
-                    <span style="font-size: ${CARD_VALUE_FONT_SIZE}; color: ${valueColor}; font-weight: ${CARD_VALUE_FONT_WEIGHT}; margin-bottom: ${CARD_VALUE_MARGIN_BOTTOM};">${value.amount}</span>
-                    ${value.rooms ? `<span style="font-size: ${CARD_ROOMCOUNT_FONT_SIZE}; color: ${valueColor}; font-weight: ${CARD_ROOMCOUNT_FONT_WEIGHT};">${value.rooms}</span>` : ''}
-                `;
-            } else {
-                valueElement.style.cssText = `
-                    font-size: ${CARD_VALUE_FONT_SIZE};
-                    margin: 0;
-                    font-weight: ${CARD_VALUE_FONT_WEIGHT};
-                    color: ${valueColor};
-                    text-align: center;
-                    font-family: 'Poppins', sans-serif;
-                `;
-                valueElement.textContent = value;
-            }
-            card.appendChild(heading);
-            card.appendChild(valueElement);
-            container.appendChild(card);
-        });
-
-        // Arrange cards in a single column layout with reduced gap
-        const gridContainer = document.createElement('div');
-        gridContainer.style.cssText = `
-            display: flex;
-            flex-direction: column;
-            gap: ${CARD_GAP};
-            width: 100%;
-        `;
-        while (container.children.length > 1) {
-            gridContainer.appendChild(container.children[1]);
-        }
-        container.appendChild(gridContainer);
-
-        document.body.appendChild(container);
-
-        // Generate screenshot with higher quality settings
-        const canvas = await html2canvas(container, {
-            backgroundColor: '#0a0a0a',
-            scale: 3,
-            logging: false,
-            useCORS: true,
-            allowTaint: true
-        });
-
-        // Clean up
-        document.body.removeChild(container);
-        document.head.removeChild(fontLink);
-
-        // Trigger download
-        canvas.toBlob(blob => {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `rock4one-stats-${new Date().toISOString().slice(0,10)}.png`;
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(url), 100);
-        }, 'image/png', 1.0);
-
-    } catch (error) {
-        console.error('Failed to generate stats image:', error);
-        alert('Failed to save statistics. Please try again.');
-    }
-}
-
-async function downloadGuestsPDF() {
-    try {
-        // Check user role first
-        const { data: userRole, error: roleError } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', currentUser.id)
-            .single();
-        
-        if (roleError) throw roleError;
-        if (userRole?.role === 'doorman') {
-            alert('Access denied. You do not have permission to download guest lists.');
-            return;
-        }
-
-        // Fetch all guests
-        const { data: guests, error } = await supabase
-            .from('guests')
-            .select('*')
+            .select(`*, seller:registered_by(username, full_name)`)
             .order('created_at', { ascending: false });
         
-        if (error) {
-            console.error('Error loading guests:', error);
-            alert('Failed to load guest list');
+        if (error) throw error;
+        
+        const tbody = document.getElementById('adminRegTableBody');
+        if (guests.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-gray-500">No registrations found</td></tr>';
             return;
         }
         
-        // Create PDF document
-        const doc = new window.jspdf.jsPDF();
+        tbody.innerHTML = guests.map(g => `
+            <tr>
+                <td class="font-semibold">${escapeHtml(g.guest_name)}</td>
+                <td>${g.mobile_number}</td>
+                <td class="capitalize">${g.entry_type}</td>
+                <td>₹${g.ticket_price?.toLocaleString()}</td>
+                <td>${formatPaymentMode(g.payment_mode)}</td>
+                <td class="text-sm">${g.seller?.full_name || g.seller?.username || '-'}</td>
+                <td>${getStatusBadge(g.status)}</td>
+                <td class="text-sm text-gray-400">${formatDate(g.created_at)}</td>
+            </tr>
+        `).join('');
         
-        // Define colors
-        const darkColor = 40;
-        const primaryColor = [232, 50, 131];
-        
-        // Add title
-        doc.setFillColor(darkColor, darkColor, darkColor);
-        doc.rect(0, 0, 210, 20, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(16);
-        doc.text('KOCHIN HANGOVER - Guest List', 105, 15, { align: 'center' });
-        
-        // Set up table
-        const startY = 30;
-        const headers = ['#', 'Guest Details', 'Entry Type', 'Payment', 'Status'];
-        const colWidths = [15, 75, 35, 35, 30];
-        
-        // Add headers
-        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.rect(10, startY - 5, 190, 10, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(10);
-        
-        let xPos = 10;
-        headers.forEach((header, i) => {
-            doc.text(header, xPos + 2, startY);
-            xPos += colWidths[i];
-        });
-        
-        // Draw table rows
-        let yPos = startY + 10;
-        doc.setTextColor(darkColor);
-        doc.setFontSize(10);
-        
-        // Add alternating row colors
-        guests.forEach((guest, index) => {
-            const rowHeight = 15;
-            
-            // Add row background
-            doc.setFillColor(index % 2 === 0 ? 245 : 235);
-            doc.rect(10, yPos - 5, 190, rowHeight, 'F');
-            
-            // Add row data
-            doc.setTextColor(darkColor);
-            xPos = 10;
-            
-            // Row number
-            doc.text(`${index + 1}`, xPos + 2, yPos);
-            xPos += colWidths[0];
-            
-            // Guest name and club on two lines
-            doc.setFont('helvetica', 'bold');
-            doc.text(guest.guest_name || '', xPos + 2, yPos - 2);
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(8);
-            doc.text(guest.club_name || '', xPos + 2, yPos + 4);
-            doc.setFontSize(10);
-            xPos += colWidths[1];
-            
-            // Entry type
-            const entryType = guest.entry_type === 'stag' ? 'Stag' : 'Couple';
-            doc.text(`${entryType}${safeGetGuestProperty(guest, 'has_room_booking', false) ? ' + Room' : ''}`, xPos + 2, yPos);
-            xPos += colWidths[2];
-            
-            // Payment
-            doc.text(`${guest.paid_amount || 0} / ${guest.total_amount || 0}`, xPos + 2, yPos);
-            xPos += colWidths[3];
-            
-            // Status with payment verification
-            const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
-            const isPaid = (guest.paid_amount || 0) >= expectedAmount;
-            const status = isPaid ? 'verified' : (guest.status || 'pending');
-            doc.text(status, xPos + 2, yPos);
-            
-            yPos += rowHeight;
-            
-            // Add a new page if needed
-            if (yPos > 280) {
-                doc.addPage();
-                
-                // Add header to new page
-                doc.setFillColor(darkColor, darkColor, darkColor);
-                doc.rect(0, 0, 210, 20, 'F');
-                doc.setTextColor(255, 255, 255);
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(16);
-                doc.text('KOCHIN HANGOVER - Guest List (Continued)', 105, 15, { align: 'center' });
-                
-                // Reset for new page
-                yPos = 30;
-            }
-        });
-        
-        // Add summary section with white background and dark text
-        yPos += 10;
-        doc.setFillColor(255, 255, 255);
-        doc.rect(10, yPos - 5, 190, 40, 'F');
-        
-        // Calculate totals
-        const totalGuests = guests.length;
-        const totalPax = guests.reduce((sum, guest) => sum + (guest.entry_type === 'couple' ? 2 : 1), 0);
-        const verifiedGuests = guests.filter(guest => guest.status === 'verified').length;
-        const verifiedPax = guests.filter(guest => guest.status === 'verified')
-            .reduce((sum, guest) => sum + (guest.entry_type === 'couple' ? 2 : 1), 0);
-        
-        // Add totals with clear formatting
-        doc.setTextColor(darkColor);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(12);
-        doc.text(`Total Registrations: ${totalGuests} (${totalPax} PAX)`, 15, yPos + 5);
-        doc.text(`Verified Entries(Arrived): ${verifiedGuests} (${verifiedPax} PAX)`, 15, yPos + 20);
-        
-        // Save the PDF
-        doc.save(`rock4one-guests-${new Date().toISOString().slice(0,10)}.pdf`);
-
     } catch (error) {
-        console.error('Failed to generate PDF:', error);
-        alert('Failed to generate PDF. Please try again.');
+        console.error('Error loading admin registrations:', error);
     }
 }
 
-async function downloadGuestsCSV() {
+async function loadAdminSellerStats() {
     try {
-        // Check user role first
-        const { data: userRole, error: roleError } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', currentUser.id)
-            .single();
-        
-        if (roleError) throw roleError;
-        if (userRole?.role === 'doorman') {
-            alert('Access denied. You do not have permission to download guest lists.');
-            return;
-        }
-
-        // Fetch all guests
-        const { data: guests, error } = await supabase
-            .from('guests')
-            .select('*')
-            .order('created_at', { ascending: false });
-        
-        if (error) {
-            console.error('Error loading guests:', error);
-            alert('Failed to load guest list');
-            return;
-        }
-
-        // Prepare data for CSV
-        const csvData = guests.map(guest => ({
-            'Guest Name': guest.guest_name || '',
-            'Club Name': guest.club_name || '',
-            'Entry Type': guest.entry_type === 'stag' ? 'Stag' : 'Couple',
-            'Room Booking': safeGetGuestProperty(guest, 'has_room_booking', false) ? 'Yes' : 'No',
-            'Total Amount': guest.total_amount || 0,
-            'Paid Amount': guest.paid_amount || 0,
-            'Payment Status': (guest.paid_amount || 0) >= (guest.entry_type === 'stag' ? 2750 : 4750) ? 'Paid' : 'Pending',
-            'Status': guest.status || 'pending',
-            'Created At': new Date(guest.created_at).toLocaleString()
-        }));
-
-        // Generate CSV using PapaParse
-        const csv = Papa.unparse(csvData);
-        
-        // Create and trigger download
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', `rock4one-guests-${new Date().toISOString().slice(0,10)}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-    } catch (error) {
-        console.error('Failed to generate CSV:', error);
-        alert('Failed to generate CSV. Please try again.');
-    }
-}
-
-async function downloadStatsPDF() {
-    try {
-        // Check user role first
-        const { data: userRole, error: roleError } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', currentUser.id)
-            .single();
-        
-        if (roleError) throw roleError;
-        if (userRole?.role === 'doorman') {
-            alert('Access denied. You do not have permission to download statistics.');
-            return;
-        }
-
-        // Fetch all guests
-        const { data: guests, error } = await supabase
-            .from('guests')
+        const { data: stats, error } = await supabase
+            .from('seller_stats')
             .select('*');
         
         if (error) throw error;
-        if (!guests || guests.length === 0) {
-            alert('No data available to generate statistics PDF.');
+        
+        const tbody = document.getElementById('adminSellerStatsBody');
+        if (!stats || stats.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center py-8 text-gray-500">No seller data</td></tr>';
             return;
         }
-
-        // Create PDF document
-        const doc = new window.jspdf.jsPDF();
         
-        // Define colors
-        const darkColor = 40;
-        
-        // Add title
-        doc.setFillColor(darkColor, darkColor, darkColor);
-        doc.rect(0, 0, 210, 20, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(16);
-        doc.text('KOCHIN HANGOVER - Event Statistics', 105, 15, { align: 'center' });
-        
-        // Calculate statistics
-        const totalGuests = guests.length;
-        const verifiedEntries = guests.filter(guest => guest.status === 'verified').length;
-        const pendingEntries = totalGuests - verifiedEntries;
-        const registrationRevenue = guests.reduce((sum, guest) => sum + (parseFloat(guest.paid_amount) || 0), 0);
-        const roomBookingRevenue = guests.reduce((sum, guest) => 
-            sum + (safeGetGuestProperty(guest, 'has_room_booking', false) ? 
-            (parseFloat(safeGetGuestProperty(guest, 'room_booking_amount', 0)) || 0): 0), 0);
-        const totalRevenue = registrationRevenue + roomBookingRevenue;
-        const totalPax = guests.reduce((sum, guest) => {
-            return sum + (guest.entry_type === 'couple' ? 2 : 1);
-        }, 0);
-        
-        // Function to add a card with better visibility
-        function addCard(title, value, x, y, width, height = 25) {
-            // White background
-            doc.setFillColor(255, 255, 255);
-            doc.rect(x, y, width, height, 'F');
-            
-            // Dark text
-            doc.setTextColor(darkColor);
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(10);
-            doc.text(title, x + 5, y + 10);
-            
-            doc.setFontSize(12);
-            doc.text(value, x + 5, y + 20);
-        }
-        
-        // Add statistics cards with reduced height and better visibility
-        const margin = 10;
-        const cardWidth = 90;
-        const cardHeight = 25;
-        let startY = 30;
-        
-        // First row
-        addCard('Total Registrations', totalGuests.toString(), margin, startY, cardWidth, cardHeight);
-        addCard('Verified Entries', verifiedEntries.toString(), margin + cardWidth + 10, startY, cardWidth, cardHeight);
-        
-        // Second row
-        startY += cardHeight + 5;
-        addCard('Pending Entries', pendingEntries.toString(), margin, startY, cardWidth, cardHeight);
-        addCard('Total Revenue', totalRevenue.toLocaleString(), margin + cardWidth + 10, startY, cardWidth, cardHeight);
-        
-        // Third row
-        startY += cardHeight + 5;
-        addCard('Registration Revenue', registrationRevenue.toLocaleString(), margin, startY, cardWidth, cardHeight);
-        addCard('Room Booking Revenue', roomBookingRevenue.toLocaleString(), margin + cardWidth + 10, startY, cardWidth, cardHeight);
-        
-        // Fourth row - Full width card
-        startY += cardHeight + 5;
-        addCard('Total PAX (Headcount)', totalPax.toString(), margin, startY, cardWidth * 2 + 10, cardHeight);
-        
-        // Save the PDF
-        doc.save('rock4one-statistics.pdf');
+        tbody.innerHTML = stats.map(s => `
+            <tr>
+                <td class="font-semibold">${escapeHtml(s.full_name || s.username)}</td>
+                <td>${s.total_registrations}</td>
+                <td class="text-orange-400">${s.pending_count}</td>
+                <td class="text-green-400">${s.verified_count}</td>
+                <td>${s.stag_count}</td>
+                <td>${s.couple_count}</td>
+                <td>₹${s.cash_collected?.toLocaleString()}</td>
+                <td>₹${s.upi_collected?.toLocaleString()}</td>
+                <td>₹${s.bank_collected?.toLocaleString()}</td>
+                <td class="font-semibold text-yellow-400">₹${s.total_verified_amount?.toLocaleString()}</td>
+            </tr>
+        `).join('');
         
     } catch (error) {
-        console.error('Error generating statistics PDF:', error);
-        alert('Failed to generate statistics PDF. Please try again.');
+        console.error('Error loading admin seller stats:', error);
     }
 }
 
-async function downloadStatsCSV() {
+// =====================================================
+// STATISTICS
+// =====================================================
+
+async function loadStatistics() {
     try {
-        // Check user role first
-        const { data: userRole, error: roleError } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', currentUser.id)
+        const { data: stats, error } = await supabase
+            .from('overall_stats')
+            .select('*')
             .single();
         
-        if (roleError) throw roleError;
-        if (userRole?.role === 'doorman') {
-            alert('Access denied. You do not have permission to download statistics.');
-            return;
-        }
-
-        // Fetch all guests
-        const { data: guests, error } = await supabase
-            .from('guests')
-            .select('*');
+        if (error) throw error;
         
-        if (error) {
-            console.error('Error fetching guests for stats:', error);
-            alert('Error generating stats CSV: ' + error.message);
-            return;
-        }
+        // Update stat displays
+        document.getElementById('statTotalReg').textContent = stats.total_registrations || 0;
+        document.getElementById('statTotalPax').textContent = stats.total_pax || 0;
+        document.getElementById('statTotalRevenue').textContent = `₹${(stats.total_verified_revenue || 0).toLocaleString()}`;
+        document.getElementById('statCheckedIn').textContent = stats.checked_in || 0;
         
-        // Calculate club-wise stats
-        const clubStats = {};
-        guests.forEach(guest => {
-            const clubName = guest.club_name || 'No Club';
-            
-            if (!clubStats[clubName]) {
-                clubStats[clubName] = {
-                    count: 0,
-                    totalAmount: 0,
-                    paidAmount: 0
-                };
-            }
-            
-            clubStats[clubName].count++;
-            clubStats[clubName].totalAmount += guest.total_amount || 0;
-            clubStats[clubName].paidAmount += guest.paid_amount || 0;
-        });
+        document.getElementById('statPending').textContent = stats.pending_verification || 0;
+        document.getElementById('statVerified').textContent = stats.payment_verified || 0;
+        document.getElementById('statGenerated').textContent = stats.pass_generated || 0;
+        document.getElementById('statSent').textContent = stats.pass_sent || 0;
+        document.getElementById('statChecked').textContent = stats.checked_in || 0;
+        document.getElementById('statRejected').textContent = stats.rejected || 0;
         
-        // Sort clubs by count (descending)
-        const sortedClubs = Object.entries(clubStats)
-            .sort((a, b) => b[1].count - a[1].count);
+        document.getElementById('statCash').textContent = `₹${(stats.cash_revenue || 0).toLocaleString()}`;
+        document.getElementById('statUpi').textContent = `₹${(stats.upi_revenue || 0).toLocaleString()}`;
+        document.getElementById('statBank').textContent = `₹${(stats.bank_revenue || 0).toLocaleString()}`;
+        document.getElementById('statTotalVerified').textContent = `₹${(stats.total_verified_revenue || 0).toLocaleString()}`;
         
-        // Convert to CSV
-        const headers = ['Club Name', 'Count', 'Total Amount', 'Paid Amount'];
-        const csvData = sortedClubs.map(([club, stats]) => [
-            club,
-            stats.count,
-            stats.totalAmount,
-            stats.paidAmount
-        ]);
-        
-        // Add summary row
-        csvData.push([
-            'TOTAL',
-            guests.length,
-            guests.reduce((sum, guest) => sum + guest.total_amount, 0),
-            guests.reduce((sum, guest) => sum + guest.paid_amount, 0)
-        ]);
-        
-        // Use PapaParse to generate CSV
-        const csv = Papa.unparse({
-            fields: headers,
-            data: csvData
-        });
-        
-        // Create download link
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', 'rock4one-statistics.csv');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        document.getElementById('statStagCount').textContent = stats.stag_count || 0;
+        document.getElementById('statCoupleCount').textContent = stats.couple_count || 0;
         
     } catch (error) {
-        console.error('Error generating CSV:', error);
-        alert('Failed to generate CSV');
+        console.error('Error loading statistics:', error);
     }
 }
 
-// Register service worker for PWA functionality
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
-            .then(registration => {
-                console.log('Service Worker registered with scope:', registration.scope);
-            })
-            .catch(error => {
-                console.error('Service Worker registration failed:', error);
-            });
-    });
-}
+// =====================================================
+// EXPORT FUNCTIONS
+// =====================================================
 
-// Initialize app when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    initializeApp().catch(error => {
-        console.error('Failed to initialize app:', error);
-        showLoginScreen();
-    });
-    
-    setupEventListeners();  // Call setupEventListeners after app initialization
-    
-    // Handle hash-based navigation with role-based security
-    window.addEventListener('hashchange', async function() {
-        if (!currentUser) return;
+window.downloadRegistrationsCSV = async function() {
+    try {
+        const { data: guests, error } = await supabase
+            .from('guests')
+            .select(`*, seller:registered_by(username, full_name)`)
+            .order('created_at', { ascending: false });
         
-        const hash = window.location.hash.substring(1);
-        if (hash) {
-            await showTab(hash);
-        }
+        if (error) throw error;
+        
+        const csvData = guests.map(g => ({
+            'Guest Name': g.guest_name,
+            'Mobile': g.mobile_number,
+            'Entry Type': g.entry_type,
+            'Amount': g.ticket_price,
+            'Payment Mode': g.payment_mode,
+            'Payment Ref': g.payment_reference || '',
+            'Seller': g.seller?.full_name || g.seller?.username || '',
+            'Status': g.status,
+            'Registered At': formatDate(g.created_at),
+            'Verified At': g.verified_at ? formatDate(g.verified_at) : ''
+        }));
+        
+        const csv = Papa.unparse(csvData);
+        downloadFile(csv, `rock4one-registrations-${formatDateForFile()}.csv`, 'text/csv');
+        
+    } catch (error) {
+        console.error('Error downloading CSV:', error);
+        showToast('Failed to download CSV', 'error');
+    }
+};
+
+window.downloadStatsReport = async function() {
+    // Similar to CSV but with summary stats
+    showToast('Generating report...', 'info');
+    await downloadRegistrationsCSV();
+};
+
+// =====================================================
+// UTILITY FUNCTIONS
+// =====================================================
+
+function setupEventListeners() {
+    // Login form
+    document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
+    
+    // Logout
+    document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
+    
+    // Navigation tabs
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.addEventListener('click', () => showTab(tab.dataset.tab));
     });
-});
-
-// Helper function to get expected amount for a given entry type
-function getExpectedAmount(entryType) {
-    return entryType === 'stag' ? 2750 : 4750;
+    
+    // Registration form
+    document.getElementById('registrationForm')?.addEventListener('submit', handleRegistration);
+    document.getElementById('entryType')?.addEventListener('change', updateRegistrationForm);
+    document.getElementById('paymentMode')?.addEventListener('change', updateRegistrationForm);
+    
+    // Settings form
+    document.getElementById('settingsForm')?.addEventListener('submit', saveSettings);
+    
+    // User form
+    document.getElementById('userForm')?.addEventListener('submit', handleUserForm);
+    
+    // Verification form
+    document.getElementById('verifyForm')?.addEventListener('submit', handleVerification);
+    
+    // Queue filters
+    document.querySelectorAll('.queue-filter').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.queue-filter').forEach(b => {
+                b.classList.remove('active');
+                b.classList.add('secondary');
+            });
+            btn.classList.add('active');
+            btn.classList.remove('secondary');
+            loadVerificationQueue(btn.dataset.filter);
+        });
+    });
+    
+    // Registration filters
+    document.querySelectorAll('.reg-filter').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.reg-filter').forEach(b => {
+                b.classList.remove('active');
+                b.classList.add('secondary');
+            });
+            btn.classList.add('active');
+            btn.classList.remove('secondary');
+            loadAllRegistrations(btn.dataset.status);
+        });
+    });
+    
+    // Search
+    document.getElementById('searchRegistrations')?.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const filtered = allRegistrationsCache.filter(g => 
+            g.guest_name.toLowerCase().includes(term) ||
+            g.mobile_number.includes(term) ||
+            (g.seller?.full_name || '').toLowerCase().includes(term)
+        );
+        renderAllRegistrations(filtered);
+    });
 }
 
-// Helper function to get pending amount for a guest
-function getPendingAmount(guest) {
-    const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
-    return expectedAmount - guest.paid_amount;
+function openModal(modalId) {
+    document.getElementById(modalId)?.classList.add('active');
 }
 
-// Helper function to format WhatsApp payment info
-function formatWhatsAppPaymentInfo(guest) {
-    const expectedAmount = guest.entry_type === 'stag' ? 2750 : 4750;
-    const paidAmount = guest.paid_amount || 0;
-    const pendingAmount = expectedAmount - paidAmount;
-    const hasRoomBooking = safeGetGuestProperty(guest, 'has_room_booking', false);
-    const roomBookingAmount = safeGetGuestProperty(guest, 'room_booking_amount', 0) || 0;
-    
-    let message = `\nPayment Received : ₹${paidAmount}`;
-    
-    // Only show Payment Pending for guests who have not paid in full
-    if (paidAmount < expectedAmount) {
-        message += `\nPayment Pending : ₹${pendingAmount}`;
-    }
-    
-    // Add room booking amount for guests who have room booking
-    if (hasRoomBooking && roomBookingAmount > 0) {
-        message += `\nPayment Received for Room Booking : ₹${roomBookingAmount}`;
-    }
-    
-    return message;
+function closeModal(modalId) {
+    document.getElementById(modalId)?.classList.remove('active');
 }
 
-// Make downloadStatsImage globally accessible
-window.downloadStatsImage = downloadStatsImage;
+window.closeModal = closeModal;
 
-// Make all functions available globally in one place
-window.editUser = editUser;
-window.deleteUser = deleteUser;
-window.editGuest = editGuest;
-window.deleteGuest = deleteGuest;
-window.downloadGuestsPDF = downloadGuestsPDF;
-window.downloadGuestsCSV = downloadGuestsCSV;
-window.downloadStatsImage = downloadStatsImage;
+function showToast(message, type = 'info') {
+    const toast = document.getElementById('toast');
+    const icon = document.getElementById('toastIcon');
+    const msg = document.getElementById('toastMessage');
+    
+    const types = {
+        success: { bg: 'bg-green-600', icon: 'fa-check-circle' },
+        error: { bg: 'bg-red-600', icon: 'fa-times-circle' },
+        warning: { bg: 'bg-yellow-600', icon: 'fa-exclamation-circle' },
+        info: { bg: 'bg-blue-600', icon: 'fa-info-circle' }
+    };
+    
+    const config = types[type] || types.info;
+    
+    toast.className = `fixed bottom-4 right-4 p-4 rounded-lg shadow-lg z-50 ${config.bg}`;
+    icon.className = `fas ${config.icon} text-xl`;
+    msg.textContent = message;
+    
+    toast.style.transform = 'translateY(0)';
+    toast.style.opacity = '1';
+    
+    setTimeout(() => {
+        toast.style.transform = 'translateY(100%)';
+        toast.style.opacity = '0';
+    }, 3000);
+}
 
-// Guest List PDF and CSV download buttons
-document.getElementById('downloadGuestsPDFBtn')?.addEventListener('click', downloadGuestsPDF);
-document.getElementById('downloadGuestsCSVBtn')?.addEventListener('click', downloadGuestsCSV);
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function formatDateForFile() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function formatPaymentMode(mode) {
+    const modes = {
+        'cash': '💵 Cash',
+        'upi': '📱 UPI',
+        'bank_transfer': '🏦 Bank'
+    };
+    return modes[mode] || mode;
+}
+
+function getStatusBadge(status) {
+    const statuses = {
+        'pending_verification': { class: 'status-pending', text: 'Pending' },
+        'payment_verified': { class: 'status-verified', text: 'Verified' },
+        'pass_generated': { class: 'status-generated', text: 'Pass Ready' },
+        'pass_sent': { class: 'status-sent', text: 'Sent' },
+        'checked_in': { class: 'status-checked', text: 'Checked In' },
+        'rejected': { class: 'status-rejected', text: 'Rejected' }
+    };
+    const s = statuses[status] || { class: '', text: status };
+    return `<span class="status-badge ${s.class}">${s.text}</span>`;
+}
+
+function downloadFile(content, filename, type) {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
+// Make functions globally available
+window.loadMySales = loadMySales;
+window.loadVerificationQueue = loadVerificationQueue;
+window.loadAllRegistrations = loadAllRegistrations;
+window.loadSellers = loadSellers;
+window.loadStatistics = loadStatistics;

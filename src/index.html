@@ -4,34 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0a0a0a">
-    <meta name="description" content="Rock 4 One - Harmony for Humanity - Entry Management System">
+    <meta name="description" content="Rock 4 One - Harmony for Humanity - Ticket Registration System">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Rock 4 One">
-    <title>Rock 4 One - Entry Management</title>
+    <title>Rock 4 One - Ticket Registration</title>
     <link rel="manifest" href="/manifest.json">
     
     <!-- Favicons -->
     <link rel="icon" href="/icons/favicon.ico" sizes="48x48">
     <link rel="icon" href="/icons/favicon-16x16.png" sizes="16x16" type="image/png">
     <link rel="icon" href="/icons/favicon-32x32.png" sizes="32x32" type="image/png">
-    
-    <!-- Apple Touch Icons -->
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
-    
-    <!-- Microsoft Tiles -->
-    <meta name="msapplication-TileColor" content="#0a0a0a">
-    <meta name="msapplication-TileImage" content="/icons/android-chrome-192x192.png">
     
     <!-- External Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://unpkg.com/qrcodejs2@0.0.2/qrcode.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-    <script type="module" src="/main.js"></script>
     
     <style>
         :root {
@@ -42,42 +33,31 @@
             --dark-secondary: #1a1a1a;
             --light: #fff8e7;
             --gold-gradient: linear-gradient(135deg, #d4a853, #f5d76e, #d4a853);
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
         }
+        
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--dark);
             color: var(--light);
             min-height: 100vh;
-            font-size: 16px;
-        }
-        
-        /* Responsive font sizing */
-        @media (max-width: 640px) {
-            body {
-                font-size: 14px;
-            }
-            h1, h2 {
-                font-size: 1.25rem !important;
-            }
-            .logo-text {
-                font-size: 1.25rem !important;
-            }
         }
         
         .rock4one-bg {
             background-color: var(--dark);
             background-image: 
-                radial-gradient(circle at 10% 20%, rgba(212, 168, 83, 0.15) 0%, transparent 35%),
-                radial-gradient(circle at 90% 30%, rgba(201, 48, 44, 0.15) 0%, transparent 35%),
-                radial-gradient(circle at 50% 80%, rgba(245, 215, 110, 0.1) 0%, transparent 35%);
+                radial-gradient(circle at 10% 20%, rgba(212, 168, 83, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(201, 48, 44, 0.1) 0%, transparent 40%);
         }
         
         .rock4one-container {
             background-color: rgba(26, 26, 26, 0.95);
             border-radius: 1rem;
-            border: 2px solid rgba(212, 168, 83, 0.6);
-            box-shadow: 0 0 25px rgba(212, 168, 83, 0.3);
-            overflow: hidden;
+            border: 2px solid rgba(212, 168, 83, 0.5);
+            box-shadow: 0 0 25px rgba(212, 168, 83, 0.2);
         }
         
         .rock4one-header {
@@ -85,21 +65,6 @@
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            text-shadow: 0 0 10px rgba(212, 168, 83, 0.3);
-            font-weight: bold;
-        }
-        
-        .rock4one-tab {
-            background-color: rgba(26, 26, 26, 0.7);
-            border-top: 2px solid var(--primary);
-            color: var(--light);
-            transition: all 0.3s ease;
-        }
-        
-        .rock4one-tab.active {
-            background-color: rgba(212, 168, 83, 0.2);
-            border-top: 2px solid var(--accent);
-            color: var(--accent);
             font-weight: bold;
         }
         
@@ -108,40 +73,47 @@
             color: var(--dark);
             border: none;
             border-radius: 0.5rem;
-            padding: 0.5rem 1rem;
+            padding: 0.6rem 1.2rem;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            overflow: hidden;
-            font-size: 0.9rem;
-        }
-        
-        @media (max-width: 640px) {
-            .rock4one-button {
-                padding: 0.4rem 0.6rem;
-                font-size: 0.8rem;
-            }
-            .rock4one-button i {
-                margin-right: 0.25rem !important;
-            }
         }
         
         .rock4one-button:hover {
-            opacity: 0.9;
             transform: translateY(-2px);
             box-shadow: 0 5px 20px rgba(212, 168, 83, 0.4);
         }
         
+        .rock4one-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .rock4one-button.secondary {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+        
+        .rock4one-button.danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .rock4one-button.success {
+            background: var(--success);
+            color: white;
+        }
+        
         .rock4one-input {
-            background-color: rgba(255, 255, 255, 0.9);
+            background-color: rgba(255, 255, 255, 0.95);
             border: 2px solid var(--primary);
             border-radius: 0.5rem;
-            padding: 0.5rem 1rem;
+            padding: 0.6rem 1rem;
             color: var(--dark);
-            transition: all 0.3s ease;
             width: 100%;
+            transition: all 0.3s ease;
         }
         
         .rock4one-input:focus {
@@ -150,62 +122,8 @@
             outline: none;
         }
         
-        .rock4one-card {
-            background-color: rgba(26, 26, 26, 0.7);
-            border-radius: 1rem;
-            border: 2px solid var(--primary);
-            padding: 1.5rem;
-            transition: all 0.3s ease;
-        }
-        
-        .rock4one-card:hover {
-            box-shadow: 0 0 15px rgba(212, 168, 83, 0.3);
-            border-color: var(--accent);
-        }
-        
-        .guest-row {
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .guest-row:hover {
-            background-color: rgba(212, 168, 83, 0.1);
-        }
-        
-        .guest-row.selected {
-            background-color: rgba(212, 168, 83, 0.2);
-            border-left: 4px solid var(--accent);
-        }
-        
-        #qrcode {
-            background-color: white;
-            padding: 1rem;
-            border-radius: 0.5rem;
-        }
-        
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-            z-index: 1000;
-        }
-        
-        .modal-content {
-            background-color: var(--dark);
-            border: 2px solid var(--primary);
-            border-radius: 1rem;
-            box-shadow: 0 0 30px rgba(212, 168, 83, 0.4);
-            padding: 2rem;
-            min-width: 300px;
-            max-width: 500px;
-        }
-
         .logo-text {
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 3px;
@@ -213,670 +131,827 @@
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            text-shadow: 0 0 20px rgba(212, 168, 83, 0.3);
-            padding: 0.5rem;
-            display: inline-block;
         }
-
+        
         .tagline {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: var(--primary);
-            letter-spacing: 3px;
+            letter-spacing: 2px;
             text-transform: uppercase;
         }
-
-        .guitar-icon {
-            display: inline-block;
-            font-size: 1.5rem;
-            color: var(--primary);
-            margin: 0 0.5rem;
+        
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
         }
-
-        .music-icon {
-            display: inline-block;
-            font-size: 1.5rem;
-            color: var(--accent);
-            margin: 0 0.5rem;
+        
+        .status-pending { background: var(--warning); color: var(--dark); }
+        .status-verified { background: var(--info); color: white; }
+        .status-generated { background: #8b5cf6; color: white; }
+        .status-sent { background: var(--success); color: white; }
+        .status-checked { background: #10b981; color: white; }
+        .status-rejected { background: var(--danger); color: white; }
+        
+        .card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(212, 168, 83, 0.3);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
         }
-
-        .pin-input {
-            width: 40px;
-            height: 40px;
-            margin: 0 5px;
+        
+        .stat-card {
             text-align: center;
-            font-size: 1.5rem;
-            border: 2px solid var(--primary);
+            padding: 1rem;
             border-radius: 0.5rem;
-            background-color: var(--dark-secondary);
-            color: var(--light);
-        }
-
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
         }
         
-        ::-webkit-scrollbar-track {
-            background: rgba(26, 26, 26, 0.5);
+        .stat-card h4 { font-size: 0.8rem; opacity: 0.8; margin-bottom: 0.5rem; }
+        .stat-card p { font-size: 1.75rem; font-weight: bold; }
+        
+        .nav-tab {
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
         }
         
-        ::-webkit-scrollbar-thumb {
-            background: var(--primary);
-            border-radius: 4px;
+        .nav-tab:hover { background: rgba(212, 168, 83, 0.1); }
+        .nav-tab.active { 
+            background: rgba(212, 168, 83, 0.2); 
+            border-color: var(--primary);
+            color: var(--accent);
         }
         
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--accent);
+        .table-container { overflow-x: auto; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th { 
+            text-align: left; 
+            padding: 0.75rem; 
+            border-bottom: 2px solid var(--primary);
+            color: var(--primary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
         }
-
-        /* Mobile Optimizations */
+        td { 
+            padding: 0.75rem; 
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        tr:hover td { background: rgba(212, 168, 83, 0.05); }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active { display: flex; }
+        
+        .modal-content {
+            background: var(--dark-secondary);
+            border: 2px solid var(--primary);
+            border-radius: 1rem;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .role-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        .role-super_admin { background: #8b5cf6; color: white; }
+        .role-admin { background: var(--info); color: white; }
+        .role-seller { background: var(--success); color: white; }
+        
+        /* Hide elements based on role */
+        .super-admin-only, .admin-only, .seller-only { display: none; }
+        
+        body.role-super_admin .super-admin-only { display: block; }
+        body.role-super_admin .admin-view { display: block; }
+        body.role-admin .admin-only { display: block; }
+        body.role-admin .admin-view { display: block; }
+        body.role-seller .seller-only { display: block; }
+        
         @media (max-width: 768px) {
-            .container {
-                padding: 0.5rem;
-            }
-            
-            .nav-buttons {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-                gap: 0.5rem;
-                width: 100%;
-            }
-            
-            .nav-button {
-                width: 100%;
-                min-height: 80px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                text-align: center;
-                padding: 1rem;
-                background: rgba(255, 255, 255, 0.05);
-                border-radius: 0.5rem;
-                backdrop-filter: blur(10px);
-            }
-            
-            .form-container {
-                padding: 1rem;
-            }
-            
-            .form-group {
-                margin-bottom: 1rem;
-            }
-            
-            .form-label {
-                font-size: 0.9rem;
-                margin-bottom: 0.25rem;
-            }
-            
-            .form-input {
-                width: 100%;
-                padding: 0.75rem;
-                font-size: 1rem;
-                border-radius: 0.5rem;
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .guest-table {
-                font-size: 0.9rem;
-            }
-            
-            .guest-table th,
-            .guest-table td {
-                padding: 0.5rem;
-            }
-            
-            #qr-reader {
-                width: 100% !important;
-                max-width: 100% !important;
-            }
-            
-            #qr-reader__scan_region {
-                min-height: 300px !important;
-            }
-            
-            #qr-reader__dashboard {
-                padding: 0.5rem !important;
-            }
-        }
-        
-        /* QR Scanner Styles */
-        #qr-reader {
-            border: none !important;
-            background: rgba(255, 255, 255, 0.05) !important;
-            border-radius: 1rem !important;
-            overflow: hidden !important;
-        }
-        
-        #qr-reader__status_span {
-            background: var(--primary) !important;
-            color: var(--dark) !important;
-        }
-        
-        #qr-reader__camera_selection {
-            background: var(--dark) !important;
-            color: var(--light) !important;
-            border: 1px solid var(--primary) !important;
-            border-radius: 0.5rem !important;
-            padding: 0.5rem !important;
-        }
-        
-        #qr-reader__dashboard button {
-            background: var(--primary) !important;
-            color: var(--dark) !important;
-            border: none !important;
-            border-radius: 0.5rem !important;
-            padding: 0.5rem 1rem !important;
-            margin: 0.5rem !important;
-            font-weight: bold !important;
+            .logo-text { font-size: 1.5rem; }
+            .nav-tab { padding: 0.5rem 0.75rem; font-size: 0.85rem; }
+            th, td { padding: 0.5rem; font-size: 0.85rem; }
         }
     </style>
 </head>
 <body class="rock4one-bg">
-    <!-- Login Screen -->
-    <div id="loginScreen" class="flex items-center justify-center min-h-screen p-4">
+
+    <!-- ==================== LOGIN SCREEN ==================== -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
         <div class="rock4one-container p-8 max-w-md w-full">
             <div class="text-center mb-8">
-                <div class="mb-4">
-                    <img src="/icons/android-chrome-192x192.png" alt="Rock 4 One Logo" class="w-40 h-40 mx-auto mb-4">
-                    <h1 class="logo-text text-4xl mb-2">ROCK 4 ONE</h1>
-                    <p class="tagline">Harmony for Humanity</p>
-                </div>
-                <h2 class="text-2xl font-bold text-white mt-4">Entry Management System</h2>
-                <p class="text-gray-300">Event Date: TBD</p>
+                <img src="/icons/android-chrome-192x192.png" alt="Rock 4 One" class="w-24 h-24 mx-auto mb-4">
+                <h1 class="logo-text mb-2">ROCK 4 ONE</h1>
+                <p class="tagline">Harmony for Humanity</p>
+                <p class="text-gray-400 mt-4 text-sm">Ticket Registration System</p>
             </div>
             
-            <form id="loginForm" class="space-y-6">
+            <form id="loginForm" class="space-y-4">
                 <div>
-                    <label for="username" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
-                    <input type="text" id="username" name="username" required class="rock4one-input w-full">
+                    <label class="block text-sm mb-1 text-gray-300">Username</label>
+                    <input type="text" id="loginUsername" class="rock4one-input" required autocomplete="username">
                 </div>
-                
                 <div>
-                    <label for="password" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
-                    <input type="password" id="password" name="password" required class="rock4one-input w-full">
+                    <label class="block text-sm mb-1 text-gray-300">Password</label>
+                    <input type="password" id="loginPassword" class="rock4one-input" required autocomplete="current-password">
                 </div>
-                
-                <div>
-                    <button type="submit" class="rock4one-button w-full py-3">
-                        <i class="fas fa-sign-in-alt mr-2"></i> Login
-                    </button>
-                </div>
-                
-                <div id="loginError" class="hidden text-red-500 text-center"></div>
+                <button type="submit" class="rock4one-button w-full py-3">
+                    <i class="fas fa-sign-in-alt mr-2"></i> Login
+                </button>
+                <div id="loginError" class="text-red-500 text-center text-sm hidden"></div>
             </form>
         </div>
     </div>
 
-    <!-- Main Application -->
-    <div id="mainApp" class="hidden min-h-screen p-4">
-        <div class="container mx-auto">
-            <!-- Header -->
-            <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
-                <div class="flex items-center mb-3 sm:mb-0">
-                    <img src="/icons/android-chrome-192x192.png" alt="Rock 4 One Logo" class="w-12 h-12 mr-3">
+    <!-- ==================== MAIN APPLICATION ==================== -->
+    <div id="mainApp" class="hidden min-h-screen">
+        
+        <!-- Header -->
+        <header class="bg-black/50 border-b border-yellow-600/30 px-4 py-3">
+            <div class="container mx-auto flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <img src="/icons/android-chrome-192x192.png" alt="Logo" class="w-10 h-10">
                     <div>
-                        <span class="logo-text text-xl sm:text-2xl">ROCK 4 ONE</span>
+                        <h1 class="logo-text text-xl">ROCK 4 ONE</h1>
                         <p class="tagline text-xs">Harmony for Humanity</p>
                     </div>
                 </div>
-                <div class="flex flex-wrap items-center justify-center sm:justify-end gap-2">
-                    <span id="userRoleDisplay" class="text-white bg-yellow-700 px-3 py-1 rounded-full text-sm"></span>
-                    <button id="usersBtn" class="rock4one-button bg-yellow-600">
-                        <i class="fas fa-users mr-2"></i> Users
-                    </button>
-                    <button id="logoutBtn" class="rock4one-button bg-red-600" style="background: #c9302c;">
-                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                <div class="flex items-center gap-3">
+                    <span id="currentUserDisplay" class="text-sm">
+                        <span id="userName" class="font-semibold"></span>
+                        <span id="userRole" class="role-badge ml-2"></span>
+                    </span>
+                    <button id="logoutBtn" class="rock4one-button danger text-sm py-2 px-3">
+                        <i class="fas fa-sign-out-alt"></i>
                     </button>
                 </div>
             </div>
+        </header>
 
-            <!-- Navigation -->
-            <div class="grid grid-cols-2 sm:flex sm:space-x-4 gap-2 mb-6">
-                <button id="newRegistrationBtn" class="rock4one-button" data-tab="registration">
-                    <i class="fas fa-user-plus mr-2"></i> New Registration
+        <!-- Navigation Tabs -->
+        <nav class="bg-black/30 px-4 py-2 border-b border-yellow-600/20">
+            <div class="container mx-auto flex flex-wrap gap-2">
+                <!-- Seller Tabs -->
+                <button class="nav-tab seller-only" data-tab="register">
+                    <i class="fas fa-ticket-alt mr-2"></i>Register Guest
                 </button>
-                <button id="entryVerificationBtn" class="rock4one-button" data-tab="verification">
-                    <i class="fas fa-qrcode mr-2"></i> Entry Verification
+                <button class="nav-tab seller-only" data-tab="my-sales">
+                    <i class="fas fa-list mr-2"></i>My Sales
                 </button>
-                <button id="guestListBtn" class="rock4one-button" data-tab="guests">
-                    <i class="fas fa-list mr-2"></i> Registered Guests
+                
+                <!-- Super Admin Tabs -->
+                <button class="nav-tab super-admin-only" data-tab="verification-queue">
+                    <i class="fas fa-clock mr-2"></i>Verification Queue
+                    <span id="pendingBadge" class="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
                 </button>
-                <button id="statsBtn" class="rock4one-button" data-tab="stats">
-                    <i class="fas fa-chart-bar mr-2"></i> Stats
+                <button class="nav-tab super-admin-only" data-tab="all-registrations">
+                    <i class="fas fa-users mr-2"></i>All Registrations
+                </button>
+                <button class="nav-tab super-admin-only" data-tab="seller-management">
+                    <i class="fas fa-user-tie mr-2"></i>Sellers
+                </button>
+                <button class="nav-tab super-admin-only" data-tab="settings">
+                    <i class="fas fa-cog mr-2"></i>Settings
+                </button>
+                
+                <!-- Admin (Read-Only) Tabs -->
+                <button class="nav-tab admin-only" data-tab="view-registrations">
+                    <i class="fas fa-eye mr-2"></i>View Registrations
+                </button>
+                <button class="nav-tab admin-only" data-tab="view-sellers">
+                    <i class="fas fa-chart-bar mr-2"></i>Seller Stats
+                </button>
+                
+                <!-- Stats Tab (Admin & Super Admin) -->
+                <button class="nav-tab admin-view" data-tab="statistics">
+                    <i class="fas fa-chart-pie mr-2"></i>Statistics
                 </button>
             </div>
+        </nav>
 
-            <!-- Content Sections -->
-            <div id="registration" class="tab-content rock4one-container p-4 sm:p-6 mb-6">
-                <h2 class="text-xl font-bold mb-4 rock4one-header">New Registration</h2>
-                
-                <form id="registrationForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="guestName" class="block text-sm font-medium text-gray-300 mb-1">Name</label>
-                        <input type="text" id="guestName" name="guestName" required class="rock4one-input w-full">
-                    </div>
-                    
-                    <div>
-                        <label for="clubName" class="block text-sm font-medium text-gray-300 mb-1">Club Name</label>
-                        <input type="text" id="clubName" name="clubName" value="" class="rock4one-input w-full">
-                    </div>
-                    
-                    <div>
-                        <label for="mobileNumber" class="block text-sm font-medium text-gray-300 mb-1">Mobile Number</label>
-                        <input type="tel" id="mobileNumber" name="mobileNumber" required class="rock4one-input w-full" pattern="[0-9]{10}" title="Please enter a valid 10-digit mobile number">
-                        <p class="text-xs text-gray-400 mt-1">10-digit mobile number (for QR code delivery and verification)</p>
-                    </div>
-                    
-                    <div>
-                        <label for="entryType" class="block text-sm font-medium text-gray-300 mb-1">Entry Type</label>
-                        <select id="entryType" name="entryType" required class="rock4one-input w-full" onchange="updateAmount()">
-                            <option value="stag">Stag (₹2750)</option>
-                            <option value="couple">Couple (₹4750)</option>
-                        </select>
-                    </div>
-                    
-                    <div>
-                        <label for="paymentMode" class="block text-sm font-medium text-gray-300 mb-1">Payment Mode</label>
-                        <select id="paymentMode" name="paymentMode" required class="rock4one-input w-full">
-                            <option value="full_cash">Full Payment - Cash</option>
-                            <option value="full_upi">Full Payment - UPI</option>
-                            <option value="full_card">Full Payment - Card</option>
-                            <option value="partial">Partial Payment</option>
-                        </select>
-                    </div>
-
-                    <div id="partialPaymentSection" class="hidden">
-                        <label for="paidAmount" class="block text-sm font-medium text-gray-300 mb-1">Paid Amount (₹)</label>
-                        <div class="flex items-center space-x-2">
-                            <input type="number" id="paidAmount" name="paidAmount" min="100" class="rock4one-input w-full" placeholder="Enter amount paid now">
-                            <span class="text-sm text-gray-400" id="totalAmountDisplay"></span>
+        <!-- Main Content Area -->
+        <main class="container mx-auto p-4">
+            
+            <!-- ========== SELLER: Register Guest ========== -->
+            <section id="tab-register" class="tab-content hidden">
+                <div class="max-w-lg mx-auto">
+                    <div class="rock4one-container p-6">
+                        <h2 class="text-xl font-bold rock4one-header mb-6 text-center">
+                            <i class="fas fa-ticket-alt mr-2"></i>Register New Guest
+                        </h2>
+                        
+                        <!-- Payment Info Display -->
+                        <div id="paymentInfoBox" class="card mb-6 text-center">
+                            <p class="text-sm text-gray-400 mb-2">Event UPI ID</p>
+                            <p id="displayUpiId" class="text-lg font-mono text-yellow-400">Loading...</p>
                         </div>
-                        <p class="text-xs text-gray-400 mt-1">Enter the amount paid now. Full amount will be collected at entry.</p>
-                    </div>
-                    
-                    <div>
-                        <label for="roomBooking" class="block text-sm font-medium text-gray-300 mb-1">Room Booking</label>
-                        <select id="roomBooking" name="roomBooking" class="rock4one-input w-full">
-                            <option value="no">No Room Booking</option>
-                            <option value="yes">Room Booking</option>
-                        </select>
-                    </div>
-                    
-                    <div id="roomBookingSection" class="hidden">
-                        <label for="roomBookingAmount" class="block text-sm font-medium text-gray-300 mb-1">Room Booking Amount (₹)</label>
-                        <input type="number" id="roomBookingAmount" name="roomBookingAmount" min="0" class="rock4one-input w-full" placeholder="Enter room booking amount">
-                        <p class="text-xs text-gray-400 mt-1">Enter the amount received for room booking.</p>
-                    </div>
-
-                    <div class="col-span-1 md:col-span-2 mt-2">
-                        <button type="submit" class="rock4one-button w-full">
-                            <i class="fas fa-user-plus mr-2"></i> Register Guest
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <div id="verification" class="tab-content rock4one-container p-4 sm:p-6 mb-6 hidden">
-                <h2 class="text-xl font-bold mb-4 rock4one-header">Entry Verification</h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <div id="qrScanner" class="bg-gray-900 rounded-lg overflow-hidden aspect-square w-full max-w-md mx-auto"></div>
-                        <p class="text-center text-sm text-gray-400 mt-2">Scan the guest's QR code to verify entry</p>
-                    </div>
-                    
-                    <div id="verificationResult" class="hidden rock4one-container p-4 bg-opacity-50">
-                        <h3 class="text-lg font-bold mb-4 rock4one-header">Guest Information</h3>
-                        <div id="verificationDetails" class="space-y-3"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="guests" class="tab-content rock4one-container p-4 sm:p-6 mb-6 hidden">
-                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-                    <h2 class="text-2xl font-bold rock4one-header">Guest List</h2>
-                    <div class="flex gap-2">
-                        <button id="downloadGuestsPDFBtn" class="rock4one-button">
-                            <i class="fas fa-file-pdf mr-2"></i>Download PDF
-                        </button>
-                        <button id="downloadGuestsCSVBtn" class="rock4one-button">
-                            <i class="fas fa-file-csv mr-2"></i>Download CSV
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="mb-4">
-                    <div class="relative">
-                        <form id="searchForm" onsubmit="event.preventDefault();" autocomplete="off">
-                            <!-- Hidden field to trick password managers -->
-                            <input type="text" style="display:none" name="fakeusernameremembered">
-                            <input type="password" style="display:none" name="fakepasswordremembered">
-                            
-                            <div class="relative">
-                                <input type="search" 
-                                       id="guestSearchInput" 
-                                       class="rock4one-input w-full" 
-                                       placeholder="Search by guest name or club..." 
-                                       autocomplete="off" 
-                                       autocorrect="off" 
-                                       autocapitalize="off" 
-                                       spellcheck="false" 
-                                       data-form-type="search" 
-                                       data-lpignore="true"
-                                       aria-label="Search guests"
-                                       style="padding-left: 40px;">
-                                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                    <i class="fas fa-search text-gray-500"></i>
-                                </div>
+                        
+                        <form id="registrationForm" class="space-y-4">
+                            <div>
+                                <label class="block text-sm mb-1 text-gray-300">Guest Name *</label>
+                                <input type="text" id="guestName" class="rock4one-input" required placeholder="Full name of the guest">
                             </div>
+                            
+                            <div>
+                                <label class="block text-sm mb-1 text-gray-300">Mobile Number *</label>
+                                <input type="tel" id="guestMobile" class="rock4one-input" required 
+                                       pattern="[0-9]{10}" placeholder="10-digit mobile number"
+                                       title="Please enter a valid 10-digit mobile number">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm mb-1 text-gray-300">Entry Type *</label>
+                                <select id="entryType" class="rock4one-input" required>
+                                    <option value="">Select entry type</option>
+                                    <option value="stag">Stag - ₹<span class="stag-price">2750</span></option>
+                                    <option value="couple">Couple - ₹<span class="couple-price">4750</span></option>
+                                </select>
+                            </div>
+                            
+                            <div id="priceDisplay" class="text-center py-3 bg-yellow-900/30 rounded-lg hidden">
+                                <p class="text-sm text-gray-400">Amount to Collect</p>
+                                <p class="text-3xl font-bold text-yellow-400">₹<span id="ticketPrice">0</span></p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm mb-1 text-gray-300">Payment Mode *</label>
+                                <select id="paymentMode" class="rock4one-input" required>
+                                    <option value="">Select payment mode</option>
+                                    <option value="cash">💵 Cash</option>
+                                    <option value="upi">📱 UPI</option>
+                                    <option value="bank_transfer">🏦 Bank Transfer</option>
+                                </select>
+                            </div>
+                            
+                            <div id="paymentRefSection" class="hidden">
+                                <label class="block text-sm mb-1 text-gray-300">
+                                    <span id="refLabel">Transaction Reference</span> *
+                                </label>
+                                <input type="text" id="paymentReference" class="rock4one-input" 
+                                       placeholder="UTR Number / Transaction ID">
+                                <p class="text-xs text-gray-500 mt-1">Enter the UTR number or transaction reference</p>
+                            </div>
+                            
+                            <button type="submit" class="rock4one-button w-full py-3 mt-6">
+                                <i class="fas fa-paper-plane mr-2"></i>Submit Registration
+                            </button>
                         </form>
                     </div>
                 </div>
-                
-                <div class="overflow-x-auto">
-                    <table id="guestListTable" class="min-w-full">
-                        <thead>
-                            <tr class="border-b border-gray-700">
-                                <th class="py-3 px-2 sm:px-4 text-left">Name</th>
-                                <th class="py-3 px-2 sm:px-4 text-left">Club</th>
-                                <th class="py-3 px-2 sm:px-4 text-left">Entry Type</th>
-                                <th class="py-3 px-2 sm:px-4 text-left payment-column">Payment</th>
-                                <th class="py-3 px-2 sm:px-4 text-left">Status</th>
-                                <th class="py-3 px-2 sm:px-4 text-left">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="guestListTableBody">
-                            <!-- Guest rows will be dynamically added here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            </section>
 
-            <div id="stats" class="tab-content rock4one-container p-4 sm:p-6 mb-6 hidden">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-                    <h2 class="text-xl font-bold rock4one-header">ROCK 4 ONE STATISTICS</h2>
-                    <div class="flex flex-wrap gap-2 mt-2 sm:mt-0">
-                        <button id="downloadStatsImageBtn" class="rock4one-button bg-blue-600" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);">
-                            <i class="fas fa-download mr-2"></i> Save Stats
-                        </button>
-                        <button id="downloadStatsCSVBtn" class="rock4one-button bg-green-600" style="background: linear-gradient(135deg, #22c55e, #4ade80);">
-                            <i class="fas fa-file-csv mr-2"></i> Download CSV
+            <!-- ========== SELLER: My Sales ========== -->
+            <section id="tab-my-sales" class="tab-content hidden">
+                <div class="rock4one-container p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold rock4one-header">
+                            <i class="fas fa-list mr-2"></i>My Registrations
+                        </h2>
+                        <button onclick="loadMySales()" class="rock4one-button secondary text-sm">
+                            <i class="fas fa-sync-alt mr-1"></i>Refresh
                         </button>
                     </div>
-                </div>
-                
-                <div class="flex flex-col gap-4 mb-6">
-                    <!-- Total Registrations -->
-                    <div class="bg-yellow-900 bg-opacity-30 rounded-lg p-3 text-center mb-1.5 border border-yellow-600">
-                        <h3 class="text-base font-semibold mb-1 text-yellow-400">Total Registrations</h3>
-                        <p class="text-2xl font-bold text-yellow-100" id="totalRegistrations">0</p>
-                    </div>
-
-                    <!-- Verified Entries -->
-                    <div class="bg-green-900 bg-opacity-30 rounded-lg p-3 text-center mb-1.5 border border-green-600">
-                        <h3 class="text-base font-semibold mb-1 text-green-400">Verified Entries</h3>
-                        <p class="text-2xl font-bold text-green-100" id="verifiedEntries">0</p>
-                    </div>
-
-                    <!-- Pending Entries -->
-                    <div class="bg-orange-900 bg-opacity-30 rounded-lg p-3 text-center mb-1.5 border border-orange-600">
-                        <h3 class="text-base font-semibold mb-1 text-orange-400">Pending Entries</h3>
-                        <p class="text-2xl font-bold text-orange-100" id="pendingEntries">0</p>
-                    </div>
-
-                    <!-- Total Revenue -->
-                    <div class="bg-blue-900 bg-opacity-30 rounded-lg p-3 text-center mb-1.5 border border-blue-600">
-                        <h3 class="text-base font-semibold mb-1 text-blue-400">Total Revenue</h3>
-                        <p class="text-2xl font-bold text-blue-100">Rs.<span id="totalRevenue">0</span></p>
-                    </div>
-
-                    <!-- Registration Revenue -->
-                    <div class="bg-purple-900 bg-opacity-30 rounded-lg p-3 text-center mb-1.5 border border-purple-600">
-                        <h3 class="text-base font-semibold mb-1 text-purple-400">Registration Revenue</h3>
-                        <p class="text-2xl font-bold text-purple-100">Rs.<span id="registrationRevenue">0</span></p>
-                    </div>
-
-                    <!-- Room Booking Revenue -->
-                    <div class="bg-pink-900 bg-opacity-30 rounded-lg p-3 text-center mb-1.5 border border-pink-600">
-                        <h3 class="text-base font-semibold mb-1 text-pink-400">Room Booking Revenue</h3>
-                        <p class="text-2xl font-bold text-pink-100">Rs.<span id="roomBookingRevenue">0</span></p>
-                        <p class="text-xs text-pink-300" id="roomCount">(0 Rooms)</p>
-                    </div>
-
-                    <!-- Total PAX -->
-                    <div class="bg-red-900 bg-opacity-30 rounded-lg p-3 text-center mb-1.5 border border-red-600">
-                        <h3 class="text-base font-semibold mb-1 text-red-400">Total PAX (Headcount)</h3>
-                        <p class="text-2xl font-bold text-red-100" id="totalPax">0</p>
-                    </div>
-                </div>
-                
-                <h3 class="text-lg font-bold mb-4 rock4one-header">Club-wise Statistics</h3>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full">
-                        <thead>
-                            <tr class="border-b border-gray-700">
-                                <th class="py-3 px-2 sm:px-4 text-left">Club</th>
-                                <th class="py-3 px-2 sm:px-4 text-left">Registrations</th>
-                                <th class="py-3 px-2 sm:px-4 text-left">Total Amount</th>
-                                <th class="py-3 px-2 sm:px-4 text-left">Paid Amount</th>
-                                <th class="py-3 px-2 sm:px-4 text-left">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="statsTableBody">
-                            <!-- Stats rows will be dynamically added here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="users" class="tab-content rock4one-container p-6 mb-6 hidden">
-                <h2 class="text-xl font-bold mb-4 rock4one-header">Users Management</h2>
-                
-                <!-- Add User Form -->
-                <form id="addUserForm" class="mb-8">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Username</label>
-                            <input type="text" id="createUsername" class="rock4one-input w-full" required>
+                    
+                    <!-- My Stats Summary -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="stat-card bg-yellow-900/30 border border-yellow-600/30">
+                            <h4>Total</h4>
+                            <p id="myTotalCount" class="text-yellow-400">0</p>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Password</label>
-                            <input type="password" id="createPassword" class="rock4one-input w-full" required>
+                        <div class="stat-card bg-orange-900/30 border border-orange-600/30">
+                            <h4>Pending</h4>
+                            <p id="myPendingCount" class="text-orange-400">0</p>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Role</label>
-                            <select id="createRole" class="rock4one-input w-full" required>
-                                <option value="admin">Admin</option>
-                                <option value="staff">Staff</option>
-                                <option value="doorman">Doorman</option>
-                            </select>
+                        <div class="stat-card bg-green-900/30 border border-green-600/30">
+                            <h4>Verified</h4>
+                            <p id="myVerifiedCount" class="text-green-400">0</p>
+                        </div>
+                        <div class="stat-card bg-blue-900/30 border border-blue-600/30">
+                            <h4>Amount</h4>
+                            <p id="myTotalAmount" class="text-blue-400">₹0</p>
                         </div>
                     </div>
-                    <div class="mt-4">
-                        <button type="submit" class="rock4one-button">
-                            <i class="fas fa-plus mr-2"></i> Add User
+                    
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Guest Name</th>
+                                    <th>Mobile</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Payment</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mySalesTableBody">
+                                <tr><td colspan="7" class="text-center py-8 text-gray-500">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========== SUPER ADMIN: Verification Queue ========== -->
+            <section id="tab-verification-queue" class="tab-content hidden">
+                <div class="rock4one-container p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold rock4one-header">
+                            <i class="fas fa-clock mr-2"></i>Pending Verification
+                        </h2>
+                        <button onclick="loadVerificationQueue()" class="rock4one-button secondary text-sm">
+                            <i class="fas fa-sync-alt mr-1"></i>Refresh
                         </button>
                     </div>
-                    <div id="addUserError" class="mt-2 text-red-500 hidden"></div>
-                </form>
-                
-                <!-- Users List -->
-                <div class="overflow-x-auto">
-                    <table class="min-w-full">
-                        <thead>
-                            <tr class="border-b border-gray-700">
-                                <th class="py-3 px-4 text-left">Username</th>
-                                <th class="py-3 px-4 text-left">Role</th>
-                                <th class="py-3 px-4 text-left">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="usersList">
-                            <!-- User rows will be dynamically added here -->
-                        </tbody>
-                    </table>
+                    
+                    <!-- Filter Buttons -->
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <button class="queue-filter active rock4one-button text-sm" data-filter="all">All</button>
+                        <button class="queue-filter rock4one-button secondary text-sm" data-filter="cash">💵 Cash</button>
+                        <button class="queue-filter rock4one-button secondary text-sm" data-filter="upi">📱 UPI</button>
+                        <button class="queue-filter rock4one-button secondary text-sm" data-filter="bank_transfer">🏦 Bank</button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Guest</th>
+                                    <th>Mobile</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Payment</th>
+                                    <th>Reference</th>
+                                    <th>Seller</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="verificationQueueBody">
+                                <tr><td colspan="8" class="text-center py-8 text-gray-500">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
-        </div>
+            </section>
+
+            <!-- ========== SUPER ADMIN: All Registrations ========== -->
+            <section id="tab-all-registrations" class="tab-content hidden">
+                <div class="rock4one-container p-6">
+                    <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+                        <h2 class="text-xl font-bold rock4one-header">
+                            <i class="fas fa-users mr-2"></i>All Registrations
+                        </h2>
+                        <div class="flex gap-2">
+                            <input type="search" id="searchRegistrations" class="rock4one-input w-48" placeholder="Search...">
+                            <button onclick="downloadRegistrationsCSV()" class="rock4one-button text-sm">
+                                <i class="fas fa-download mr-1"></i>CSV
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Status Filter -->
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <button class="reg-filter active rock4one-button text-sm" data-status="all">All</button>
+                        <button class="reg-filter rock4one-button secondary text-sm" data-status="pending_verification">Pending</button>
+                        <button class="reg-filter rock4one-button secondary text-sm" data-status="payment_verified">Verified</button>
+                        <button class="reg-filter rock4one-button secondary text-sm" data-status="pass_sent">Pass Sent</button>
+                        <button class="reg-filter rock4one-button secondary text-sm" data-status="checked_in">Checked In</button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Guest</th>
+                                    <th>Mobile</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Payment</th>
+                                    <th>Seller</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="allRegistrationsBody">
+                                <tr><td colspan="8" class="text-center py-8 text-gray-500">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========== SUPER ADMIN: Seller Management ========== -->
+            <section id="tab-seller-management" class="tab-content hidden">
+                <div class="rock4one-container p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold rock4one-header">
+                            <i class="fas fa-user-tie mr-2"></i>Seller Management
+                        </h2>
+                        <button onclick="showAddUserModal()" class="rock4one-button">
+                            <i class="fas fa-plus mr-2"></i>Add User
+                        </button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Full Name</th>
+                                    <th>Mobile</th>
+                                    <th>Role</th>
+                                    <th>Registrations</th>
+                                    <th>Verified Amount</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sellersTableBody">
+                                <tr><td colspan="8" class="text-center py-8 text-gray-500">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========== SUPER ADMIN: Settings ========== -->
+            <section id="tab-settings" class="tab-content hidden">
+                <div class="max-w-2xl mx-auto">
+                    <div class="rock4one-container p-6">
+                        <h2 class="text-xl font-bold rock4one-header mb-6">
+                            <i class="fas fa-cog mr-2"></i>Event Settings
+                        </h2>
+                        
+                        <form id="settingsForm" class="space-y-6">
+                            <!-- Event Info -->
+                            <div class="card">
+                                <h3 class="font-semibold mb-4 text-yellow-400">Event Information</h3>
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm mb-1">Event Name</label>
+                                        <input type="text" id="settingEventName" class="rock4one-input" data-key="event_name">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm mb-1">Tagline</label>
+                                        <input type="text" id="settingTagline" class="rock4one-input" data-key="event_tagline">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm mb-1">Event Date</label>
+                                        <input type="text" id="settingDate" class="rock4one-input" data-key="event_date">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm mb-1">Venue</label>
+                                        <input type="text" id="settingVenue" class="rock4one-input" data-key="event_venue">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Ticket Prices -->
+                            <div class="card">
+                                <h3 class="font-semibold mb-4 text-yellow-400">Ticket Prices</h3>
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm mb-1">Stag Price (₹)</label>
+                                        <input type="number" id="settingStagPrice" class="rock4one-input" data-key="stag_price">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm mb-1">Couple Price (₹)</label>
+                                        <input type="number" id="settingCouplePrice" class="rock4one-input" data-key="couple_price">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Payment Info -->
+                            <div class="card">
+                                <h3 class="font-semibold mb-4 text-yellow-400">Payment Information</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm mb-1">UPI ID (for payments)</label>
+                                        <input type="text" id="settingUpiId" class="rock4one-input" data-key="upi_id" placeholder="example@upi">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm mb-1">Bank Details (for transfers)</label>
+                                        <textarea id="settingBankDetails" class="rock4one-input" data-key="bank_details" rows="3" 
+                                                  placeholder="Bank Name, Account Number, IFSC"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="rock4one-button w-full py-3">
+                                <i class="fas fa-save mr-2"></i>Save Settings
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========== ADMIN: View Registrations (Read-Only) ========== -->
+            <section id="tab-view-registrations" class="tab-content hidden">
+                <div class="rock4one-container p-6">
+                    <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+                        <h2 class="text-xl font-bold rock4one-header">
+                            <i class="fas fa-eye mr-2"></i>All Registrations (View Only)
+                        </h2>
+                        <div class="flex gap-2">
+                            <input type="search" id="adminSearchReg" class="rock4one-input w-48" placeholder="Search...">
+                            <button onclick="downloadRegistrationsCSV()" class="rock4one-button text-sm">
+                                <i class="fas fa-download mr-1"></i>Export
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Guest</th>
+                                    <th>Mobile</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Payment</th>
+                                    <th>Seller</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminRegTableBody">
+                                <tr><td colspan="8" class="text-center py-8 text-gray-500">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========== ADMIN: View Sellers (Read-Only) ========== -->
+            <section id="tab-view-sellers" class="tab-content hidden">
+                <div class="rock4one-container p-6">
+                    <h2 class="text-xl font-bold rock4one-header mb-6">
+                        <i class="fas fa-chart-bar mr-2"></i>Sales by Seller
+                    </h2>
+                    
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Seller</th>
+                                    <th>Total Reg.</th>
+                                    <th>Pending</th>
+                                    <th>Verified</th>
+                                    <th>Stag</th>
+                                    <th>Couple</th>
+                                    <th>Cash</th>
+                                    <th>UPI</th>
+                                    <th>Bank</th>
+                                    <th>Total Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminSellerStatsBody">
+                                <tr><td colspan="10" class="text-center py-8 text-gray-500">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========== STATISTICS (Admin & Super Admin) ========== -->
+            <section id="tab-statistics" class="tab-content hidden">
+                <div class="rock4one-container p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold rock4one-header">
+                            <i class="fas fa-chart-pie mr-2"></i>Event Statistics
+                        </h2>
+                        <button onclick="downloadStatsReport()" class="rock4one-button text-sm">
+                            <i class="fas fa-download mr-1"></i>Download Report
+                        </button>
+                    </div>
+                    
+                    <!-- Overview Stats -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="stat-card bg-yellow-900/30 border border-yellow-600/30">
+                            <h4>Total Registrations</h4>
+                            <p id="statTotalReg" class="text-yellow-400">0</p>
+                        </div>
+                        <div class="stat-card bg-blue-900/30 border border-blue-600/30">
+                            <h4>Total PAX</h4>
+                            <p id="statTotalPax" class="text-blue-400">0</p>
+                        </div>
+                        <div class="stat-card bg-green-900/30 border border-green-600/30">
+                            <h4>Verified Revenue</h4>
+                            <p id="statTotalRevenue" class="text-green-400">₹0</p>
+                        </div>
+                        <div class="stat-card bg-purple-900/30 border border-purple-600/30">
+                            <h4>Checked In</h4>
+                            <p id="statCheckedIn" class="text-purple-400">0</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Status Breakdown -->
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <div class="card">
+                            <h3 class="font-semibold mb-4 text-yellow-400">Status Breakdown</h3>
+                            <div class="space-y-3">
+                                <div class="flex justify-between">
+                                    <span>Pending Verification</span>
+                                    <span id="statPending" class="text-orange-400 font-semibold">0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Payment Verified</span>
+                                    <span id="statVerified" class="text-blue-400 font-semibold">0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Pass Generated</span>
+                                    <span id="statGenerated" class="text-purple-400 font-semibold">0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Pass Sent</span>
+                                    <span id="statSent" class="text-green-400 font-semibold">0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Checked In</span>
+                                    <span id="statChecked" class="text-teal-400 font-semibold">0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Rejected</span>
+                                    <span id="statRejected" class="text-red-400 font-semibold">0</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <h3 class="font-semibold mb-4 text-yellow-400">Payment Breakdown</h3>
+                            <div class="space-y-3">
+                                <div class="flex justify-between">
+                                    <span>💵 Cash</span>
+                                    <span id="statCash" class="text-green-400 font-semibold">₹0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>📱 UPI</span>
+                                    <span id="statUpi" class="text-blue-400 font-semibold">₹0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>🏦 Bank Transfer</span>
+                                    <span id="statBank" class="text-purple-400 font-semibold">₹0</span>
+                                </div>
+                                <hr class="border-gray-600 my-2">
+                                <div class="flex justify-between text-lg">
+                                    <span class="font-semibold">Total Verified</span>
+                                    <span id="statTotalVerified" class="text-yellow-400 font-bold">₹0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Entry Type Breakdown -->
+                    <div class="card">
+                        <h3 class="font-semibold mb-4 text-yellow-400">Entry Type Breakdown</h3>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div class="flex justify-between items-center p-3 bg-blue-900/20 rounded">
+                                <span>Stag Entries</span>
+                                <span id="statStagCount" class="text-2xl font-bold text-blue-400">0</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-pink-900/20 rounded">
+                                <span>Couple Entries</span>
+                                <span id="statCoupleCount" class="text-2xl font-bold text-pink-400">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
     </div>
 
-    <!-- MPIN Verification Modal -->
-    <div id="mpinVerificationModal" class="modal flex items-center justify-center">
+    <!-- ==================== MODALS ==================== -->
+    
+    <!-- Add/Edit User Modal -->
+    <div id="userModal" class="modal">
         <div class="modal-content">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold rock4one-header">Verify Transaction</h3>
-                <button onclick="closeMpinModal()" class="text-gray-300 hover:text-white">
-                    <i class="fas fa-times"></i>
+                <h3 id="userModalTitle" class="text-xl font-bold rock4one-header">Add User</h3>
+                <button onclick="closeModal('userModal')" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
-            
-            <p class="mb-4 text-center">Please enter your 4-digit MPIN to verify this transaction</p>
-            
-            <div class="flex justify-center mb-6">
-                <input type="password" class="pin-input" maxlength="1" data-index="0">
-                <input type="password" class="pin-input" maxlength="1" data-index="1">
-                <input type="password" class="pin-input" maxlength="1" data-index="2">
-                <input type="password" class="pin-input" maxlength="1" data-index="3">
-            </div>
-            
-            <div class="text-center">
-                <button id="verifyMpinBtn" class="rock4one-button">Verify</button>
-            </div>
-            
-            <div id="mpinError" class="hidden text-red-500 text-center mt-4"></div>
-        </div>
-    </div>
-
-    <!-- Create MPIN Modal -->
-    <div id="createMpinModal" class="modal flex items-center justify-center">
-        <div class="modal-content">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold rock4one-header">Create MPIN</h3>
-                <button onclick="closeCreateMpinModal()" class="text-gray-300 hover:text-white">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <p class="mb-4 text-center">Please create a 4-digit MPIN for transaction verification</p>
-            
-            <div class="flex justify-center mb-6">
-                <input type="password" class="pin-input create-pin" maxlength="1" data-index="0">
-                <input type="password" class="pin-input create-pin" maxlength="1" data-index="1">
-                <input type="password" class="pin-input create-pin" maxlength="1" data-index="2">
-                <input type="password" class="pin-input create-pin" maxlength="1" data-index="3">
-            </div>
-            
-            <p class="mb-4 text-center">Confirm your MPIN</p>
-            
-            <div class="flex justify-center mb-6">
-                <input type="password" class="pin-input confirm-pin" maxlength="1" data-index="0">
-                <input type="password" class="pin-input confirm-pin" maxlength="1" data-index="1">
-                <input type="password" class="pin-input confirm-pin" maxlength="1" data-index="2">
-                <input type="password" class="pin-input confirm-pin" maxlength="1" data-index="3">
-            </div>
-            
-            <div class="text-center">
-                <button id="saveMpinBtn" class="rock4one-button">Save MPIN</button>
-            </div>
-            
-            <div id="createMpinError" class="hidden text-red-500 text-center mt-4"></div>
-        </div>
-    </div>
-
-    <!-- Edit User Modal -->
-    <div id="editUserModal" class="modal hidden">
-        <div class="modal-content">
-            <h3 class="text-xl font-bold mb-4 rock4one-header">Edit User</h3>
-            
-            <form id="editUserForm" class="space-y-4">
+            <form id="userForm" class="space-y-4">
+                <input type="hidden" id="editUserId">
                 <div>
-                    <label for="editUsername" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
-                    <input type="text" id="editUsername" name="editUsername" required class="rock4one-input w-full">
+                    <label class="block text-sm mb-1">Username *</label>
+                    <input type="text" id="userUsername" class="rock4one-input" required>
                 </div>
-                
                 <div>
-                    <label for="editPassword" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
-                    <input type="password" id="editPassword" name="editPassword" required class="rock4one-input w-full">
+                    <label class="block text-sm mb-1">Password *</label>
+                    <input type="password" id="userPassword" class="rock4one-input" required>
+                    <p class="text-xs text-gray-500 mt-1" id="passwordHint">Min 6 characters</p>
                 </div>
-
                 <div>
-                    <label for="editRole" class="block text-sm font-medium text-gray-300 mb-2">Role</label>
-                    <select id="editRole" name="editRole" class="rock4one-input w-full" required>
-                        <option value="staff">Staff</option>
-                        <option value="admin">Admin</option>
-                        <option value="doorman">Doorman</option>
+                    <label class="block text-sm mb-1">Full Name</label>
+                    <input type="text" id="userFullName" class="rock4one-input">
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">Mobile Number</label>
+                    <input type="tel" id="userMobile" class="rock4one-input" pattern="[0-9]{10}">
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">Role *</label>
+                    <select id="userRole" class="rock4one-input" required>
+                        <option value="seller">Seller</option>
+                        <option value="admin">Admin (Read-Only)</option>
+                        <option value="super_admin">Super Admin</option>
                     </select>
                 </div>
-
-                <button type="submit" class="rock4one-button w-full">Update User</button>
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="rock4one-button flex-1">
+                        <i class="fas fa-save mr-2"></i>Save
+                    </button>
+                    <button type="button" onclick="closeModal('userModal')" class="rock4one-button secondary flex-1">
+                        Cancel
+                    </button>
+                </div>
             </form>
         </div>
     </div>
 
-    <!-- Polyfills and dependencies -->
-    <script src="https://cdn.jsdelivr.net/npm/es-module-shims@1.7.3/dist/es-module-shims.js"></script>
-    <script type="importmap">
-    {
-        "imports": {
-            "@supabase/supabase-js": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"
-        }
-    }
-    </script>
-    
-    <!-- PWA Installation Prompt -->
-    <div id="installPrompt" class="fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-[#d4a853] p-4 hidden">
-        <div class="flex justify-between items-center">
-            <p class="text-white">Install Rock 4 One for a better experience</p>
-            <div class="flex space-x-2">
-                <button id="installCancelBtn" class="rock4one-button bg-gray-600" style="background: #4b5563;">Later</button>
-                <button id="installConfirmBtn" class="rock4one-button">Install</button>
+    <!-- Verification Modal -->
+    <div id="verifyModal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold rock4one-header">Verify Payment</h3>
+                <button onclick="closeModal('verifyModal')" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="verifyGuestInfo" class="card mb-4">
+                <!-- Guest info will be loaded here -->
+            </div>
+            <form id="verifyForm" class="space-y-4">
+                <input type="hidden" id="verifyGuestId">
+                <div>
+                    <label class="block text-sm mb-1">Verification Notes (optional)</label>
+                    <textarea id="verifyNotes" class="rock4one-input" rows="2" placeholder="Any notes about this verification"></textarea>
+                </div>
+                <div class="flex gap-3">
+                    <button type="submit" class="rock4one-button success flex-1">
+                        <i class="fas fa-check mr-2"></i>Verify Payment
+                    </button>
+                    <button type="button" onclick="rejectPayment()" class="rock4one-button danger flex-1">
+                        <i class="fas fa-times mr-2"></i>Reject
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Guest Pass Modal -->
+    <div id="passModal" class="modal">
+        <div class="modal-content max-w-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold rock4one-header">Guest Pass</h3>
+                <button onclick="closeModal('passModal')" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="guestPassPreview" class="mb-4">
+                <!-- Pass preview will be rendered here -->
+            </div>
+            <div class="flex gap-3">
+                <button onclick="sendWhatsApp()" class="rock4one-button success flex-1">
+                    <i class="fab fa-whatsapp mr-2"></i>Send via WhatsApp
+                </button>
+                <button onclick="downloadPass()" class="rock4one-button flex-1">
+                    <i class="fas fa-download mr-2"></i>Download
+                </button>
             </div>
         </div>
     </div>
 
-    <script type="module" src="main.js"></script>
-    <script>
-        // Register service worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js').then(registration => {
-                    console.log('ServiceWorker registration successful with scope:', registration.scope);
-                }).catch(err => {
-                    console.log('ServiceWorker registration failed: ', err);
-                });
-            });
-        }
+    <!-- Success/Error Toast -->
+    <div id="toast" class="fixed bottom-4 right-4 p-4 rounded-lg shadow-lg transform translate-y-full opacity-0 transition-all duration-300 z-50">
+        <div class="flex items-center gap-3">
+            <i id="toastIcon" class="fas text-xl"></i>
+            <span id="toastMessage"></span>
+        </div>
+    </div>
 
-        // Handle install prompt
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            const installPrompt = document.getElementById('installPrompt');
-            if (installPrompt) installPrompt.classList.remove('hidden');
-        });
-
-        document.getElementById('installConfirmBtn')?.addEventListener('click', () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('User accepted install prompt');
-                    } else {
-                        console.log('User dismissed install prompt');
-                    }
-                    deferredPrompt = null;
-                    document.getElementById('installPrompt').classList.add('hidden');
-                });
-            }
-        });
-
-        document.getElementById('installCancelBtn')?.addEventListener('click', () => {
-            document.getElementById('installPrompt').classList.add('hidden');
-        });
-    </script>
+    <script type="module" src="/main.js"></script>
 </body>
 </html>
