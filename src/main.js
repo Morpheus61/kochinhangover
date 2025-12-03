@@ -4,8 +4,8 @@ import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import QRCode from 'qrcode';
 import html2canvas from 'html2canvas';
 
-const supabaseUrl = 'https://rcedawlruorpkzzrvkqn.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjZWRhd2xydW9ycGt6enJ2a3FuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxOTU4MDQsImV4cCI6MjA1OTc3MTgwNH0.opF31e2g9ZGIJBAR6McDvBEXPtSOhrmW1c_QQh_u1yg';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Initialize app state
@@ -245,7 +245,7 @@ async function showTab(tabId) {
                     <i class="fas fa-video-slash text-4xl mb-4 text-red-400"></i>
                     <h3 class="text-xl font-bold mb-2">Camera Access Required</h3>
                     <p class="mb-4">Please enable camera permissions to scan QR codes.</p>
-                    <button onclick="showTab('verification')" class="kochin-button">
+                    <button onclick="showTab('verification')" class="rock4one-button">
                         Retry
                     </button>
                 </div>
@@ -563,7 +563,7 @@ async function editUser(userId) {
         modal.innerHTML = `
             <div class="modal-content">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold kochin-header">Edit User</h3>
+                    <h3 class="text-xl font-bold rock4one-header">Edit User</h3>
                     <button class="text-gray-300 hover:text-white close-modal-btn">
                         <i class="fas fa-times"></i>
                     </button>
@@ -573,15 +573,15 @@ async function editUser(userId) {
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium mb-1">Username</label>
-                            <input type="text" id="editUsername" class="kochin-input w-full" value="${user.username}" required>
+                            <input type="text" id="editUsername" class="rock4one-input w-full" value="${user.username}" required>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Password</label>
-                            <input type="password" id="editPassword" class="kochin-input w-full" placeholder="Leave blank to keep current password">
+                            <input type="password" id="editPassword" class="rock4one-input w-full" placeholder="Leave blank to keep current password">
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Role</label>
-                            <select id="editRole" class="kochin-input w-full" required>
+                            <select id="editRole" class="rock4one-input w-full" required>
                                 <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
                                 <option value="staff" ${user.role === 'staff' ? 'selected' : ''}>Staff</option>
                                 <option value="doorman" ${user.role === 'doorman' ? 'selected' : ''}>Doorman</option>
@@ -589,11 +589,11 @@ async function editUser(userId) {
                         </div>
                     </div>
                     
-                    <div class="mt-6 flex space-x-4 sticky bottom-0 bg-[#2a0e3a] py-4">
-                        <button type="submit" class="kochin-button flex-1">
+                    <div class="mt-6 flex space-x-4 sticky bottom-0 bg-[#0a0a0a] py-4">
+                        <button type="submit" class="rock4one-button flex-1">
                             <i class="fas fa-save mr-2"></i> Save Changes
                         </button>
-                        <button type="button" class="kochin-button bg-gray-600 flex-1 close-modal-btn">
+                        <button type="button" class="rock4one-button bg-gray-600 flex-1 close-modal-btn">
                             Cancel
                         </button>
                     </div>
@@ -883,13 +883,13 @@ async function editGuest(guestId) {
                 const successModal = document.createElement('div');
                 successModal.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50';
                 successModal.innerHTML = `
-                    <div class="bg-[#2a0e3a] p-6 rounded-lg max-w-md w-full">
+                    <div class="bg-[#0a0a0a] p-6 rounded-lg max-w-md w-full">
                         <div class="text-center mb-4">
                             <i class="fas fa-check-circle text-green-400 text-4xl mb-2"></i>
                             <h3 class="text-xl font-bold">Guest Updated</h3>
                         </div>
                         <p class="mb-6 text-center">Changes saved successfully!</p>
-                        <button onclick="this.closest('.fixed').remove()" class="kochin-button w-full">
+                        <button onclick="this.closest('.fixed').remove()" class="rock4one-button w-full">
                             OK
                         </button>
                     </div>
@@ -1026,7 +1026,7 @@ async function initQRScanner() {
             qrScannerContainer.innerHTML = `
                 <div class="error-message p-4 bg-red-800 rounded-lg text-center">
                     <p class="mb-4">Failed to initialize scanner: ${error.message}</p>
-                    <button onclick="initQRScanner()" class="kochin-button">
+                    <button onclick="initQRScanner()" class="rock4one-button">
                         Retry Scanner Initialization
                     </button>
                 </div>
@@ -1105,7 +1105,7 @@ async function onScanSuccess(decodedText) {
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4';
         modal.innerHTML = `
-            <div class="bg-[#2a0e3a] p-6 rounded-lg max-w-md w-full">
+            <div class="bg-[#0a0a0a] p-6 rounded-lg max-w-md w-full">
                 <div class="text-center mb-6">
                     <i class="fas ${isFullyPaid ? 'fa-check-circle text-green-400' : 'fa-exclamation-triangle text-yellow-400'} text-5xl"></i>
                     <h3 class="text-2xl font-bold mt-4 ${isFullyPaid ? 'text-green-400' : 'text-yellow-400'}">
@@ -1142,14 +1142,14 @@ async function onScanSuccess(decodedText) {
                 
                 <div class="flex space-x-4">
                     ${isFullyPaid ? 
-                        `<button onclick="verifyGuest('${guest.id}')" class="kochin-button flex-1 bg-green-600">
+                        `<button onclick="verifyGuest('${guest.id}')" class="rock4one-button flex-1 bg-green-600">
                             <i class="fas fa-check mr-2"></i> Allow Entry
                         </button>` : 
-                        `<button class="kochin-button bg-yellow-600 flex-1 cursor-not-allowed" disabled>
+                        `<button class="rock4one-button bg-yellow-600 flex-1 cursor-not-allowed" disabled>
                             <i class="fas fa-ban mr-2"></i> Entry Denied
                         </button>`
                     }
-                    <button onclick="this.closest('.fixed').remove(); qrScanner.resume();" class="kochin-button bg-gray-700 flex-1">
+                    <button onclick="this.closest('.fixed').remove(); qrScanner.resume();" class="rock4one-button bg-gray-700 flex-1">
                         Close
                     </button>
                 </div>
@@ -1204,13 +1204,13 @@ function showErrorModal(message) {
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75';
     modal.innerHTML = `
-        <div class="bg-[#2a0e3a] p-6 rounded-lg max-w-md w-full">
+        <div class="bg-[#0a0a0a] p-6 rounded-lg max-w-md w-full">
             <div class="text-center mb-4">
                 <i class="fas fa-exclamation-triangle text-red-400 text-4xl mb-2"></i>
                 <h3 class="text-xl font-bold">Scanning Error</h3>
             </div>
             <p class="mb-6 text-center">${message}</p>
-            <button onclick="this.closest('.fixed').remove()" class="kochin-button w-full">
+            <button onclick="this.closest('.fixed').remove()" class="rock4one-button w-full">
                 OK
             </button>
         </div>
@@ -1294,13 +1294,13 @@ window.verifyGuest = async function(guestId) {
         const successModal = document.createElement('div');
         successModal.className = 'fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75';
         successModal.innerHTML = `
-            <div class="bg-[#2a0e3a] p-6 rounded-lg max-w-md w-full">
+            <div class="bg-[#0a0a0a] p-6 rounded-lg max-w-md w-full">
                 <div class="text-center mb-4">
                     <i class="fas fa-check-circle text-green-400 text-4xl mb-2"></i>
                     <h3 class="text-xl font-bold text-green-400">Success</h3>
                 </div>
                 <p class="mb-6 text-center">Guest entry verified successfully!</p>
-                <button onclick="this.closest('.fixed').remove(); if(qrScanner) qrScanner.resume();" class="kochin-button w-full bg-green-600">
+                <button onclick="this.closest('.fixed').remove(); if(qrScanner) qrScanner.resume();" class="rock4one-button w-full bg-green-600">
                     OK
                 </button>
             </div>
@@ -1616,7 +1616,7 @@ function setupEventListeners() {
                     width: 300,
                     margin: 2,
                     color: {
-                        dark: '#2a0e3a',
+                        dark: '#0a0a0a',
                         light: '#ffffff'
                     }
                 });
@@ -1632,10 +1632,10 @@ function setupEventListeners() {
                     <div style="
                         width: 600px;
                         padding: 20px;
-                        background: linear-gradient(135deg, #2a0e3a 0%, #3a1e4a 100%);
+                        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
                         border-radius: 20px;
-                        border: 8px solid #e83283;
-                        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                        border: 8px solid #d4a853;
+                        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
                         color: white;
                         font-family: Arial, sans-serif;
                         position: relative;
@@ -1649,7 +1649,7 @@ function setupEventListeners() {
                             width: 150px;
                             height: 150px;
                             border-radius: 50%;
-                            background: rgba(232, 50, 131, 0.2);
+                            background: rgba(212, 168, 83, 0.15);
                         "></div>
                         <div style="
                             position: absolute;
@@ -1658,7 +1658,7 @@ function setupEventListeners() {
                             width: 150px;
                             height: 150px;
                             border-radius: 50%;
-                            background: rgba(52, 219, 219, 0.2);
+                            background: rgba(201, 48, 44, 0.15);
                         "></div>
                         
                         <!-- Header -->
@@ -1666,23 +1666,32 @@ function setupEventListeners() {
                             text-align: center;
                             margin-bottom: 20px;
                             padding-bottom: 15px;
-                            border-bottom: 2px solid #e83283;
+                            border-bottom: 2px solid #d4a853;
                         ">
                             <h1 style="
                                 font-size: 36px;
                                 font-weight: bold;
                                 margin: 0;
-                                color: #ffffff;
+                                background: linear-gradient(135deg, #d4a853, #f5d76e);
+                                -webkit-background-clip: text;
+                                background-clip: text;
+                                color: transparent;
                                 text-transform: uppercase;
-                                letter-spacing: 1px;
+                                letter-spacing: 3px;
                                 word-spacing: 2px;
                                 font-family: 'Poppins', sans-serif;
-                                text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                            ">KOCHIN HANGOVER</h1>
+                            ">ROCK 4 ONE</h1>
+                            <p style="
+                                font-size: 14px;
+                                margin: 5px 0 0;
+                                color: #d4a853;
+                                letter-spacing: 3px;
+                                text-transform: uppercase;
+                            ">Harmony for Humanity</p>
                             <h2 style="
                                 font-size: 24px;
-                                margin: 5px 0 0;
-                                color: #34dbdb;
+                                margin: 10px 0 0;
+                                color: #f5d76e;
                             ">Guest Pass</h2>
                         </div>
                         
@@ -1691,27 +1700,27 @@ function setupEventListeners() {
                             <!-- Guest Info -->
                             <div style="width: 60%; padding-right: 20px;">
                                 <div style="margin-bottom: 15px;">
-                                    <p style="font-size: 14px; margin: 0; color: #f7d046;">Full Name</p>
+                                    <p style="font-size: 14px; margin: 0; color: #d4a853;">Full Name</p>
                                     <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0;">${guest.guest_name}</p>
                                 </div>
                                 
                                 <div style="margin-bottom: 15px;">
-                                    <p style="font-size: 14px; margin: 0; color: #f7d046;">Club Name</p>
+                                    <p style="font-size: 14px; margin: 0; color: #d4a853;">Club Name</p>
                                     <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0;">${guest.club_name || 'N/A'}</p>
                                 </div>
                                 
                                 <div style="margin-bottom: 15px;">
-                                    <p style="font-size: 14px; margin: 0; color: #f7d046;">Mobile Number</p>
+                                    <p style="font-size: 14px; margin: 0; color: #d4a853;">Mobile Number</p>
                                     <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0;">${guest.mobile_number}</p>
                                 </div>
                                 
                                 <div style="margin-bottom: 15px;">
-                                    <p style="font-size: 14px; margin: 0; color: #f7d046;">Entry Type</p>
+                                    <p style="font-size: 14px; margin: 0; color: #d4a853;">Entry Type</p>
                                     <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0;">${guest.entry_type === 'stag' ? 'STAG' : 'COUPLE'}${safeGetGuestProperty(guest, 'has_room_booking', false) ? ' + ROOM' : ''}</p>
                                 </div>
                                 
                                 <div style="margin-bottom: 15px;">
-                                    <p style="font-size: 14px; margin: 0; color: #f7d046;">Status</p>
+                                    <p style="font-size: 14px; margin: 0; color: #d4a853;">Status</p>
                                     <p style="
                                         font-size: 24px; 
                                         font-weight: bold; 
@@ -1737,7 +1746,7 @@ function setupEventListeners() {
                                     background: white;
                                     padding: 10px;
                                     border-radius: 10px;
-                                    border: 3px solid #e83283;
+                                    border: 3px solid #d4a853;
                                 ">
                                     <img src="${qrCodeDataURL}" alt="QR Code" style="width: 180px; height: 180px;">
                                 </div>
@@ -1745,7 +1754,7 @@ function setupEventListeners() {
                                     text-align: center;
                                     font-size: 14px;
                                     margin-top: 10px;
-                                    color: #34dbdb;
+                                    color: #f5d76e;
                                 ">Scan this QR code at the entrance</p>
                             </div>
                         </div>
@@ -1754,11 +1763,11 @@ function setupEventListeners() {
                         <div style="
                             margin-top: 20px;
                             padding-top: 15px;
-                            border-top: 2px solid #e83283;
+                            border-top: 2px solid #d4a853;
                             text-align: center;
                         ">
-                            <p style="font-size: 16px; margin: 5px 0; color: #f7d046;">Date: 3rd May, 2025</p>
-                            <p style="font-size: 16px; margin: 5px 0; color: #f7d046;">Venue: Casino Hotel, Wellington Island, Kochi</p>
+                            <p style="font-size: 16px; margin: 5px 0; color: #d4a853;">Date: TBD</p>
+                            <p style="font-size: 16px; margin: 5px 0; color: #d4a853;">Venue: TBD</p>
                         </div>
                         
                         <!-- Decorative icons -->
@@ -1766,14 +1775,14 @@ function setupEventListeners() {
                             display: flex;
                             justify-content: space-between;
                             margin-top: 15px;
-                            color: #e83283;
+                            color: #d4a853;
                             font-size: 20px;
                         ">
-                            <span style="transform: rotate(15deg);">🍸</span>
-                            <span style="transform: rotate(-15deg);">🍹</span>
-                            <span style="transform: rotate(15deg);">🍸</span>
-                            <span style="transform: rotate(-15deg);">🍹</span>
-                            <span style="transform: rotate(15deg);">🍸</span>
+                            <span>🎸</span>
+                            <span>🎵</span>
+                            <span>🎸</span>
+                            <span>🎵</span>
+                            <span>🎸</span>
                         </div>
                     </div>
                 `;
@@ -1789,15 +1798,17 @@ function setupEventListeners() {
                 
                 // Store the image data URL for later use
                 const guestPassImageUrl = imageDataURL;
-                const guestPassFileName = `kochin-hangover-pass-${guest.guest_name.replace(/\s+/g, '-').toLowerCase()}.png`;
+                const guestPassFileName = `rock4one-pass-${guest.guest_name.replace(/\s+/g, '-').toLowerCase()}.png`;
                 
                 // Create WhatsApp share message
-                const message = `KOCHIN HANGOVER - GUEST PASS
+                const message = `ROCK 4 ONE - GUEST PASS
 
 Name: ${guest.guest_name}
 Club: ${guest.club_name || ''}
 Mobile: ${guest.mobile_number}
 Entry Type: ${guest.entry_type === 'stag' ? 'STAG' : 'COUPLE'}${safeGetGuestProperty(guest, 'has_room_booking', false) ? ' + ROOM' : ''}${formatWhatsAppPaymentInfo(guest)}
+
+Harmony for Humanity 🎸
 
 Please show this pass at the entrance.`;
                 
@@ -1820,8 +1831,8 @@ Please show this pass at the entrance.`;
                 if (isMobile) {
                     // Mobile version
                     modal.innerHTML = `
-                        <div class="kochin-container p-6 max-w-md mx-auto">
-                            <h3 class="text-xl font-bold mb-4 kochin-header">Share Guest Pass</h3>
+                        <div class="rock4one-container p-6 max-w-md mx-auto">
+                            <h3 class="text-xl font-bold mb-4 rock4one-header">Share Guest Pass</h3>
                             <p class="mb-4">The guest pass image has been downloaded to your device.</p>
                             <p class="mb-4">After clicking "Open WhatsApp", please:</p>
                             <ol class="list-decimal pl-6 mb-6">
@@ -1831,10 +1842,10 @@ Please show this pass at the entrance.`;
                                 <li class="mb-2">Find and select the downloaded guest pass image</li>
                             </ol>
                             <div class="flex justify-between">
-                                <button id="openWhatsAppBtn" class="kochin-button flex-1 bg-green-600">
+                                <button id="openWhatsAppBtn" class="rock4one-button flex-1 bg-green-600">
                                     <i class="fab fa-whatsapp mr-2"></i> Open WhatsApp
                                 </button>
-                                <button id="closeShareModalBtn" class="kochin-button bg-gray-600 flex-1">
+                                <button id="closeShareModalBtn" class="rock4one-button bg-gray-600 flex-1">
                                     Close
                                 </button>
                             </div>
@@ -1843,8 +1854,8 @@ Please show this pass at the entrance.`;
                 } else {
                     // Desktop version with copyable message
                     modal.innerHTML = `
-                        <div class="kochin-container p-6 max-w-md mx-auto">
-                            <h3 class="text-xl font-bold mb-4 kochin-header">Share Guest Pass</h3>
+                        <div class="rock4one-container p-6 max-w-md mx-auto">
+                            <h3 class="text-xl font-bold mb-4 rock4one-header">Share Guest Pass</h3>
                             <p class="mb-4">The guest pass image has been downloaded to your device.</p>
                             <p class="mb-4">For WhatsApp Desktop:</p>
                             <ol class="list-decimal pl-6 mb-6">
@@ -1859,16 +1870,16 @@ Please show this pass at the entrance.`;
                             </div>
                             
                             <div class="flex justify-between mb-3">
-                                <button id="copyMessageBtn" class="kochin-button flex-1 bg-blue-600">
+                                <button id="copyMessageBtn" class="rock4one-button flex-1 bg-blue-600">
                                     <i class="fas fa-copy mr-2"></i> Select & Copy Message
                                 </button>
                             </div>
                             
                             <div class="flex justify-between">
-                                <button id="openWhatsAppBtn" class="kochin-button flex-1 bg-green-600">
+                                <button id="openWhatsAppBtn" class="rock4one-button flex-1 bg-green-600">
                                     <i class="fab fa-whatsapp mr-2"></i> Open WhatsApp
                                 </button>
-                                <button id="closeShareModalBtn" class="kochin-button bg-gray-600 flex-1">
+                                <button id="closeShareModalBtn" class="rock4one-button bg-gray-600 flex-1">
                                     Close
                                 </button>
                             </div>
@@ -2172,7 +2183,7 @@ async function downloadStatsImage() {
         // Create container with explicit font styling
         const container = document.createElement('div');
         container.style.cssText = `
-            background: #2a0e3a;
+            background: #0a0a0a;
             padding: 20px;
             display: flex;
             flex-direction: column;
@@ -2385,7 +2396,7 @@ async function downloadStatsImage() {
 
         // Generate screenshot with higher quality settings
         const canvas = await html2canvas(container, {
-            backgroundColor: '#2a0e3a',
+            backgroundColor: '#0a0a0a',
             scale: 3,
             logging: false,
             useCORS: true,
@@ -2401,7 +2412,7 @@ async function downloadStatsImage() {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `kochin-stats-${new Date().toISOString().slice(0,10)}.png`;
+            a.download = `rock4one-stats-${new Date().toISOString().slice(0,10)}.png`;
             a.click();
             setTimeout(() => URL.revokeObjectURL(url), 100);
         }, 'image/png', 1.0);
@@ -2555,7 +2566,7 @@ async function downloadGuestsPDF() {
         doc.text(`Verified Entries(Arrived): ${verifiedGuests} (${verifiedPax} PAX)`, 15, yPos + 20);
         
         // Save the PDF
-        doc.save(`kochin-hangover-guests-${new Date().toISOString().slice(0,10)}.pdf`);
+        doc.save(`rock4one-guests-${new Date().toISOString().slice(0,10)}.pdf`);
 
     } catch (error) {
         console.error('Failed to generate PDF:', error);
@@ -2611,7 +2622,7 @@ async function downloadGuestsCSV() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', `kochin-hangover-guests-${new Date().toISOString().slice(0,10)}.csv`);
+        link.setAttribute('download', `rock4one-guests-${new Date().toISOString().slice(0,10)}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -2717,7 +2728,7 @@ async function downloadStatsPDF() {
         addCard('Total PAX (Headcount)', totalPax.toString(), margin, startY, cardWidth * 2 + 10, cardHeight);
         
         // Save the PDF
-        doc.save('kochin-hangover-statistics.pdf');
+        doc.save('rock4one-statistics.pdf');
         
     } catch (error) {
         console.error('Error generating statistics PDF:', error);
@@ -2801,7 +2812,7 @@ async function downloadStatsCSV() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', 'kochin-hangover-statistics.csv');
+        link.setAttribute('download', 'rock4one-statistics.csv');
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

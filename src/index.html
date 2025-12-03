@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#2a0e3a">
-    <meta name="description" content="Kochin Hangover Entry Management System">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="description" content="Rock 4 One - Harmony for Humanity - Entry Management System">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Kochin Hangover">
-    <title>Kochin Hangover - Entry Management</title>
+    <meta name="apple-mobile-web-app-title" content="Rock 4 One">
+    <title>Rock 4 One - Entry Management</title>
     <link rel="manifest" href="/manifest.json">
     
     <!-- Favicons -->
@@ -21,7 +21,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
     
     <!-- Microsoft Tiles -->
-    <meta name="msapplication-TileColor" content="#2a0e3a">
+    <meta name="msapplication-TileColor" content="#0a0a0a">
     <meta name="msapplication-TileImage" content="/icons/android-chrome-192x192.png">
     
     <!-- External Libraries -->
@@ -35,11 +35,13 @@
     
     <style>
         :root {
-            --primary: #e83283;
-            --secondary: #34dbdb;
-            --accent: #f7d046;
-            --dark: #2a0e3a;
-            --light: #f8f0ff;
+            --primary: #d4a853;
+            --secondary: #c9302c;
+            --accent: #f5d76e;
+            --dark: #0a0a0a;
+            --dark-secondary: #1a1a1a;
+            --light: #fff8e7;
+            --gold-gradient: linear-gradient(135deg, #d4a853, #f5d76e, #d4a853);
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -62,47 +64,48 @@
             }
         }
         
-        .kochin-bg {
+        .rock4one-bg {
             background-color: var(--dark);
-            background-image: radial-gradient(circle at 10% 20%, rgba(232, 50, 131, 0.3) 0%, transparent 30%),
-                              radial-gradient(circle at 90% 30%, rgba(52, 219, 219, 0.3) 0%, transparent 30%),
-                              radial-gradient(circle at 50% 80%, rgba(247, 208, 70, 0.3) 0%, transparent 30%);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(212, 168, 83, 0.15) 0%, transparent 35%),
+                radial-gradient(circle at 90% 30%, rgba(201, 48, 44, 0.15) 0%, transparent 35%),
+                radial-gradient(circle at 50% 80%, rgba(245, 215, 110, 0.1) 0%, transparent 35%);
         }
         
-        .kochin-container {
-            background-color: rgba(42, 14, 58, 0.85);
+        .rock4one-container {
+            background-color: rgba(26, 26, 26, 0.95);
             border-radius: 1rem;
-            border: 2px solid rgba(232, 50, 131, 0.5);
-            box-shadow: 0 0 20px rgba(52, 219, 219, 0.5);
-            overflow: hidden; /* Prevent content overflow */
+            border: 2px solid rgba(212, 168, 83, 0.6);
+            box-shadow: 0 0 25px rgba(212, 168, 83, 0.3);
+            overflow: hidden;
         }
         
-        .kochin-header {
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        .rock4one-header {
+            background: var(--gold-gradient);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+            text-shadow: 0 0 10px rgba(212, 168, 83, 0.3);
             font-weight: bold;
         }
         
-        .kochin-tab {
-            background-color: rgba(42, 14, 58, 0.7);
+        .rock4one-tab {
+            background-color: rgba(26, 26, 26, 0.7);
             border-top: 2px solid var(--primary);
             color: var(--light);
             transition: all 0.3s ease;
         }
         
-        .kochin-tab.active {
-            background-color: rgba(232, 50, 131, 0.2);
-            border-top: 2px solid var(--secondary);
-            color: var(--secondary);
+        .rock4one-tab.active {
+            background-color: rgba(212, 168, 83, 0.2);
+            border-top: 2px solid var(--accent);
+            color: var(--accent);
             font-weight: bold;
         }
         
-        .kochin-button {
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            color: white;
+        .rock4one-button {
+            background: var(--gold-gradient);
+            color: var(--dark);
             border: none;
             border-radius: 0.5rem;
             padding: 0.5rem 1rem;
@@ -116,22 +119,22 @@
         }
         
         @media (max-width: 640px) {
-            .kochin-button {
+            .rock4one-button {
                 padding: 0.4rem 0.6rem;
                 font-size: 0.8rem;
             }
-            .kochin-button i {
+            .rock4one-button i {
                 margin-right: 0.25rem !important;
             }
         }
         
-        .kochin-button:hover {
+        .rock4one-button:hover {
             opacity: 0.9;
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 5px 20px rgba(212, 168, 83, 0.4);
         }
         
-        .kochin-input {
+        .rock4one-input {
             background-color: rgba(255, 255, 255, 0.9);
             border: 2px solid var(--primary);
             border-radius: 0.5rem;
@@ -141,23 +144,23 @@
             width: 100%;
         }
         
-        .kochin-input:focus {
-            border-color: var(--secondary);
-            box-shadow: 0 0 0 3px rgba(52, 219, 219, 0.3);
+        .rock4one-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(212, 168, 83, 0.3);
             outline: none;
         }
         
-        .kochin-card {
-            background-color: rgba(42, 14, 58, 0.7);
+        .rock4one-card {
+            background-color: rgba(26, 26, 26, 0.7);
             border-radius: 1rem;
             border: 2px solid var(--primary);
             padding: 1.5rem;
             transition: all 0.3s ease;
         }
         
-        .kochin-card:hover {
-            box-shadow: 0 0 15px rgba(52, 219, 219, 0.3);
-            border-color: var(--secondary);
+        .rock4one-card:hover {
+            box-shadow: 0 0 15px rgba(212, 168, 83, 0.3);
+            border-color: var(--accent);
         }
         
         .guest-row {
@@ -166,12 +169,12 @@
         }
         
         .guest-row:hover {
-            background-color: rgba(232, 50, 131, 0.2);
+            background-color: rgba(212, 168, 83, 0.1);
         }
         
         .guest-row.selected {
-            background-color: rgba(232, 50, 131, 0.3);
-            border-left: 4px solid var(--secondary);
+            background-color: rgba(212, 168, 83, 0.2);
+            border-left: 4px solid var(--accent);
         }
         
         #qrcode {
@@ -187,7 +190,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
+            background-color: rgba(0, 0, 0, 0.8);
             z-index: 1000;
         }
         
@@ -195,7 +198,7 @@
             background-color: var(--dark);
             border: 2px solid var(--primary);
             border-radius: 1rem;
-            box-shadow: 0 0 20px rgba(52, 219, 219, 0.5);
+            box-shadow: 0 0 30px rgba(212, 168, 83, 0.4);
             padding: 2rem;
             min-width: 300px;
             max-width: 500px;
@@ -205,29 +208,34 @@
             font-size: 2.5rem;
             font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            background: linear-gradient(90deg, var(--accent), var(--primary), var(--secondary));
+            letter-spacing: 3px;
+            background: var(--gold-gradient);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+            text-shadow: 0 0 20px rgba(212, 168, 83, 0.3);
             padding: 0.5rem;
             display: inline-block;
-            transform: rotate(-2deg);
         }
 
-        .bottle-icon {
+        .tagline {
+            font-size: 0.9rem;
+            color: var(--primary);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .guitar-icon {
             display: inline-block;
-            transform: rotate(15deg);
             font-size: 1.5rem;
-            color: var(--accent);
+            color: var(--primary);
             margin: 0 0.5rem;
         }
 
-        .glass-icon {
+        .music-icon {
             display: inline-block;
             font-size: 1.5rem;
-            color: var(--secondary);
+            color: var(--accent);
             margin: 0 0.5rem;
         }
 
@@ -239,6 +247,8 @@
             font-size: 1.5rem;
             border: 2px solid var(--primary);
             border-radius: 0.5rem;
+            background-color: var(--dark-secondary);
+            color: var(--light);
         }
 
         /* Custom scrollbar */
@@ -247,7 +257,7 @@
         }
         
         ::-webkit-scrollbar-track {
-            background: rgba(42, 14, 58, 0.5);
+            background: rgba(26, 26, 26, 0.5);
         }
         
         ::-webkit-scrollbar-thumb {
@@ -256,7 +266,7 @@
         }
         
         ::-webkit-scrollbar-thumb:hover {
-            background: var(--secondary);
+            background: var(--accent);
         }
 
         /* Mobile Optimizations */
@@ -281,7 +291,7 @@
                 justify-content: center;
                 text-align: center;
                 padding: 1rem;
-                background: rgba(255, 255, 255, 0.1);
+                background: rgba(255, 255, 255, 0.05);
                 border-radius: 0.5rem;
                 backdrop-filter: blur(10px);
             }
@@ -336,19 +346,19 @@
         /* QR Scanner Styles */
         #qr-reader {
             border: none !important;
-            background: rgba(255, 255, 255, 0.1) !important;
+            background: rgba(255, 255, 255, 0.05) !important;
             border-radius: 1rem !important;
             overflow: hidden !important;
         }
         
         #qr-reader__status_span {
             background: var(--primary) !important;
-            color: white !important;
+            color: var(--dark) !important;
         }
         
         #qr-reader__camera_selection {
             background: var(--dark) !important;
-            color: white !important;
+            color: var(--light) !important;
             border: 1px solid var(--primary) !important;
             border-radius: 0.5rem !important;
             padding: 0.5rem !important;
@@ -356,40 +366,42 @@
         
         #qr-reader__dashboard button {
             background: var(--primary) !important;
-            color: white !important;
+            color: var(--dark) !important;
             border: none !important;
             border-radius: 0.5rem !important;
             padding: 0.5rem 1rem !important;
             margin: 0.5rem !important;
+            font-weight: bold !important;
         }
     </style>
 </head>
-<body class="kochin-bg">
+<body class="rock4one-bg">
     <!-- Login Screen -->
     <div id="loginScreen" class="flex items-center justify-center min-h-screen p-4">
-        <div class="kochin-container p-8 max-w-md w-full">
+        <div class="rock4one-container p-8 max-w-md w-full">
             <div class="text-center mb-8">
                 <div class="mb-4">
-                    <img src="/icons/android-chrome-512x512.png" alt="Kochin Hangover Logo" class="w-40 h-40 mx-auto mb-4">
-                    <h1 class="logo-text text-4xl mb-2">KOCHIN HANGOVER</h1>
+                    <img src="/icons/android-chrome-512x512.png" alt="Rock 4 One Logo" class="w-40 h-40 mx-auto mb-4">
+                    <h1 class="logo-text text-4xl mb-2">ROCK 4 ONE</h1>
+                    <p class="tagline">Harmony for Humanity</p>
                 </div>
-                <h2 class="text-2xl font-bold text-white">Entry Management System</h2>
-                <p class="text-gray-300">May 3rd, 2025</p>
+                <h2 class="text-2xl font-bold text-white mt-4">Entry Management System</h2>
+                <p class="text-gray-300">Event Date: TBD</p>
             </div>
             
             <form id="loginForm" class="space-y-6">
                 <div>
                     <label for="username" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
-                    <input type="text" id="username" name="username" required class="kochin-input w-full">
+                    <input type="text" id="username" name="username" required class="rock4one-input w-full">
                 </div>
                 
                 <div>
                     <label for="password" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
-                    <input type="password" id="password" name="password" required class="kochin-input w-full">
+                    <input type="password" id="password" name="password" required class="rock4one-input w-full">
                 </div>
                 
                 <div>
-                    <button type="submit" class="kochin-button w-full py-3">
+                    <button type="submit" class="rock4one-button w-full py-3">
                         <i class="fas fa-sign-in-alt mr-2"></i> Login
                     </button>
                 </div>
@@ -405,15 +417,18 @@
             <!-- Header -->
             <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
                 <div class="flex items-center mb-3 sm:mb-0">
-                    <img src="/icons/android-chrome-192x192.png" alt="Kochin Hangover Logo" class="w-12 h-12 mr-3">
-                    <span class="logo-text text-xl sm:text-2xl">KOCHIN HANGOVER</span>
+                    <img src="/icons/android-chrome-192x192.png" alt="Rock 4 One Logo" class="w-12 h-12 mr-3">
+                    <div>
+                        <span class="logo-text text-xl sm:text-2xl">ROCK 4 ONE</span>
+                        <p class="tagline text-xs">Harmony for Humanity</p>
+                    </div>
                 </div>
                 <div class="flex flex-wrap items-center justify-center sm:justify-end gap-2">
-                    <span id="userRoleDisplay" class="text-white bg-purple-700 px-3 py-1 rounded-full text-sm"></span>
-                    <button id="usersBtn" class="kochin-button bg-purple-600">
+                    <span id="userRoleDisplay" class="text-white bg-yellow-700 px-3 py-1 rounded-full text-sm"></span>
+                    <button id="usersBtn" class="rock4one-button bg-yellow-600">
                         <i class="fas fa-users mr-2"></i> Users
                     </button>
-                    <button id="logoutBtn" class="kochin-button bg-red-600">
+                    <button id="logoutBtn" class="rock4one-button bg-red-600" style="background: #c9302c;">
                         <i class="fas fa-sign-out-alt mr-2"></i> Logout
                     </button>
                 </div>
@@ -421,44 +436,44 @@
 
             <!-- Navigation -->
             <div class="grid grid-cols-2 sm:flex sm:space-x-4 gap-2 mb-6">
-                <button id="newRegistrationBtn" class="kochin-button" data-tab="registration">
+                <button id="newRegistrationBtn" class="rock4one-button" data-tab="registration">
                     <i class="fas fa-user-plus mr-2"></i> New Registration
                 </button>
-                <button id="entryVerificationBtn" class="kochin-button" data-tab="verification">
+                <button id="entryVerificationBtn" class="rock4one-button" data-tab="verification">
                     <i class="fas fa-qrcode mr-2"></i> Entry Verification
                 </button>
-                <button id="guestListBtn" class="kochin-button" data-tab="guests">
+                <button id="guestListBtn" class="rock4one-button" data-tab="guests">
                     <i class="fas fa-list mr-2"></i> Registered Guests
                 </button>
-                <button id="statsBtn" class="kochin-button" data-tab="stats">
+                <button id="statsBtn" class="rock4one-button" data-tab="stats">
                     <i class="fas fa-chart-bar mr-2"></i> Stats
                 </button>
             </div>
 
             <!-- Content Sections -->
-            <div id="registration" class="tab-content kochin-container p-4 sm:p-6 mb-6">
-                <h2 class="text-xl font-bold mb-4">New Registration</h2>
+            <div id="registration" class="tab-content rock4one-container p-4 sm:p-6 mb-6">
+                <h2 class="text-xl font-bold mb-4 rock4one-header">New Registration</h2>
                 
                 <form id="registrationForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="guestName" class="block text-sm font-medium text-gray-300 mb-1">Name</label>
-                        <input type="text" id="guestName" name="guestName" required class="kochin-input w-full">
+                        <input type="text" id="guestName" name="guestName" required class="rock4one-input w-full">
                     </div>
                     
                     <div>
                         <label for="clubName" class="block text-sm font-medium text-gray-300 mb-1">Club Name</label>
-                        <input type="text" id="clubName" name="clubName" value="Angels 153" class="kochin-input w-full">
+                        <input type="text" id="clubName" name="clubName" value="" class="rock4one-input w-full">
                     </div>
                     
                     <div>
                         <label for="mobileNumber" class="block text-sm font-medium text-gray-300 mb-1">Mobile Number</label>
-                        <input type="tel" id="mobileNumber" name="mobileNumber" required class="kochin-input w-full" pattern="[0-9]{10}" title="Please enter a valid 10-digit mobile number">
+                        <input type="tel" id="mobileNumber" name="mobileNumber" required class="rock4one-input w-full" pattern="[0-9]{10}" title="Please enter a valid 10-digit mobile number">
                         <p class="text-xs text-gray-400 mt-1">10-digit mobile number (for QR code delivery and verification)</p>
                     </div>
                     
                     <div>
                         <label for="entryType" class="block text-sm font-medium text-gray-300 mb-1">Entry Type</label>
-                        <select id="entryType" name="entryType" required class="kochin-input w-full" onchange="updateAmount()">
+                        <select id="entryType" name="entryType" required class="rock4one-input w-full" onchange="updateAmount()">
                             <option value="stag">Stag (₹2750)</option>
                             <option value="couple">Couple (₹4750)</option>
                         </select>
@@ -466,7 +481,7 @@
                     
                     <div>
                         <label for="paymentMode" class="block text-sm font-medium text-gray-300 mb-1">Payment Mode</label>
-                        <select id="paymentMode" name="paymentMode" required class="kochin-input w-full">
+                        <select id="paymentMode" name="paymentMode" required class="rock4one-input w-full">
                             <option value="full_cash">Full Payment - Cash</option>
                             <option value="full_upi">Full Payment - UPI</option>
                             <option value="full_card">Full Payment - Card</option>
@@ -477,7 +492,7 @@
                     <div id="partialPaymentSection" class="hidden">
                         <label for="paidAmount" class="block text-sm font-medium text-gray-300 mb-1">Paid Amount (₹)</label>
                         <div class="flex items-center space-x-2">
-                            <input type="number" id="paidAmount" name="paidAmount" min="100" class="kochin-input w-full" placeholder="Enter amount paid now">
+                            <input type="number" id="paidAmount" name="paidAmount" min="100" class="rock4one-input w-full" placeholder="Enter amount paid now">
                             <span class="text-sm text-gray-400" id="totalAmountDisplay"></span>
                         </div>
                         <p class="text-xs text-gray-400 mt-1">Enter the amount paid now. Full amount will be collected at entry.</p>
@@ -485,7 +500,7 @@
                     
                     <div>
                         <label for="roomBooking" class="block text-sm font-medium text-gray-300 mb-1">Room Booking</label>
-                        <select id="roomBooking" name="roomBooking" class="kochin-input w-full">
+                        <select id="roomBooking" name="roomBooking" class="rock4one-input w-full">
                             <option value="no">No Room Booking</option>
                             <option value="yes">Room Booking</option>
                         </select>
@@ -493,20 +508,20 @@
                     
                     <div id="roomBookingSection" class="hidden">
                         <label for="roomBookingAmount" class="block text-sm font-medium text-gray-300 mb-1">Room Booking Amount (₹)</label>
-                        <input type="number" id="roomBookingAmount" name="roomBookingAmount" min="0" class="kochin-input w-full" placeholder="Enter room booking amount">
+                        <input type="number" id="roomBookingAmount" name="roomBookingAmount" min="0" class="rock4one-input w-full" placeholder="Enter room booking amount">
                         <p class="text-xs text-gray-400 mt-1">Enter the amount received for room booking.</p>
                     </div>
 
                     <div class="col-span-1 md:col-span-2 mt-2">
-                        <button type="submit" class="kochin-button w-full">
+                        <button type="submit" class="rock4one-button w-full">
                             <i class="fas fa-user-plus mr-2"></i> Register Guest
                         </button>
                     </div>
                 </form>
             </div>
 
-            <div id="verification" class="tab-content kochin-container p-4 sm:p-6 mb-6 hidden">
-                <h2 class="text-xl font-bold mb-4">Entry Verification</h2>
+            <div id="verification" class="tab-content rock4one-container p-4 sm:p-6 mb-6 hidden">
+                <h2 class="text-xl font-bold mb-4 rock4one-header">Entry Verification</h2>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -514,21 +529,21 @@
                         <p class="text-center text-sm text-gray-400 mt-2">Scan the guest's QR code to verify entry</p>
                     </div>
                     
-                    <div id="verificationResult" class="hidden kochin-container p-4 bg-opacity-50">
-                        <h3 class="text-lg font-bold mb-4 kochin-header">Guest Information</h3>
+                    <div id="verificationResult" class="hidden rock4one-container p-4 bg-opacity-50">
+                        <h3 class="text-lg font-bold mb-4 rock4one-header">Guest Information</h3>
                         <div id="verificationDetails" class="space-y-3"></div>
                     </div>
                 </div>
             </div>
 
-            <div id="guests" class="tab-content kochin-container p-4 sm:p-6 mb-6 hidden">
+            <div id="guests" class="tab-content rock4one-container p-4 sm:p-6 mb-6 hidden">
                 <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-                    <h2 class="text-2xl font-bold kochin-header">Guest List</h2>
+                    <h2 class="text-2xl font-bold rock4one-header">Guest List</h2>
                     <div class="flex gap-2">
-                        <button id="downloadGuestsPDFBtn" class="kochin-button">
+                        <button id="downloadGuestsPDFBtn" class="rock4one-button">
                             <i class="fas fa-file-pdf mr-2"></i>Download PDF
                         </button>
-                        <button id="downloadGuestsCSVBtn" class="kochin-button">
+                        <button id="downloadGuestsCSVBtn" class="rock4one-button">
                             <i class="fas fa-file-csv mr-2"></i>Download CSV
                         </button>
                     </div>
@@ -544,7 +559,7 @@
                             <div class="relative">
                                 <input type="search" 
                                        id="guestSearchInput" 
-                                       class="kochin-input w-full" 
+                                       class="rock4one-input w-full" 
                                        placeholder="Search by guest name or club..." 
                                        autocomplete="off" 
                                        autocorrect="off" 
@@ -581,14 +596,14 @@
                 </div>
             </div>
 
-            <div id="stats" class="tab-content kochin-container p-4 sm:p-6 mb-6 hidden">
+            <div id="stats" class="tab-content rock4one-container p-4 sm:p-6 mb-6 hidden">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-                    <h2 class="text-xl font-bold">KOCHIN HANGOVER STATISTICS</h2>
+                    <h2 class="text-xl font-bold rock4one-header">ROCK 4 ONE STATISTICS</h2>
                     <div class="flex flex-wrap gap-2 mt-2 sm:mt-0">
-                        <button id="downloadStatsImageBtn" class="kochin-button bg-blue-600">
+                        <button id="downloadStatsImageBtn" class="rock4one-button bg-blue-600" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);">
                             <i class="fas fa-download mr-2"></i> Save Stats
                         </button>
-                        <button id="downloadStatsCSVBtn" class="kochin-button bg-green-600">
+                        <button id="downloadStatsCSVBtn" class="rock4one-button bg-green-600" style="background: linear-gradient(135deg, #22c55e, #4ade80);">
                             <i class="fas fa-file-csv mr-2"></i> Download CSV
                         </button>
                     </div>
@@ -596,50 +611,50 @@
                 
                 <div class="flex flex-col gap-4 mb-6">
                     <!-- Total Registrations -->
-                    <div class="bg-purple-100 rounded-lg p-3 text-center mb-1.5">
-                        <h3 class="text-base font-semibold mb-1 text-purple-900">Total Registrations</h3>
-                        <p class="text-2xl font-bold text-purple-900" id="totalRegistrations">0</p>
+                    <div class="bg-yellow-900 bg-opacity-30 rounded-lg p-3 text-center mb-1.5 border border-yellow-600">
+                        <h3 class="text-base font-semibold mb-1 text-yellow-400">Total Registrations</h3>
+                        <p class="text-2xl font-bold text-yellow-100" id="totalRegistrations">0</p>
                     </div>
 
                     <!-- Verified Entries -->
-                    <div class="bg-green-100 rounded-lg p-3 text-center mb-1.5">
-                        <h3 class="text-base font-semibold mb-1 text-green-900">Verified Entries</h3>
-                        <p class="text-2xl font-bold text-green-900" id="verifiedEntries">0</p>
+                    <div class="bg-green-900 bg-opacity-30 rounded-lg p-3 text-center mb-1.5 border border-green-600">
+                        <h3 class="text-base font-semibold mb-1 text-green-400">Verified Entries</h3>
+                        <p class="text-2xl font-bold text-green-100" id="verifiedEntries">0</p>
                     </div>
 
                     <!-- Pending Entries -->
-                    <div class="bg-yellow-100 rounded-lg p-3 text-center mb-1.5">
-                        <h3 class="text-base font-semibold mb-1 text-yellow-900">Pending Entries</h3>
-                        <p class="text-2xl font-bold text-yellow-900" id="pendingEntries">0</p>
+                    <div class="bg-orange-900 bg-opacity-30 rounded-lg p-3 text-center mb-1.5 border border-orange-600">
+                        <h3 class="text-base font-semibold mb-1 text-orange-400">Pending Entries</h3>
+                        <p class="text-2xl font-bold text-orange-100" id="pendingEntries">0</p>
                     </div>
 
                     <!-- Total Revenue -->
-                    <div class="bg-blue-100 rounded-lg p-3 text-center mb-1.5">
-                        <h3 class="text-base font-semibold mb-1 text-blue-900">Total Revenue</h3>
-                        <p class="text-2xl font-bold text-blue-900">Rs.<span id="totalRevenue">0</span></p>
+                    <div class="bg-blue-900 bg-opacity-30 rounded-lg p-3 text-center mb-1.5 border border-blue-600">
+                        <h3 class="text-base font-semibold mb-1 text-blue-400">Total Revenue</h3>
+                        <p class="text-2xl font-bold text-blue-100">Rs.<span id="totalRevenue">0</span></p>
                     </div>
 
                     <!-- Registration Revenue -->
-                    <div class="bg-purple-100 rounded-lg p-3 text-center mb-1.5">
-                        <h3 class="text-base font-semibold mb-1 text-purple-900">Registration Revenue</h3>
-                        <p class="text-2xl font-bold text-purple-900">Rs.<span id="registrationRevenue">0</span></p>
+                    <div class="bg-purple-900 bg-opacity-30 rounded-lg p-3 text-center mb-1.5 border border-purple-600">
+                        <h3 class="text-base font-semibold mb-1 text-purple-400">Registration Revenue</h3>
+                        <p class="text-2xl font-bold text-purple-100">Rs.<span id="registrationRevenue">0</span></p>
                     </div>
 
                     <!-- Room Booking Revenue -->
-                    <div class="bg-pink-100 rounded-lg p-3 text-center mb-1.5">
-                        <h3 class="text-base font-semibold mb-1 text-pink-900">Room Booking Revenue</h3>
-                        <p class="text-2xl font-bold text-pink-900">Rs.<span id="roomBookingRevenue">0</span></p>
-                        <p class="text-xs text-pink-700" id="roomCount">(0 Rooms)</p>
+                    <div class="bg-pink-900 bg-opacity-30 rounded-lg p-3 text-center mb-1.5 border border-pink-600">
+                        <h3 class="text-base font-semibold mb-1 text-pink-400">Room Booking Revenue</h3>
+                        <p class="text-2xl font-bold text-pink-100">Rs.<span id="roomBookingRevenue">0</span></p>
+                        <p class="text-xs text-pink-300" id="roomCount">(0 Rooms)</p>
                     </div>
 
                     <!-- Total PAX -->
-                    <div class="bg-pink-100 rounded-lg p-3 text-center mb-1.5">
-                        <h3 class="text-base font-semibold mb-1 text-pink-900">Total PAX (Headcount)</h3>
-                        <p class="text-2xl font-bold text-pink-900" id="totalPax">0</p>
+                    <div class="bg-red-900 bg-opacity-30 rounded-lg p-3 text-center mb-1.5 border border-red-600">
+                        <h3 class="text-base font-semibold mb-1 text-red-400">Total PAX (Headcount)</h3>
+                        <p class="text-2xl font-bold text-red-100" id="totalPax">0</p>
                     </div>
                 </div>
                 
-                <h3 class="text-lg font-bold mb-4">Club-wise Statistics</h3>
+                <h3 class="text-lg font-bold mb-4 rock4one-header">Club-wise Statistics</h3>
                 <div class="overflow-x-auto">
                     <table class="min-w-full">
                         <thead>
@@ -658,23 +673,23 @@
                 </div>
             </div>
 
-            <div id="users" class="tab-content kochin-container p-6 mb-6 hidden">
-                <h2 class="text-xl font-bold mb-4">Users Management</h2>
+            <div id="users" class="tab-content rock4one-container p-6 mb-6 hidden">
+                <h2 class="text-xl font-bold mb-4 rock4one-header">Users Management</h2>
                 
                 <!-- Add User Form -->
                 <form id="addUserForm" class="mb-8">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium mb-1">Username</label>
-                            <input type="text" id="createUsername" class="kochin-input w-full" required>
+                            <input type="text" id="createUsername" class="rock4one-input w-full" required>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Password</label>
-                            <input type="password" id="createPassword" class="kochin-input w-full" required>
+                            <input type="password" id="createPassword" class="rock4one-input w-full" required>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Role</label>
-                            <select id="createRole" class="kochin-input w-full" required>
+                            <select id="createRole" class="rock4one-input w-full" required>
                                 <option value="admin">Admin</option>
                                 <option value="staff">Staff</option>
                                 <option value="doorman">Doorman</option>
@@ -682,7 +697,7 @@
                         </div>
                     </div>
                     <div class="mt-4">
-                        <button type="submit" class="kochin-button">
+                        <button type="submit" class="rock4one-button">
                             <i class="fas fa-plus mr-2"></i> Add User
                         </button>
                     </div>
@@ -712,7 +727,7 @@
     <div id="mpinVerificationModal" class="modal flex items-center justify-center">
         <div class="modal-content">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold kochin-header">Verify Transaction</h3>
+                <h3 class="text-xl font-bold rock4one-header">Verify Transaction</h3>
                 <button onclick="closeMpinModal()" class="text-gray-300 hover:text-white">
                     <i class="fas fa-times"></i>
                 </button>
@@ -728,7 +743,7 @@
             </div>
             
             <div class="text-center">
-                <button id="verifyMpinBtn" class="kochin-button">Verify</button>
+                <button id="verifyMpinBtn" class="rock4one-button">Verify</button>
             </div>
             
             <div id="mpinError" class="hidden text-red-500 text-center mt-4"></div>
@@ -739,7 +754,7 @@
     <div id="createMpinModal" class="modal flex items-center justify-center">
         <div class="modal-content">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold kochin-header">Create MPIN</h3>
+                <h3 class="text-xl font-bold rock4one-header">Create MPIN</h3>
                 <button onclick="closeCreateMpinModal()" class="text-gray-300 hover:text-white">
                     <i class="fas fa-times"></i>
                 </button>
@@ -764,7 +779,7 @@
             </div>
             
             <div class="text-center">
-                <button id="saveMpinBtn" class="kochin-button">Save MPIN</button>
+                <button id="saveMpinBtn" class="rock4one-button">Save MPIN</button>
             </div>
             
             <div id="createMpinError" class="hidden text-red-500 text-center mt-4"></div>
@@ -774,28 +789,29 @@
     <!-- Edit User Modal -->
     <div id="editUserModal" class="modal hidden">
         <div class="modal-content">
-            <h3 class="text-xl font-bold mb-4">Edit User</h3>
+            <h3 class="text-xl font-bold mb-4 rock4one-header">Edit User</h3>
             
             <form id="editUserForm" class="space-y-4">
                 <div>
                     <label for="editUsername" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
-                    <input type="text" id="editUsername" name="editUsername" required class="kochin-input w-full">
+                    <input type="text" id="editUsername" name="editUsername" required class="rock4one-input w-full">
                 </div>
                 
                 <div>
                     <label for="editPassword" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
-                    <input type="password" id="editPassword" name="editPassword" required class="kochin-input w-full">
+                    <input type="password" id="editPassword" name="editPassword" required class="rock4one-input w-full">
                 </div>
 
                 <div>
                     <label for="editRole" class="block text-sm font-medium text-gray-300 mb-2">Role</label>
-                    <select id="editRole" name="editRole" class="kochin-input w-full" required>
+                    <select id="editRole" name="editRole" class="rock4one-input w-full" required>
                         <option value="staff">Staff</option>
                         <option value="admin">Admin</option>
+                        <option value="doorman">Doorman</option>
                     </select>
                 </div>
 
-                <button type="submit" class="kochin-button w-full">Update User</button>
+                <button type="submit" class="rock4one-button w-full">Update User</button>
             </form>
         </div>
     </div>
@@ -811,12 +827,12 @@
     </script>
     
     <!-- PWA Installation Prompt -->
-    <div id="installPrompt" class="fixed bottom-0 left-0 right-0 bg-[#2a0e3a] border-t border-[#e83283] p-4 hidden">
+    <div id="installPrompt" class="fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-[#d4a853] p-4 hidden">
         <div class="flex justify-between items-center">
-            <p class="text-white">Install Kochin Hangover for a better experience</p>
+            <p class="text-white">Install Rock 4 One for a better experience</p>
             <div class="flex space-x-2">
-                <button id="installCancelBtn" class="kochin-button bg-gray-600">Later</button>
-                <button id="installConfirmBtn" class="kochin-button">Install</button>
+                <button id="installCancelBtn" class="rock4one-button bg-gray-600" style="background: #4b5563;">Later</button>
+                <button id="installConfirmBtn" class="rock4one-button">Install</button>
             </div>
         </div>
     </div>

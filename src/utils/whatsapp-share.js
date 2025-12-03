@@ -36,7 +36,7 @@ const createGuestPass = async (guest, qrCodeDataURL) => {
     
     return {
         imageUrl: imageDataURL,
-        fileName: `kochin-hangover-pass-${guest.guest_name.replace(/\s+/g, '-').toLowerCase()}.png`
+        fileName: `rock4one-pass-${guest.guest_name.replace(/\s+/g, '-').toLowerCase()}.png`
     };
 };
 
@@ -46,21 +46,21 @@ const showWhatsAppModal = (isMobile) => {
     modal.className = 'whatsapp-share-modal fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75';
     
     modal.innerHTML = isMobile ? `
-        <div class="kochin-container p-6 max-w-md mx-auto">
-            <h3 class="text-xl font-bold mb-4 kochin-header">Share Guest Pass</h3>
+        <div class="rock4one-container p-6 max-w-md mx-auto">
+            <h3 class="text-xl font-bold mb-4 rock4one-header">Share Guest Pass</h3>
             <p class="mb-4">Ready to share via WhatsApp?</p>
             <div class="flex justify-between">
-                <button id="shareNowBtn" class="kochin-button flex-1 bg-green-600">
+                <button id="shareNowBtn" class="rock4one-button flex-1 bg-green-600">
                     <i class="fab fa-whatsapp mr-2"></i> Share Now
                 </button>
-                <button id="cancelShareBtn" class="kochin-button bg-gray-600 flex-1">
+                <button id="cancelShareBtn" class="rock4one-button bg-gray-600 flex-1">
                     Cancel
                 </button>
             </div>
         </div>
     ` : `
-        <div class="kochin-container p-6 max-w-md mx-auto">
-            <h3 class="text-xl font-bold mb-4 kochin-header">Share Guest Pass</h3>
+        <div class="rock4one-container p-6 max-w-md mx-auto">
+            <h3 class="text-xl font-bold mb-4 rock4one-header">Share Guest Pass</h3>
             <p class="mb-4">For WhatsApp Desktop:</p>
             <ol class="list-decimal pl-6 mb-6">
                 <li class="mb-2">Click "Open WhatsApp" below</li>
@@ -69,10 +69,10 @@ const showWhatsAppModal = (isMobile) => {
                 <li class="mb-2">Attach the downloaded pass</li>
             </ol>
             <div class="flex justify-between">
-                <button id="shareNowBtn" class="kochin-button flex-1 bg-green-600">
+                <button id="shareNowBtn" class="rock4one-button flex-1 bg-green-600">
                     <i class="fab fa-whatsapp mr-2"></i> Open WhatsApp
                 </button>
-                <button id="cancelShareBtn" class="kochin-button bg-gray-600 flex-1">
+                <button id="cancelShareBtn" class="rock4one-button bg-gray-600 flex-1">
                     Cancel
                 </button>
             </div>
@@ -118,14 +118,14 @@ export const initWhatsAppShare = () => {
                 const qrCodeDataURL = await QRCode.toDataURL(qrData, {
                     width: 300,
                     margin: 2,
-                    color: { dark: '#2a0e3a', light: '#ffffff' }
+                    color: { dark: '#0a0a0a', light: '#ffffff' }
                 });
 
                 // Create guest pass image
                 const { imageUrl: guestPassImageUrl, fileName: guestPassFileName } = await createGuestPass(guest, qrCodeDataURL);
                 
                 // Create WhatsApp message
-                const message = `KOCHIN HANGOVER - GUEST PASS\n\nName: ${guest.guest_name}\nClub: ${guest.club_name || ''}\nMobile: ${guest.mobile_number}\nEntry Type: ${guest.entry_type === 'stag' ? 'STAG' : 'COUPLE'}${safeGetGuestProperty(guest, 'has_room_booking', false) ? ' + ROOM' : ''}${formatWhatsAppPaymentInfo(guest)}\n\nPlease show this pass at the entrance.`;
+                const message = `ROCK 4 ONE - GUEST PASS\n\nName: ${guest.guest_name}\nClub: ${guest.club_name || ''}\nMobile: ${guest.mobile_number}\nEntry Type: ${guest.entry_type === 'stag' ? 'STAG' : 'COUPLE'}${safeGetGuestProperty(guest, 'has_room_booking', false) ? ' + ROOM' : ''}${formatWhatsAppPaymentInfo(guest)}\n\nHarmony for Humanity 🎸\n\nPlease show this pass at the entrance.`;
 
                 // Remove existing modals
                 document.querySelectorAll('.whatsapp-share-modal').forEach(m => m.remove());
@@ -179,4 +179,4 @@ export const initWhatsAppShare = () => {
             }
         }
     });
-}; 
+};

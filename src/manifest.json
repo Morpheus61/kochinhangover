@@ -1,11 +1,11 @@
 {
-  "name": "Kochin Hangover",
-  "short_name": "KochinHangover",
-  "description": "Entry Management System for Kochin Hangover Event",
+  "name": "Rock 4 One",
+  "short_name": "Rock4One",
+  "description": "Entry Management System for Rock 4 One - Harmony for Humanity",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#2a0e3a",
-  "theme_color": "#2a0e3a",
+  "background_color": "#0a0a0a",
+  "theme_color": "#d4a853",
   "icons": [
     {
       "src": "/icons/android-chrome-192x192.png",

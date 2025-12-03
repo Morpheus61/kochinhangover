@@ -1,9 +1,11 @@
 :root {
-    --primary: #e83283;
-    --secondary: #34dbdb;
-    --accent: #f7d046;
-    --dark: #2a0e3a;
-    --light: #f8f0ff;
+    --primary: #d4a853;      /* Gold */
+    --secondary: #c9302c;    /* Rock Red */
+    --accent: #f5d76e;       /* Bright Gold */
+    --dark: #0a0a0a;         /* Deep Black */
+    --dark-secondary: #1a1a1a; /* Slightly lighter black */
+    --light: #fff8e7;        /* Warm White */
+    --gold-gradient: linear-gradient(135deg, #d4a853, #f5d76e, #d4a853);
 }
 
 body {
@@ -13,21 +15,22 @@ body {
     min-height: 100vh;
 }
 
-.kochin-bg {
+.rock4one-bg {
     background-color: var(--dark);
-    background-image: radial-gradient(circle at 10% 20%, rgba(232, 50, 131, 0.3) 0%, transparent 30%),
-                      radial-gradient(circle at 90% 30%, rgba(52, 219, 219, 0.3) 0%, transparent 30%),
-                      radial-gradient(circle at 50% 80%, rgba(247, 208, 70, 0.3) 0%, transparent 30%);
+    background-image: 
+        radial-gradient(circle at 10% 20%, rgba(212, 168, 83, 0.15) 0%, transparent 35%),
+        radial-gradient(circle at 90% 30%, rgba(201, 48, 44, 0.15) 0%, transparent 35%),
+        radial-gradient(circle at 50% 80%, rgba(245, 215, 110, 0.1) 0%, transparent 35%);
 }
 
-.kochin-container {
-    background-color: rgba(42, 14, 58, 0.85);
+.rock4one-container {
+    background-color: rgba(26, 26, 26, 0.95);
     border-radius: 1rem;
-    border: 2px solid rgba(232, 50, 131, 0.5);
-    box-shadow: 0 0 20px rgba(52, 219, 219, 0.5);
+    border: 2px solid rgba(212, 168, 83, 0.6);
+    box-shadow: 0 0 25px rgba(212, 168, 83, 0.3);
 }
 
-.kochin-input {
+.rock4one-input {
     background-color: var(--light);
     border: 2px solid var(--primary);
     border-radius: 0.5rem;
@@ -37,19 +40,19 @@ body {
     width: 100%;
 }
 
-.kochin-input:focus {
-    border-color: var(--secondary);
-    box-shadow: 0 0 0 3px rgba(52, 219, 219, 0.3);
+.rock4one-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(212, 168, 83, 0.3);
     outline: none;
 }
 
-.kochin-input::placeholder {
+.rock4one-input::placeholder {
     color: #6b7280;
 }
 
-.kochin-button {
-    background: linear-gradient(90deg, var(--primary), var(--secondary));
-    color: white;
+.rock4one-button {
+    background: var(--gold-gradient);
+    color: var(--dark);
     border: none;
     border-radius: 0.5rem;
     padding: 0.5rem 1.5rem;
@@ -58,64 +61,72 @@ body {
     transition: all 0.3s ease;
 }
 
-.kochin-button:hover {
+.rock4one-button:hover {
     opacity: 0.9;
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 5px 20px rgba(212, 168, 83, 0.4);
 }
 
 .logo-text {
     font-size: 2.5rem;
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 2px;
-    background: linear-gradient(90deg, var(--accent), var(--primary), var(--secondary));
+    letter-spacing: 3px;
+    background: var(--gold-gradient);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    text-shadow: 0 0 20px rgba(212, 168, 83, 0.3);
     padding: 0.5rem;
     display: inline-block;
-    transform: rotate(-2deg);
 }
 
-.bottle-icon {
+.tagline {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--primary);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+}
+
+.guitar-icon {
     display: inline-block;
-    transform: rotate(15deg);
+    font-size: 1.5rem;
+    color: var(--primary);
+    margin: 0 0.5rem;
+}
+
+.music-icon {
+    display: inline-block;
     font-size: 1.5rem;
     color: var(--accent);
     margin: 0 0.5rem;
 }
 
-.glass-icon {
-    display: inline-block;
-    font-size: 1.5rem;
-    color: var(--secondary);
-    margin: 0 0.5rem;
-}
-
-.kochin-tab {
-    background-color: rgba(255, 255, 255, 0.1);
+.rock4one-tab {
+    background-color: rgba(255, 255, 255, 0.05);
     color: var(--light);
     padding: 0.5rem 1rem;
     border-radius: 0.5rem;
     font-weight: 500;
     transition: all 0.3s ease;
+    border-bottom: 2px solid transparent;
 }
 
-.kochin-tab:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+.rock4one-tab:hover {
+    background-color: rgba(212, 168, 83, 0.1);
 }
 
-.kochin-tab.active {
-    background-color: var(--primary);
-    color: white;
+.rock4one-tab.active {
+    background-color: rgba(212, 168, 83, 0.2);
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary);
 }
 
-.kochin-button-secondary {
+.rock4one-button-secondary {
     background-color: rgba(255, 255, 255, 0.1);
     color: var(--light);
-    border: 1px solid var(--light);
+    border: 1px solid var(--primary);
     border-radius: 0.5rem;
     padding: 0.5rem 1.5rem;
     font-weight: 500;
@@ -123,8 +134,8 @@ body {
     transition: all 0.3s ease;
 }
 
-.kochin-button-secondary:hover {
-    background-color: var(--light);
+.rock4one-button-secondary:hover {
+    background-color: var(--primary);
     color: var(--dark);
 }
 
@@ -140,31 +151,33 @@ th {
     text-transform: uppercase;
     font-size: 0.875rem;
     letter-spacing: 0.05em;
+    color: var(--primary);
 }
 
 td {
     padding: 1rem;
     color: var(--light);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(212, 168, 83, 0.2);
 }
 
 tr:hover td {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(212, 168, 83, 0.05);
 }
 
 /* Stats Card */
 .stats-card {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(212, 168, 83, 0.1);
     border-radius: 0.5rem;
     padding: 1rem;
     margin-bottom: 1rem;
+    border: 1px solid rgba(212, 168, 83, 0.3);
 }
 
 .stats-card h4 {
     font-size: 0.875rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
-    color: var(--accent);
+    color: var(--primary);
 }
 
 .stats-card p {
@@ -175,13 +188,14 @@ tr:hover td {
 
 /* Transaction Item */
 .transaction-item {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.05);
     border-radius: 0.5rem;
     padding: 1rem;
     margin-bottom: 0.5rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-left: 3px solid var(--primary);
 }
 
 .transaction-item .details {
@@ -197,4 +211,31 @@ tr:hover td {
 .transaction-item .amount {
     color: var(--accent);
     font-weight: 600;
+}
+
+/* Rock Header Effect */
+.rock4one-header {
+    background: var(--gold-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: bold;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(26, 26, 26, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
 }
