@@ -1,33 +1,31 @@
 // Cache name with version
 const CACHE_NAME = 'rock4one-cache-v1';
 
-// Files to cache
+// Files to cache - only cache essential files that exist
 const CACHE_FILES = [
-  './',
-  'index.html',
-  'main.js',
-  'icons/android-chrome-192x192.png',
-  'icons/android-chrome-512x512.png',
-  'icons/apple-touch-icon.png',
-  'icons/favicon-16x16.png',
-  'icons/favicon-32x32.png',
-  'icons/favicon.ico',
-  'manifest.json'
+  '/',
+  '/index.html',
+  '/manifest.json'
 ];
 
 // Install event - cache assets
 self.addEventListener('install', (event) => {
+  console.log('Service Worker installing...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('Opened cache');
-        return cache.addAll(CACHE_FILES);
+        return cache.addAll(CACHE_FILES).catch((error) => {
+          console.error('Failed to cache files:', error);
+        });
       })
   );
+  self.skipWaiting();
 });
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
+  console.log('Service Worker activating...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -40,10 +38,16 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+  return self.clients.claim();
 });
 
 // Fetch event - serve from cache or network
 self.addEventListener('fetch', (event) => {
+  // Skip caching for non-GET requests
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -71,6 +75,10 @@ self.addEventListener('fetch', (event) => {
               });
 
             return response;
+          })
+          .catch((error) => {
+            console.error('Fetch failed:', error);
+            throw error;
           });
       })
   );
