@@ -437,7 +437,7 @@
                 <div class="flex items-center gap-2">
                     <span id="currentUserDisplay" class="text-xs md:text-sm">
                         <span id="userName" class="font-semibold hidden md:inline"></span>
-                        <span id="userRole" class="role-badge ml-1"></span>
+                        <span id="userRoleBadge" class="role-badge ml-1"></span>
                     </span>
                     <button id="logoutBtn" class="rock4one-button danger text-xs py-2 px-2 md:px-3">
                         <i class="fas fa-sign-out-alt"></i>
@@ -1080,7 +1080,7 @@
                 </div>
                 <div>
                     <label class="block text-sm mb-1">Role *</label>
-                    <select id="userRole" class="rock4one-input" required>
+                    <select id="userRoleSelect" class="rock4one-input" required>
                         <option value="seller">Seller</option>
                         <option value="admin">Admin (Read-Only)</option>
                         <option value="super_admin">Super Admin</option>

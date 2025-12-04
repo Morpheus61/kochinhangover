@@ -45,8 +45,8 @@ async function initializeApp() {
     
     // Update user display
     document.getElementById('userName').textContent = currentUser.full_name || currentUser.username;
-    document.getElementById('userRole').textContent = formatRole(currentUser.role);
-    document.getElementById('userRole').className = `role-badge role-${currentUser.role}`;
+    document.getElementById('userRoleBadge').textContent = formatRole(currentUser.role);
+    document.getElementById('userRoleBadge').className = `role-badge role-${currentUser.role}`;
     
     // Show first appropriate tab
     showDefaultTab();
@@ -1202,7 +1202,7 @@ window.editUser = async function(userId) {
         document.getElementById('userMobile').value = user.mobile_number || '';
         document.getElementById('userClubName').value = user.club_name || '';
         document.getElementById('userClubNumber').value = user.club_number || '';
-        document.getElementById('userRole').value = user.role;
+        document.getElementById('userRoleSelect').value = user.role;
         
         openModal('userModal');
         
@@ -1238,8 +1238,14 @@ async function handleUserForm(e) {
         mobile_number: mobileNumber,
         club_name: document.getElementById('userClubName').value.trim() || null,
         club_number: document.getElementById('userClubNumber').value.trim() || null,
-        role: document.getElementById('userRole').value
+        role: document.getElementById('userRoleSelect').value
     };
+    
+    // Validate role is selected
+    if (!userData.role) {
+        showToast('Please select a role', 'error');
+        return;
+    }
     
     const password = document.getElementById('userPassword').value;
     if (password) {
