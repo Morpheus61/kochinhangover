@@ -156,11 +156,15 @@ function updateUIWithSettings() {
     // Update Payment QR Code display for sellers
     const paymentQRDisplay = document.getElementById('paymentQRDisplay');
     const sellerQRImage = document.getElementById('sellerQRImage');
+    const downloadQRBtn = document.getElementById('downloadQRBtnContainer');
+    
     if (paymentQRDisplay && sellerQRImage && settings.payment_qr_code) {
         sellerQRImage.src = settings.payment_qr_code;
         paymentQRDisplay.classList.remove('hidden');
+        if (downloadQRBtn) downloadQRBtn.classList.remove('hidden');
     } else if (paymentQRDisplay) {
         paymentQRDisplay.classList.add('hidden');
+        if (downloadQRBtn) downloadQRBtn.classList.add('hidden');
     }
     
     // Update Bank Details display for sellers
@@ -305,6 +309,75 @@ window.removePaymentQR = async function() {
     } catch (error) {
         console.error('Error removing QR code:', error);
         showToast('Failed to remove QR code', 'error');
+    }
+};
+
+// Share Payment Info via WhatsApp (for Sellers)
+window.sharePaymentInfo = function() {
+    const eventName = settings.event_name || 'Rock 4 One';
+    const upiId = settings.upi_id || '';
+    const bankDetails = settings.bank_details || '';
+    const stagPrice = settings.stag_price || '2750';
+    const couplePrice = settings.couple_price || '4750';
+    
+    let message = `🎸 *${eventName.toUpperCase()}* 🎸\n`;
+    message += `_Harmony for Humanity_\n\n`;
+    message += `💰 *PAYMENT INFORMATION*\n\n`;
+    
+    message += `🎫 *Ticket Prices:*\n`;
+    message += `• Stag: ₹${parseInt(stagPrice).toLocaleString()}\n`;
+    message += `• Couple: ₹${parseInt(couplePrice).toLocaleString()}\n\n`;
+    
+    if (upiId) {
+        message += `📱 *UPI ID:*\n`;
+        message += `\`${upiId}\`\n\n`;
+    }
+    
+    if (bankDetails) {
+        message += `🏦 *Bank Transfer:*\n`;
+        message += `${bankDetails}\n\n`;
+    }
+    
+    if (settings.payment_qr_code) {
+        message += `📲 *QR Code:* I'll send the payment QR code separately.\n\n`;
+    }
+    
+    message += `✅ After payment, please share:\n`;
+    message += `• Your Name\n`;
+    message += `• Mobile Number\n`;
+    message += `• Payment Screenshot/UTR\n\n`;
+    
+    message += `Thank you! 🎵`;
+    
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+    
+    // If QR code exists, prompt to download it
+    if (settings.payment_qr_code) {
+        setTimeout(() => {
+            if (confirm('Would you like to download the Payment QR Code to share separately?')) {
+                downloadPaymentQR();
+            }
+        }, 500);
+    }
+};
+
+// Download Payment QR Code (for Sellers to share)
+window.downloadPaymentQR = function() {
+    if (!settings.payment_qr_code) {
+        showToast('No Payment QR Code available', 'error');
+        return;
+    }
+    
+    try {
+        const link = document.createElement('a');
+        link.download = 'rock4one-payment-qr.png';
+        link.href = settings.payment_qr_code;
+        link.click();
+        showToast('QR Code downloaded!', 'success');
+    } catch (error) {
+        console.error('Error downloading QR:', error);
+        showToast('Failed to download QR code', 'error');
     }
 };
 

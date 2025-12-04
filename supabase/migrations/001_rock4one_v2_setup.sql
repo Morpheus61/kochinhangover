@@ -30,17 +30,20 @@ INSERT INTO settings (setting_key, setting_value, description) VALUES
     ('event_date', 'TBD', 'Event date'),
     ('event_venue', 'TBD', 'Event venue'),
     ('upi_id', '', 'UPI ID for payments (shown to sellers)'),
-    ('bank_details', '', 'Bank account details for transfers');
+    ('bank_details', '', 'Bank account details for transfers'),
+    ('payment_qr_code', '', 'Payment QR Code image (base64)');
 
 -- =====================================================
--- USERS TABLE - With three roles
+-- USERS TABLE - With three roles and club info
 -- =====================================================
 CREATE TABLE users (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     username TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
-    full_name TEXT,
-    mobile_number TEXT,
+    full_name TEXT NOT NULL,
+    mobile_number TEXT NOT NULL,
+    club_name TEXT,
+    club_number TEXT,
     role TEXT NOT NULL CHECK (role IN ('super_admin', 'admin', 'seller')),
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
@@ -49,8 +52,8 @@ CREATE TABLE users (
 
 -- Insert default Super Admin
 -- IMPORTANT: Change this password immediately after first login!
-INSERT INTO users (username, password, full_name, role) 
-VALUES ('SuperAdmin', 'Rock4One@2025', 'Super Administrator', 'super_admin');
+INSERT INTO users (username, password, full_name, mobile_number, role) 
+VALUES ('SuperAdmin', 'Rock4One@2025', 'Super Administrator', '0000000000', 'super_admin');
 
 -- =====================================================
 -- GUESTS TABLE - With seller tracking & payment verification
@@ -144,6 +147,9 @@ SELECT
     u.id as seller_id,
     u.username,
     u.full_name,
+    u.mobile_number,
+    u.club_name,
+    u.club_number,
     COUNT(g.id) as total_registrations,
     COUNT(CASE WHEN g.status = 'pending_verification' THEN 1 END) as pending_count,
     COUNT(CASE WHEN g.status IN ('payment_verified', 'pass_generated', 'pass_sent', 'checked_in') THEN 1 END) as verified_count,
@@ -157,7 +163,7 @@ SELECT
 FROM users u
 LEFT JOIN guests g ON u.id = g.registered_by
 WHERE u.role = 'seller'
-GROUP BY u.id, u.username, u.full_name;
+GROUP BY u.id, u.username, u.full_name, u.mobile_number, u.club_name, u.club_number;
 
 -- View: Overall Statistics
 CREATE OR REPLACE VIEW overall_stats AS
