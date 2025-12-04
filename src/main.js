@@ -153,6 +153,26 @@ function updateUIWithSettings() {
         upiDisplay.textContent = settings.upi_id || 'Not configured';
     }
     
+    // Update Payment QR Code display for sellers
+    const paymentQRDisplay = document.getElementById('paymentQRDisplay');
+    const sellerQRImage = document.getElementById('sellerQRImage');
+    if (paymentQRDisplay && sellerQRImage && settings.payment_qr_code) {
+        sellerQRImage.src = settings.payment_qr_code;
+        paymentQRDisplay.classList.remove('hidden');
+    } else if (paymentQRDisplay) {
+        paymentQRDisplay.classList.add('hidden');
+    }
+    
+    // Update Bank Details display for sellers
+    const bankDisplay = document.getElementById('paymentBankDisplay');
+    const bankDetails = document.getElementById('displayBankDetails');
+    if (bankDisplay && bankDetails && settings.bank_details) {
+        bankDetails.textContent = settings.bank_details;
+        bankDisplay.classList.remove('hidden');
+    } else if (bankDisplay) {
+        bankDisplay.classList.add('hidden');
+    }
+    
     // Update settings form if super admin
     if (currentUser?.role === 'super_admin') {
         document.querySelectorAll('#settingsForm [data-key]').forEach(input => {
@@ -161,6 +181,20 @@ function updateUIWithSettings() {
                 input.value = settings[key];
             }
         });
+        
+        // Show QR code preview in settings
+        const qrPreview = document.getElementById('qrCodePreview');
+        const qrImage = document.getElementById('qrCodeImage');
+        const qrUploadArea = document.getElementById('qrCodeUploadArea');
+        
+        if (qrPreview && qrImage && settings.payment_qr_code) {
+            qrImage.src = settings.payment_qr_code;
+            qrPreview.classList.remove('hidden');
+            if (qrUploadArea) qrUploadArea.classList.add('hidden');
+        } else if (qrPreview) {
+            qrPreview.classList.add('hidden');
+            if (qrUploadArea) qrUploadArea.classList.remove('hidden');
+        }
     }
 }
 
@@ -198,6 +232,90 @@ async function saveSettings(e) {
         console.error('Error saving settings:', error);
         showToast('Failed to save settings', 'error');
     }
+}
+
+// Payment QR Code Upload Handler
+window.handleQRCodeUpload = async function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        showToast('Please upload an image file', 'error');
+        return;
+    }
+    
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+        showToast('Image must be less than 2MB', 'error');
+        return;
+    }
+    
+    try {
+        showToast('Uploading QR code...', 'info');
+        
+        // Convert to base64
+        const base64 = await fileToBase64(file);
+        
+        // Save to settings
+        const { error } = await supabase
+            .from('settings')
+            .upsert({ 
+                setting_key: 'payment_qr_code',
+                setting_value: base64,
+                description: 'Payment QR Code image (base64)',
+                updated_at: new Date().toISOString(),
+                updated_by: currentUser.id
+            }, { onConflict: 'setting_key' });
+        
+        if (error) throw error;
+        
+        // Reload settings to update UI
+        await loadSettings();
+        showToast('Payment QR Code uploaded successfully!', 'success');
+        
+    } catch (error) {
+        console.error('Error uploading QR code:', error);
+        showToast('Failed to upload QR code', 'error');
+    }
+    
+    // Clear the input
+    event.target.value = '';
+};
+
+// Remove Payment QR Code
+window.removePaymentQR = async function() {
+    if (!confirm('Remove the Payment QR Code?')) return;
+    
+    try {
+        const { error } = await supabase
+            .from('settings')
+            .update({ 
+                setting_value: '',
+                updated_at: new Date().toISOString(),
+                updated_by: currentUser.id
+            })
+            .eq('setting_key', 'payment_qr_code');
+        
+        if (error) throw error;
+        
+        await loadSettings();
+        showToast('Payment QR Code removed', 'success');
+        
+    } catch (error) {
+        console.error('Error removing QR code:', error);
+        showToast('Failed to remove QR code', 'error');
+    }
+};
+
+// Helper function to convert file to base64
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
 }
 
 // =====================================================
@@ -949,6 +1067,11 @@ async function loadSellers() {
                 <td class="font-semibold">${escapeHtml(u.username)}</td>
                 <td>${escapeHtml(u.full_name || '-')}</td>
                 <td>${u.mobile_number || '-'}</td>
+                <td class="text-sm">
+                    ${u.club_name ? `<span class="text-yellow-400">${escapeHtml(u.club_name)}</span>` : ''}
+                    ${u.club_number ? `<br><span class="text-gray-500 text-xs">#${escapeHtml(u.club_number)}</span>` : ''}
+                    ${!u.club_name && !u.club_number ? '-' : ''}
+                </td>
                 <td><span class="role-badge role-${u.role}">${formatRole(u.role)}</span></td>
                 <td>${u.total_registrations || 0}</td>
                 <td class="text-green-400">₹${(u.total_verified_amount || 0).toLocaleString()}</td>
@@ -978,6 +1101,8 @@ window.showAddUserModal = function() {
     document.getElementById('userForm').reset();
     document.getElementById('editUserId').value = '';
     document.getElementById('userPassword').required = true;
+    document.getElementById('userFullName').required = true;
+    document.getElementById('userMobile').required = true;
     document.getElementById('passwordHint').textContent = 'Min 6 characters';
     openModal('userModal');
 };
@@ -997,9 +1122,13 @@ window.editUser = async function(userId) {
         document.getElementById('userUsername').value = user.username;
         document.getElementById('userPassword').value = '';
         document.getElementById('userPassword').required = false;
+        document.getElementById('userFullName').required = true;
+        document.getElementById('userMobile').required = true;
         document.getElementById('passwordHint').textContent = 'Leave blank to keep current';
         document.getElementById('userFullName').value = user.full_name || '';
         document.getElementById('userMobile').value = user.mobile_number || '';
+        document.getElementById('userClubName').value = user.club_name || '';
+        document.getElementById('userClubNumber').value = user.club_number || '';
         document.getElementById('userRole').value = user.role;
         
         openModal('userModal');
@@ -1016,15 +1145,35 @@ async function handleUserForm(e) {
     const userId = document.getElementById('editUserId').value;
     const isEdit = !!userId;
     
+    // Validate required fields
+    const fullName = document.getElementById('userFullName').value.trim();
+    const mobileNumber = document.getElementById('userMobile').value.trim();
+    
+    if (!fullName) {
+        showToast('Full Name is required', 'error');
+        return;
+    }
+    
+    if (!mobileNumber || !/^[0-9]{10}$/.test(mobileNumber)) {
+        showToast('Valid 10-digit Mobile Number is required', 'error');
+        return;
+    }
+    
     const userData = {
         username: document.getElementById('userUsername').value.trim(),
-        full_name: document.getElementById('userFullName').value.trim() || null,
-        mobile_number: document.getElementById('userMobile').value.trim() || null,
+        full_name: fullName,
+        mobile_number: mobileNumber,
+        club_name: document.getElementById('userClubName').value.trim() || null,
+        club_number: document.getElementById('userClubNumber').value.trim() || null,
         role: document.getElementById('userRole').value
     };
     
     const password = document.getElementById('userPassword').value;
     if (password) {
+        if (password.length < 6) {
+            showToast('Password must be at least 6 characters', 'error');
+            return;
+        }
         userData.password = password;
     }
     
@@ -1130,13 +1279,16 @@ async function loadAdminSellerStats() {
         
         const tbody = document.getElementById('adminSellerStatsBody');
         if (!stats || stats.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center py-8 text-gray-500">No seller data</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" class="text-center py-8 text-gray-500">No seller data</td></tr>';
             return;
         }
         
         tbody.innerHTML = stats.map(s => `
             <tr>
                 <td class="font-semibold">${escapeHtml(s.full_name || s.username)}</td>
+                <td class="text-sm">
+                    ${s.club_name ? `<span class="text-yellow-400">${escapeHtml(s.club_name)}</span>` : '-'}
+                </td>
                 <td>${s.total_registrations}</td>
                 <td class="text-orange-400">${s.pending_count}</td>
                 <td class="text-green-400">${s.verified_count}</td>
