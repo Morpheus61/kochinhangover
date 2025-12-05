@@ -59,7 +59,8 @@ function formatRole(role) {
     const roles = {
         'super_admin': 'Super Admin',
         'admin': 'Admin',
-        'seller': 'Seller'
+        'seller': 'Seller',
+        'entry_marshall': 'Entry Marshall'
     };
     return roles[role] || role;
 }
@@ -75,6 +76,9 @@ function showDefaultTab() {
             break;
         case 'admin':
             defaultTab = 'view-registrations';
+            break;
+        case 'entry_marshall':
+            defaultTab = 'entry-scan';
             break;
         default:
             defaultTab = 'register';
@@ -103,6 +107,9 @@ async function loadRoleData() {
                 loadAdminSellerStats(),
                 loadStatistics()
             ]);
+            break;
+        case 'entry_marshall':
+            await loadEntryStats();
             break;
     }
 }
@@ -454,6 +461,11 @@ function showTab(tabId) {
         tab.classList.add('secondary');
     });
     
+    // Remove active from all mobile menu items
+    document.querySelectorAll('.mobile-menu-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
     // Show selected tab
     const targetTab = document.getElementById(`tab-${tabId}`);
     if (targetTab) {
@@ -465,6 +477,12 @@ function showTab(tabId) {
     if (navBtn) {
         navBtn.classList.add('active');
         navBtn.classList.remove('secondary');
+    }
+    
+    // Activate mobile menu item
+    const mobileItem = document.querySelector(`.mobile-menu-item[data-tab="${tabId}"]`);
+    if (mobileItem) {
+        mobileItem.classList.add('active');
     }
     
     // Refresh data for certain tabs
@@ -493,6 +511,9 @@ async function refreshTabData(tabId) {
             break;
         case 'view-sellers':
             await loadAdminSellerStats();
+            break;
+        case 'entry-scan':
+            await loadEntryStats();
             break;
     }
 }
@@ -854,7 +875,13 @@ async function loadAllRegistrations(statusFilter = 'all') {
             .order('created_at', { ascending: false });
         
         if (statusFilter !== 'all') {
-            query = query.eq('status', statusFilter);
+            // Handle combined filters
+            if (statusFilter === 'verified') {
+                // Verified includes payment_verified and pass_generated
+                query = query.in('status', ['payment_verified', 'pass_generated']);
+            } else {
+                query = query.eq('status', statusFilter);
+            }
         }
         
         const { data: guests, error } = await query;
@@ -1531,7 +1558,42 @@ function setupEventListeners() {
         );
         renderAllRegistrations(filtered);
     });
+    
+    // Mobile menu items
+    document.querySelectorAll('.mobile-menu-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const tab = item.dataset.tab;
+            if (tab) {
+                showTab(tab);
+                toggleMobileMenu(); // Close menu after selection
+            }
+        });
+    });
 }
+
+// Mobile Menu Toggle
+window.toggleMobileMenu = function() {
+    const menu = document.getElementById('mobileSlideMenu');
+    const overlay = document.getElementById('mobileMenuOverlay');
+    
+    if (menu && overlay) {
+        menu.classList.toggle('active');
+        overlay.classList.toggle('active');
+        
+        // Update menu role display
+        const roleDisplay = document.getElementById('mobileMenuRole');
+        if (roleDisplay && currentUser) {
+            roleDisplay.textContent = formatRole(currentUser.role);
+        }
+        
+        // Update pending badge in mobile menu
+        const pendingBadge = document.getElementById('pendingBadge');
+        const mobilePendingBadge = document.getElementById('mobilePendingBadge');
+        if (pendingBadge && mobilePendingBadge) {
+            mobilePendingBadge.textContent = pendingBadge.textContent;
+        }
+    }
+};
 
 function openModal(modalId) {
     document.getElementById(modalId)?.classList.add('active');
@@ -1625,9 +1687,923 @@ function downloadFile(content, filename, type) {
     URL.revokeObjectURL(url);
 }
 
+// =====================================================
+// ENTRY MARSHALL - GATE MANAGEMENT & CHECK-IN
+// =====================================================
+
+let qrScanner = null;
+let currentDuty = null;
+let scanMode = 'entry'; // 'entry' or 'exit'
+
+async function loadEntryStats() {
+    try {
+        // Display marshall name
+        const marshallDisplay = document.getElementById('marshallNameDisplay');
+        if (marshallDisplay) {
+            marshallDisplay.textContent = `Logged in as: ${currentUser.full_name || currentUser.username}`;
+        }
+        
+        // Load available gates for dropdown
+        await loadGatesDropdown();
+        
+        // Check if marshall is on duty
+        await checkDutyStatus();
+        
+        // Get stats
+        const { count: myCheckins } = await supabase
+            .from('guest_movements')
+            .select('*', { count: 'exact', head: true })
+            .eq('marshall_id', currentUser.id)
+            .eq('movement_type', 'entry');
+        
+        const { count: insideVenue } = await supabase
+            .from('guests')
+            .select('*', { count: 'exact', head: true })
+            .eq('is_inside_venue', true);
+        
+        const { count: totalExpected } = await supabase
+            .from('guests')
+            .select('*', { count: 'exact', head: true })
+            .in('status', ['pass_sent', 'checked_in']);
+        
+        // Update displays
+        const myCheckinsEl = document.getElementById('entryMyCheckins');
+        const insideEl = document.getElementById('entryCheckedInCount');
+        const expectedEl = document.getElementById('entryTotalExpected');
+        
+        if (myCheckinsEl) myCheckinsEl.textContent = myCheckins || 0;
+        if (insideEl) insideEl.textContent = insideVenue || 0;
+        if (expectedEl) expectedEl.textContent = totalExpected || 0;
+        
+        // Load recent activity
+        await loadRecentActivity();
+        
+    } catch (error) {
+        console.error('Error loading entry stats:', error);
+    }
+}
+
+async function loadGatesDropdown() {
+    try {
+        const { data: gates, error } = await supabase
+            .from('entry_gates')
+            .select('*')
+            .eq('is_active', true)
+            .order('gate_name');
+        
+        if (error) throw error;
+        
+        const select = document.getElementById('gateSelect');
+        if (!select) return;
+        
+        select.innerHTML = '<option value="">-- Choose Gate --</option>';
+        
+        if (gates && gates.length > 0) {
+            gates.forEach(gate => {
+                select.innerHTML += `<option value="${gate.id}">${gate.gate_name} (${gate.gate_code})</option>`;
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error loading gates:', error);
+    }
+}
+
+async function checkDutyStatus() {
+    try {
+        const { data: duty, error } = await supabase
+            .from('marshall_duties')
+            .select('*, gate:entry_gates(*)')
+            .eq('marshall_id', currentUser.id)
+            .eq('status', 'on_duty')
+            .single();
+        
+        if (duty && !error) {
+            currentDuty = duty;
+            showOnDutyUI(duty);
+        } else {
+            currentDuty = null;
+            showOffDutyUI();
+        }
+        
+    } catch (error) {
+        // No active duty found
+        currentDuty = null;
+        showOffDutyUI();
+    }
+}
+
+function showOnDutyUI(duty) {
+    const offDutySection = document.getElementById('offDutySection');
+    const onDutySection = document.getElementById('onDutySection');
+    const scanSection = document.getElementById('scanSection');
+    const notOnDutyMessage = document.getElementById('notOnDutyMessage');
+    const currentGateName = document.getElementById('currentGateName');
+    const dutyDuration = document.getElementById('dutyDuration');
+    
+    if (offDutySection) offDutySection.classList.add('hidden');
+    if (onDutySection) onDutySection.classList.remove('hidden');
+    if (scanSection) scanSection.classList.remove('hidden');
+    if (notOnDutyMessage) notOnDutyMessage.classList.add('hidden');
+    
+    if (currentGateName && duty.gate) {
+        currentGateName.textContent = duty.gate.gate_name;
+    }
+    
+    if (dutyDuration && duty.clock_in_at) {
+        const clockIn = new Date(duty.clock_in_at);
+        dutyDuration.textContent = `Since: ${clockIn.toLocaleTimeString()}`;
+    }
+}
+
+function showOffDutyUI() {
+    const offDutySection = document.getElementById('offDutySection');
+    const onDutySection = document.getElementById('onDutySection');
+    const scanSection = document.getElementById('scanSection');
+    const notOnDutyMessage = document.getElementById('notOnDutyMessage');
+    
+    if (offDutySection) offDutySection.classList.remove('hidden');
+    if (onDutySection) onDutySection.classList.add('hidden');
+    if (scanSection) scanSection.classList.add('hidden');
+    if (notOnDutyMessage) notOnDutyMessage.classList.remove('hidden');
+}
+
+window.clockIn = async function() {
+    const gateId = document.getElementById('gateSelect').value;
+    
+    if (!gateId) {
+        showToast('Please select a gate first', 'error');
+        return;
+    }
+    
+    try {
+        const { data, error } = await supabase
+            .from('marshall_duties')
+            .insert({
+                marshall_id: currentUser.id,
+                gate_id: gateId,
+                status: 'on_duty',
+                clock_in_at: new Date().toISOString()
+            })
+            .select('*, gate:entry_gates(*)')
+            .single();
+        
+        if (error) throw error;
+        
+        currentDuty = data;
+        showOnDutyUI(data);
+        showToast(`Clocked in at ${data.gate.gate_name}`, 'success');
+        
+    } catch (error) {
+        console.error('Error clocking in:', error);
+        showToast('Failed to clock in', 'error');
+    }
+};
+
+window.clockOut = async function() {
+    if (!currentDuty) return;
+    
+    try {
+        const { error } = await supabase
+            .from('marshall_duties')
+            .update({
+                status: 'off_duty',
+                clock_out_at: new Date().toISOString()
+            })
+            .eq('id', currentDuty.id);
+        
+        if (error) throw error;
+        
+        showToast('Clocked out successfully', 'success');
+        currentDuty = null;
+        showOffDutyUI();
+        
+    } catch (error) {
+        console.error('Error clocking out:', error);
+        showToast('Failed to clock out', 'error');
+    }
+};
+
+window.setScanMode = function(mode) {
+    scanMode = mode;
+    
+    const btnEntry = document.getElementById('btnModeEntry');
+    const btnExit = document.getElementById('btnModeExit');
+    const scanModeText = document.getElementById('scanModeText');
+    const scanButton = document.getElementById('scanButton');
+    
+    if (mode === 'entry') {
+        btnEntry?.classList.remove('secondary');
+        btnExit?.classList.add('secondary');
+        if (scanModeText) scanModeText.textContent = 'ENTRY';
+        if (scanButton) scanButton.classList.remove('danger');
+    } else {
+        btnEntry?.classList.add('secondary');
+        btnExit?.classList.remove('secondary');
+        if (scanModeText) scanModeText.textContent = 'EXIT';
+        if (scanButton) scanButton.classList.add('danger');
+    }
+};
+
+async function loadRecentActivity() {
+    try {
+        const { data: recent, error } = await supabase
+            .from('guest_movements')
+            .select('*, guest:guests(guest_name, entry_type)')
+            .eq('marshall_id', currentUser.id)
+            .order('created_at', { ascending: false })
+            .limit(10);
+        
+        if (error) throw error;
+        
+        const container = document.getElementById('recentCheckins');
+        if (!container) return;
+        
+        if (!recent || recent.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No activity yet</p>';
+            return;
+        }
+        
+        container.innerHTML = recent.map(m => {
+            const isEntry = m.movement_type === 'entry';
+            const bgColor = isEntry ? 'bg-green-900/20 border-green-600/30' : 'bg-red-900/20 border-red-600/30';
+            const textColor = isEntry ? 'text-green-400' : 'text-red-400';
+            const icon = isEntry ? 'fa-sign-in-alt' : 'fa-sign-out-alt';
+            
+            return `
+                <div class="flex justify-between items-center p-2 ${bgColor} rounded border">
+                    <div>
+                        <i class="fas ${icon} ${textColor} mr-2"></i>
+                        <span class="font-semibold">${escapeHtml(m.guest?.guest_name || 'Unknown')}</span>
+                        <span class="text-xs text-gray-400 ml-1 capitalize">(${m.guest?.entry_type || ''})</span>
+                    </div>
+                    <span class="text-xs ${textColor}">${formatTimeAgo(m.created_at)}</span>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Error loading recent activity:', error);
+    }
+}
+
+function formatTimeAgo(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return formatDate(date);
+}
+
+// QR Scanner
+window.startQRScanner = async function() {
+    if (!currentDuty) {
+        showToast('Please clock in first', 'error');
+        return;
+    }
+    
+    openModal('scannerModal');
+    
+    const video = document.getElementById('qrVideo');
+    
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
+        });
+        
+        video.srcObject = stream;
+        video.play();
+        
+        if (!window.QrScanner) {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/qr-scanner@1.4.2/qr-scanner.umd.min.js';
+            document.head.appendChild(script);
+            await new Promise(resolve => script.onload = resolve);
+        }
+        
+        qrScanner = new QrScanner(video, result => {
+            processQRCode(result.data);
+        }, {
+            highlightScanRegion: true,
+            highlightCodeOutline: true
+        });
+        
+        await qrScanner.start();
+        
+    } catch (error) {
+        console.error('Camera error:', error);
+        closeModal('scannerModal');
+        showToast('Camera access denied', 'error');
+    }
+};
+
+window.stopQRScanner = function() {
+    if (qrScanner) {
+        qrScanner.stop();
+        qrScanner.destroy();
+        qrScanner = null;
+    }
+    
+    const video = document.getElementById('qrVideo');
+    if (video?.srcObject) {
+        video.srcObject.getTracks().forEach(track => track.stop());
+        video.srcObject = null;
+    }
+    
+    closeModal('scannerModal');
+};
+
+async function processQRCode(qrData) {
+    stopQRScanner();
+    
+    try {
+        let guestData;
+        try {
+            guestData = JSON.parse(qrData);
+        } catch {
+            showCheckinResult(false, 'Invalid QR Code', 'This is not a valid guest pass.');
+            return;
+        }
+        
+        if (!guestData.id) {
+            showCheckinResult(false, 'Invalid Pass', 'Invalid guest information.');
+            return;
+        }
+        
+        const { data: guest, error } = await supabase
+            .from('guests')
+            .select('*')
+            .eq('id', guestData.id)
+            .single();
+        
+        if (error || !guest) {
+            showCheckinResult(false, 'Guest Not Found', 'No guest found with this pass.');
+            return;
+        }
+        
+        if (scanMode === 'entry') {
+            await processEntry(guest);
+        } else {
+            await processExit(guest);
+        }
+        
+    } catch (error) {
+        console.error('Error processing QR:', error);
+        showCheckinResult(false, 'Error', 'An error occurred.');
+    }
+}
+
+async function processEntry(guest) {
+    // Check if already inside
+    if (guest.is_inside_venue) {
+        showCheckinResult(false, 'Already Inside', 
+            `<strong>${guest.guest_name}</strong> is already inside the venue.`, 'warning');
+        return;
+    }
+    
+    // Check if pass is valid
+    if (!['pass_sent', 'checked_in'].includes(guest.status)) {
+        showCheckinResult(false, 'Invalid Pass', 
+            `This pass is not valid. Status: ${guest.status}`, 'warning');
+        return;
+    }
+    
+    try {
+        // Update guest status
+        await supabase
+            .from('guests')
+            .update({
+                status: 'checked_in',
+                is_inside_venue: true,
+                last_gate_id: currentDuty.gate_id,
+                entry_count: (guest.entry_count || 0) + 1,
+                last_movement_at: new Date().toISOString(),
+                checked_in_by: currentUser.id
+            })
+            .eq('id', guest.id);
+        
+        // Log movement
+        await supabase
+            .from('guest_movements')
+            .insert({
+                guest_id: guest.id,
+                gate_id: currentDuty.gate_id,
+                marshall_id: currentUser.id,
+                movement_type: 'entry'
+            });
+        
+        const entryNum = (guest.entry_count || 0) + 1;
+        const reentryNote = entryNum > 1 ? `<br><span class="text-sm text-yellow-400">(Re-entry #${entryNum})</span>` : '';
+        
+        showCheckinResult(true, 'Entry Successful!', 
+            `<strong>${guest.guest_name}</strong><br>
+            <span class="text-sm text-gray-400 capitalize">${guest.entry_type} Entry</span>${reentryNote}`, 'success');
+        
+        await loadEntryStats();
+        
+    } catch (error) {
+        console.error('Error processing entry:', error);
+        showCheckinResult(false, 'Entry Failed', 'An error occurred.');
+    }
+}
+
+async function processExit(guest) {
+    // Check if inside venue
+    if (!guest.is_inside_venue) {
+        showCheckinResult(false, 'Not Inside', 
+            `<strong>${guest.guest_name}</strong> is not currently inside the venue.`, 'warning');
+        return;
+    }
+    
+    try {
+        // Update guest status
+        await supabase
+            .from('guests')
+            .update({
+                is_inside_venue: false,
+                last_movement_at: new Date().toISOString()
+            })
+            .eq('id', guest.id);
+        
+        // Log movement
+        await supabase
+            .from('guest_movements')
+            .insert({
+                guest_id: guest.id,
+                gate_id: currentDuty.gate_id,
+                marshall_id: currentUser.id,
+                movement_type: 'exit'
+            });
+        
+        showCheckinResult(true, 'Exit Recorded', 
+            `<strong>${guest.guest_name}</strong> has exited.<br>
+            <span class="text-sm text-gray-400">They can re-enter by scanning again.</span>`, 'success');
+        
+        await loadEntryStats();
+        
+    } catch (error) {
+        console.error('Error processing exit:', error);
+        showCheckinResult(false, 'Exit Failed', 'An error occurred.');
+    }
+}
+
+window.manualLookup = async function() {
+    const mobile = document.getElementById('manualMobile')?.value.trim();
+    
+    if (!mobile || mobile.length !== 10) {
+        showToast('Please enter a valid 10-digit mobile number', 'error');
+        return;
+    }
+    
+    if (!currentDuty) {
+        showToast('Please clock in first', 'error');
+        return;
+    }
+    
+    try {
+        const { data: guests, error } = await supabase
+            .from('guests')
+            .select('*')
+            .eq('mobile_number', mobile);
+        
+        if (error) throw error;
+        
+        if (!guests || guests.length === 0) {
+            showCheckinResult(false, 'Guest Not Found', `No guest found with mobile ${mobile}.`);
+            return;
+        }
+        
+        const guest = guests[0];
+        showGuestLookup(guest);
+        
+    } catch (error) {
+        console.error('Error in manual lookup:', error);
+        showToast('An error occurred', 'error');
+    }
+};
+
+function showGuestLookup(guest) {
+    const content = document.getElementById('guestLookupContent');
+    if (!content) return;
+    
+    const statusColor = guest.is_inside_venue ? 'green' : 'gray';
+    const statusText = guest.is_inside_venue ? 'Inside Venue' : 'Outside Venue';
+    
+    content.innerHTML = `
+        <div class="text-center mb-4">
+            <h4 class="text-xl font-bold">${escapeHtml(guest.guest_name)}</h4>
+            <p class="text-sm text-gray-400 capitalize">${guest.entry_type} Entry</p>
+            <span class="inline-block mt-2 px-3 py-1 rounded-full text-sm bg-${statusColor}-900/30 text-${statusColor}-400 border border-${statusColor}-600/30">
+                ${statusText}
+            </span>
+        </div>
+        <div class="space-y-2 text-sm mb-4">
+            <div class="flex justify-between">
+                <span class="text-gray-400">Mobile:</span>
+                <span>${guest.mobile_number}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-gray-400">Entry Count:</span>
+                <span>${guest.entry_count || 0}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-gray-400">Status:</span>
+                <span>${guest.status}</span>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            ${!guest.is_inside_venue ? `
+                <button onclick="processEntryFromLookup('${guest.id}')" class="rock4one-button success flex-1">
+                    <i class="fas fa-sign-in-alt mr-1"></i>Entry
+                </button>
+            ` : `
+                <button onclick="processExitFromLookup('${guest.id}')" class="rock4one-button danger flex-1">
+                    <i class="fas fa-sign-out-alt mr-1"></i>Exit
+                </button>
+            `}
+            <button onclick="closeModal('guestLookupModal')" class="rock4one-button secondary flex-1">Cancel</button>
+        </div>
+    `;
+    
+    openModal('guestLookupModal');
+}
+
+window.processEntryFromLookup = async function(guestId) {
+    closeModal('guestLookupModal');
+    const { data: guest } = await supabase.from('guests').select('*').eq('id', guestId).single();
+    if (guest) await processEntry(guest);
+    document.getElementById('manualMobile').value = '';
+};
+
+window.processExitFromLookup = async function(guestId) {
+    closeModal('guestLookupModal');
+    const { data: guest } = await supabase.from('guests').select('*').eq('id', guestId).single();
+    if (guest) await processExit(guest);
+    document.getElementById('manualMobile').value = '';
+};
+
+function showCheckinResult(success, title, message, type = null) {
+    const resultType = type || (success ? 'success' : 'error');
+    const icon = resultType === 'success' ? 'fa-check-circle text-green-400' : 
+                 resultType === 'warning' ? 'fa-exclamation-triangle text-yellow-400' : 
+                 'fa-times-circle text-red-400';
+    const bgColor = resultType === 'success' ? 'bg-green-900/30 border-green-600' : 
+                    resultType === 'warning' ? 'bg-yellow-900/30 border-yellow-600' :
+                    'bg-red-900/30 border-red-600';
+    
+    const content = document.getElementById('checkinResultContent');
+    if (content) {
+        content.innerHTML = `
+            <div class="p-6 ${bgColor} border-2 rounded-xl mb-4">
+                <i class="fas ${icon} text-6xl mb-4"></i>
+                <h3 class="text-2xl font-bold mb-2">${title}</h3>
+                <p class="text-gray-300">${message}</p>
+            </div>
+        `;
+    }
+    
+    openModal('checkinResultModal');
+    
+    if (success) {
+        setTimeout(() => closeModal('checkinResultModal'), 3000);
+    }
+}
+
+// =====================================================
+// GATE MANAGEMENT (Super Admin)
+// =====================================================
+
+async function loadGates() {
+    try {
+        const { data: gates, error } = await supabase
+            .from('entry_gates')
+            .select('*')
+            .order('gate_name');
+        
+        if (error) throw error;
+        
+        const container = document.getElementById('gatesListSettings');
+        if (!container) return;
+        
+        if (!gates || gates.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No gates configured</p>';
+            return;
+        }
+        
+        container.innerHTML = gates.map(gate => `
+            <div class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                <div>
+                    <span class="font-semibold">${escapeHtml(gate.gate_name)}</span>
+                    <span class="text-xs text-yellow-400 ml-2">(${gate.gate_code})</span>
+                    ${!gate.is_active ? '<span class="text-xs text-red-400 ml-2">[Inactive]</span>' : ''}
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="editGate('${gate.id}')" class="text-blue-400 hover:text-blue-300 text-sm">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteGate('${gate.id}')" class="text-red-400 hover:text-red-300 text-sm">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Error loading gates:', error);
+    }
+}
+
+window.openGateModal = function(gateId = null) {
+    document.getElementById('editGateId').value = '';
+    document.getElementById('gateName').value = '';
+    document.getElementById('gateCode').value = '';
+    document.getElementById('gateDescription').value = '';
+    document.getElementById('gateActive').checked = true;
+    document.getElementById('gateModalTitle').textContent = 'Add Entry Gate';
+    
+    openModal('gateModal');
+};
+
+window.editGate = async function(gateId) {
+    try {
+        const { data: gate, error } = await supabase
+            .from('entry_gates')
+            .select('*')
+            .eq('id', gateId)
+            .single();
+        
+        if (error) throw error;
+        
+        document.getElementById('editGateId').value = gate.id;
+        document.getElementById('gateName').value = gate.gate_name;
+        document.getElementById('gateCode').value = gate.gate_code;
+        document.getElementById('gateDescription').value = gate.description || '';
+        document.getElementById('gateActive').checked = gate.is_active;
+        document.getElementById('gateModalTitle').textContent = 'Edit Entry Gate';
+        
+        openModal('gateModal');
+        
+    } catch (error) {
+        console.error('Error loading gate:', error);
+        showToast('Failed to load gate', 'error');
+    }
+};
+
+window.deleteGate = async function(gateId) {
+    if (!confirm('Are you sure you want to delete this gate?')) return;
+    
+    try {
+        const { error } = await supabase
+            .from('entry_gates')
+            .delete()
+            .eq('id', gateId);
+        
+        if (error) throw error;
+        
+        showToast('Gate deleted', 'success');
+        await loadGates();
+        
+    } catch (error) {
+        console.error('Error deleting gate:', error);
+        showToast('Failed to delete gate', 'error');
+    }
+};
+
+// Gate form submission
+document.getElementById('gateForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const gateId = document.getElementById('editGateId').value;
+    const gateData = {
+        gate_name: document.getElementById('gateName').value,
+        gate_code: document.getElementById('gateCode').value.toUpperCase(),
+        description: document.getElementById('gateDescription').value || null,
+        is_active: document.getElementById('gateActive').checked
+    };
+    
+    try {
+        if (gateId) {
+            const { error } = await supabase
+                .from('entry_gates')
+                .update(gateData)
+                .eq('id', gateId);
+            if (error) throw error;
+        } else {
+            gateData.created_by = currentUser?.id;
+            const { error } = await supabase
+                .from('entry_gates')
+                .insert(gateData);
+            if (error) throw error;
+        }
+        
+        showToast('Gate saved successfully', 'success');
+        closeModal('gateModal');
+        await loadGates();
+        
+    } catch (error) {
+        console.error('Error saving gate:', error);
+        showToast('Failed to save gate: ' + error.message, 'error');
+    }
+});
+
+// =====================================================
+// VENUE STATUS (Admin/Super Admin Statistics)
+// =====================================================
+
+window.refreshVenueStatus = async function() {
+    await loadVenueStatus();
+    showToast('Venue status refreshed', 'success');
+};
+
+async function loadVenueStatus() {
+    try {
+        // Get guests inside venue
+        const { count: insideCount } = await supabase
+            .from('guests')
+            .select('*', { count: 'exact', head: true })
+            .eq('is_inside_venue', true);
+        
+        // Get guests who have exited
+        const { count: checkedInCount } = await supabase
+            .from('guests')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'checked_in');
+        
+        const exitedCount = (checkedInCount || 0) - (insideCount || 0);
+        
+        // Get marshalls on duty
+        const { count: marshallCount } = await supabase
+            .from('marshall_duties')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'on_duty');
+        
+        // Get active gates
+        const { count: gateCount } = await supabase
+            .from('entry_gates')
+            .select('*', { count: 'exact', head: true })
+            .eq('is_active', true);
+        
+        // Update displays
+        const insideEl = document.getElementById('venueGuestsInside');
+        const exitedEl = document.getElementById('venueGuestsExited');
+        const marshallsEl = document.getElementById('venueMarshallsOnDuty');
+        const gatesEl = document.getElementById('venueActiveGates');
+        
+        if (insideEl) insideEl.textContent = insideCount || 0;
+        if (exitedEl) exitedEl.textContent = exitedCount >= 0 ? exitedCount : 0;
+        if (marshallsEl) marshallsEl.textContent = marshallCount || 0;
+        if (gatesEl) gatesEl.textContent = gateCount || 0;
+        
+        // Load gate stats
+        await loadGateStats();
+        
+        // Load marshalls on duty list
+        await loadMarshallsOnDuty();
+        
+    } catch (error) {
+        console.error('Error loading venue status:', error);
+    }
+}
+
+async function loadGateStats() {
+    try {
+        const { data: gates, error } = await supabase
+            .from('entry_gates')
+            .select('*')
+            .eq('is_active', true);
+        
+        if (error) throw error;
+        
+        const container = document.getElementById('gateStatsContainer');
+        if (!container) return;
+        
+        if (!gates || gates.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-sm col-span-full text-center py-4">No gates configured</p>';
+            return;
+        }
+        
+        let html = '';
+        
+        for (const gate of gates) {
+            // Get marshalls at this gate
+            const { data: marshalls } = await supabase
+                .from('marshall_duties')
+                .select('*, marshall:users(full_name)')
+                .eq('gate_id', gate.id)
+                .eq('status', 'on_duty');
+            
+            // Get entries at this gate
+            const { count: entryCount } = await supabase
+                .from('guest_movements')
+                .select('*', { count: 'exact', head: true })
+                .eq('gate_id', gate.id)
+                .eq('movement_type', 'entry');
+            
+            // Get exits at this gate
+            const { count: exitCount } = await supabase
+                .from('guest_movements')
+                .select('*', { count: 'exact', head: true })
+                .eq('gate_id', gate.id)
+                .eq('movement_type', 'exit');
+            
+            const marshallNames = marshalls?.map(m => m.marshall?.full_name).filter(Boolean).join(', ') || 'No marshalls';
+            const hasMarshall = marshalls && marshalls.length > 0;
+            
+            html += `
+                <div class="p-4 bg-gray-800/50 rounded-lg border ${hasMarshall ? 'border-green-600/30' : 'border-gray-700'}">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h5 class="font-semibold text-yellow-400">${escapeHtml(gate.gate_name)}</h5>
+                            <span class="text-xs text-gray-500">${gate.gate_code}</span>
+                        </div>
+                        ${hasMarshall ? '<span class="px-2 py-1 text-xs bg-green-900/50 text-green-400 rounded">Active</span>' : '<span class="px-2 py-1 text-xs bg-gray-700 text-gray-400 rounded">Unmanned</span>'}
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-sm mb-2">
+                        <div class="text-center p-2 bg-green-900/20 rounded">
+                            <span class="block text-lg font-bold text-green-400">${entryCount || 0}</span>
+                            <span class="text-xs text-gray-400">Entries</span>
+                        </div>
+                        <div class="text-center p-2 bg-red-900/20 rounded">
+                            <span class="block text-lg font-bold text-red-400">${exitCount || 0}</span>
+                            <span class="text-xs text-gray-400">Exits</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400">
+                        <i class="fas fa-user-shield mr-1"></i>${marshallNames}
+                    </p>
+                </div>
+            `;
+        }
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error loading gate stats:', error);
+    }
+}
+
+async function loadMarshallsOnDuty() {
+    try {
+        const { data: duties, error } = await supabase
+            .from('marshall_duties')
+            .select('*, marshall:users(full_name, mobile_number), gate:entry_gates(gate_name, gate_code)')
+            .eq('status', 'on_duty')
+            .order('clock_in_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        const container = document.getElementById('marshallsOnDutyList');
+        if (!container) return;
+        
+        if (!duties || duties.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No marshalls on duty</p>';
+            return;
+        }
+        
+        container.innerHTML = duties.map(d => {
+            const clockIn = new Date(d.clock_in_at);
+            const duration = Math.floor((Date.now() - clockIn.getTime()) / 60000);
+            const durationText = duration < 60 ? `${duration}m` : `${Math.floor(duration/60)}h ${duration%60}m`;
+            
+            return `
+                <div class="flex items-center justify-between p-3 bg-green-900/20 rounded-lg border border-green-600/30">
+                    <div>
+                        <span class="font-semibold">${escapeHtml(d.marshall?.full_name || 'Unknown')}</span>
+                        <span class="text-xs text-gray-400 ml-2">${d.marshall?.mobile_number || ''}</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-sm text-yellow-400">${d.gate?.gate_name || 'Unknown Gate'}</span>
+                        <span class="block text-xs text-gray-500">${durationText} on duty</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Error loading marshalls on duty:', error);
+    }
+}
+
+// Load gates and venue status when statistics tab is shown
+const originalLoadStatistics = loadStatistics;
+loadStatistics = async function() {
+    await originalLoadStatistics();
+    await loadVenueStatus();
+    await loadGates();
+};
+
 // Make functions globally available
 window.loadMySales = loadMySales;
 window.loadVerificationQueue = loadVerificationQueue;
 window.loadAllRegistrations = loadAllRegistrations;
 window.loadSellers = loadSellers;
 window.loadStatistics = loadStatistics;
+window.loadEntryStats = loadEntryStats;
+window.loadVenueStatus = loadVenueStatus;
+window.loadGates = loadGates;
