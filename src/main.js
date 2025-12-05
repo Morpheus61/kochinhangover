@@ -515,6 +515,9 @@ async function refreshTabData(tabId) {
         case 'entry-scan':
             await loadEntryStats();
             break;
+        case 'gate-management':
+            await loadGateManagement();
+            break;
     }
 }
 
@@ -2416,6 +2419,223 @@ document.getElementById('gateForm')?.addEventListener('submit', async (e) => {
 // VENUE STATUS (Admin/Super Admin Statistics)
 // =====================================================
 
+window.refreshGateManagement = async function() {
+    await loadGateManagement();
+    showToast('Gate management refreshed', 'success');
+};
+
+async function loadGateManagement() {
+    try {
+        // Get guests inside venue
+        const { count: insideCount } = await supabase
+            .from('guests')
+            .select('*', { count: 'exact', head: true })
+            .eq('is_inside_venue', true);
+        
+        // Get guests who have exited
+        const { count: checkedInCount } = await supabase
+            .from('guests')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'checked_in');
+        
+        const exitedCount = (checkedInCount || 0) - (insideCount || 0);
+        
+        // Get marshalls on duty
+        const { count: marshallCount } = await supabase
+            .from('marshall_duties')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'on_duty');
+        
+        // Get active gates
+        const { count: gateCount } = await supabase
+            .from('entry_gates')
+            .select('*', { count: 'exact', head: true })
+            .eq('is_active', true);
+        
+        // Update displays for Gate Management tab
+        const insideEl = document.getElementById('gateVenueInside');
+        const exitedEl = document.getElementById('gateVenueExited');
+        const marshallsEl = document.getElementById('gateMarshallCount');
+        const gatesEl = document.getElementById('gateActiveCount');
+        
+        if (insideEl) insideEl.textContent = insideCount || 0;
+        if (exitedEl) exitedEl.textContent = exitedCount >= 0 ? exitedCount : 0;
+        if (marshallsEl) marshallsEl.textContent = marshallCount || 0;
+        if (gatesEl) gatesEl.textContent = gateCount || 0;
+        
+        // Load gate cards
+        await loadGateCards();
+        
+        // Load marshalls on duty list
+        await loadGateMarshallsList();
+        
+        // Load gate configuration (for super admin)
+        await loadGateConfig();
+        
+    } catch (error) {
+        console.error('Error loading gate management:', error);
+    }
+}
+
+async function loadGateCards() {
+    try {
+        const { data: gates, error } = await supabase
+            .from('entry_gates')
+            .select('*')
+            .eq('is_active', true);
+        
+        if (error) throw error;
+        
+        const container = document.getElementById('gateCardsContainer');
+        if (!container) return;
+        
+        if (!gates || gates.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-sm col-span-full text-center py-4">No gates configured. Add gates in Settings.</p>';
+            return;
+        }
+        
+        let html = '';
+        
+        for (const gate of gates) {
+            // Get marshalls at this gate
+            const { data: marshalls } = await supabase
+                .from('marshall_duties')
+                .select('*, marshall:users(full_name)')
+                .eq('gate_id', gate.id)
+                .eq('status', 'on_duty');
+            
+            // Get entries at this gate
+            const { count: entryCount } = await supabase
+                .from('guest_movements')
+                .select('*', { count: 'exact', head: true })
+                .eq('gate_id', gate.id)
+                .eq('movement_type', 'entry');
+            
+            // Get exits at this gate
+            const { count: exitCount } = await supabase
+                .from('guest_movements')
+                .select('*', { count: 'exact', head: true })
+                .eq('gate_id', gate.id)
+                .eq('movement_type', 'exit');
+            
+            const marshallNames = marshalls?.map(m => m.marshall?.full_name).filter(Boolean).join(', ') || 'No marshalls';
+            const hasMarshall = marshalls && marshalls.length > 0;
+            
+            html += `
+                <div class="p-4 bg-gray-800/50 rounded-lg border ${hasMarshall ? 'border-green-600/30' : 'border-gray-700'}">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h5 class="font-semibold text-yellow-400">${escapeHtml(gate.gate_name)}</h5>
+                            <span class="text-xs text-gray-500">${gate.gate_code}</span>
+                        </div>
+                        ${hasMarshall ? '<span class="px-2 py-1 text-xs bg-green-900/50 text-green-400 rounded">Active</span>' : '<span class="px-2 py-1 text-xs bg-gray-700 text-gray-400 rounded">Unmanned</span>'}
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-sm mb-2">
+                        <div class="text-center p-2 bg-green-900/20 rounded">
+                            <span class="block text-lg font-bold text-green-400">${entryCount || 0}</span>
+                            <span class="text-xs text-gray-400">Entries</span>
+                        </div>
+                        <div class="text-center p-2 bg-red-900/20 rounded">
+                            <span class="block text-lg font-bold text-red-400">${exitCount || 0}</span>
+                            <span class="text-xs text-gray-400">Exits</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400">
+                        <i class="fas fa-user-shield mr-1"></i>${marshallNames}
+                    </p>
+                </div>
+            `;
+        }
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error loading gate cards:', error);
+    }
+}
+
+async function loadGateMarshallsList() {
+    try {
+        const { data: duties, error } = await supabase
+            .from('marshall_duties')
+            .select('*, marshall:users(full_name, mobile_number), gate:entry_gates(gate_name, gate_code)')
+            .eq('status', 'on_duty')
+            .order('clock_in_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        const container = document.getElementById('gateMarshallsList');
+        if (!container) return;
+        
+        if (!duties || duties.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No marshalls on duty</p>';
+            return;
+        }
+        
+        container.innerHTML = duties.map(d => {
+            const clockIn = new Date(d.clock_in_at);
+            const duration = Math.floor((Date.now() - clockIn.getTime()) / 60000);
+            const durationText = duration < 60 ? `${duration}m` : `${Math.floor(duration/60)}h ${duration%60}m`;
+            
+            return `
+                <div class="flex items-center justify-between p-3 bg-green-900/20 rounded-lg border border-green-600/30">
+                    <div>
+                        <span class="font-semibold">${escapeHtml(d.marshall?.full_name || 'Unknown')}</span>
+                        <span class="text-xs text-gray-400 ml-2">${d.marshall?.mobile_number || ''}</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-sm text-yellow-400">${d.gate?.gate_name || 'Unknown Gate'}</span>
+                        <span class="block text-xs text-gray-500">${durationText} on duty</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Error loading gate marshalls list:', error);
+    }
+}
+
+async function loadGateConfig() {
+    try {
+        const { data: gates, error } = await supabase
+            .from('entry_gates')
+            .select('*')
+            .order('gate_name');
+        
+        if (error) throw error;
+        
+        const container = document.getElementById('gateConfigList');
+        if (!container) return;
+        
+        if (!gates || gates.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No gates configured</p>';
+            return;
+        }
+        
+        container.innerHTML = gates.map(gate => `
+            <div class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                <div>
+                    <span class="font-semibold">${escapeHtml(gate.gate_name)}</span>
+                    <span class="text-xs text-yellow-400 ml-2">(${gate.gate_code})</span>
+                    ${!gate.is_active ? '<span class="text-xs text-red-400 ml-2">[Inactive]</span>' : '<span class="text-xs text-green-400 ml-2">[Active]</span>'}
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="editGate('${gate.id}')" class="text-blue-400 hover:text-blue-300 text-sm">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteGate('${gate.id}')" class="text-red-400 hover:text-red-300 text-sm">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Error loading gate config:', error);
+    }
+}
+
 window.refreshVenueStatus = async function() {
     await loadVenueStatus();
     showToast('Venue status refreshed', 'success');
@@ -2607,3 +2827,4 @@ window.loadStatistics = loadStatistics;
 window.loadEntryStats = loadEntryStats;
 window.loadVenueStatus = loadVenueStatus;
 window.loadGates = loadGates;
+window.loadGateManagement = loadGateManagement;

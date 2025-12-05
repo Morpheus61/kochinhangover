@@ -34,7 +34,7 @@ INSERT INTO settings (setting_key, setting_value, description) VALUES
     ('payment_qr_code', '', 'Payment QR Code image (base64)');
 
 -- =====================================================
--- USERS TABLE - With three roles and club info
+-- USERS TABLE - With four roles and club info
 -- =====================================================
 CREATE TABLE users (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -44,7 +44,7 @@ CREATE TABLE users (
     mobile_number TEXT NOT NULL,
     club_name TEXT,
     club_number TEXT,
-    role TEXT NOT NULL CHECK (role IN ('super_admin', 'admin', 'seller')),
+    role TEXT NOT NULL CHECK (role IN ('super_admin', 'admin', 'seller', 'entry_marshall')),
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     created_by UUID

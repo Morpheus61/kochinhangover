@@ -600,6 +600,10 @@
                         <span>Manage Sellers</span>
                     </div>
                     <div class="mobile-menu-divider"></div>
+                    <div class="mobile-menu-item" data-tab="gate-management">
+                        <i class="fas fa-door-open"></i>
+                        <span>Gate Management</span>
+                    </div>
                     <div class="mobile-menu-item" data-tab="settings">
                         <i class="fas fa-cog"></i>
                         <span>Settings</span>
@@ -621,6 +625,10 @@
                         <span>Seller Stats</span>
                     </div>
                     <div class="mobile-menu-divider"></div>
+                    <div class="mobile-menu-item" data-tab="gate-management">
+                        <i class="fas fa-door-open"></i>
+                        <span>Gate Management</span>
+                    </div>
                     <div class="mobile-menu-item" data-tab="statistics">
                         <i class="fas fa-chart-pie"></i>
                         <span>Statistics</span>
@@ -678,6 +686,9 @@
                     <button class="nav-tab super-admin-only" data-tab="seller-management">
                         <i class="fas fa-user-tie mr-2"></i><span class="tab-text">Sellers</span>
                     </button>
+                    <button class="nav-tab super-admin-only" data-tab="gate-management">
+                        <i class="fas fa-door-open mr-2"></i><span class="tab-text">Gates</span>
+                    </button>
                     <button class="nav-tab super-admin-only" data-tab="settings">
                         <i class="fas fa-cog mr-2"></i><span class="tab-text">Settings</span>
                     </button>
@@ -688,6 +699,9 @@
                     </button>
                     <button class="nav-tab admin-only" data-tab="view-sellers">
                         <i class="fas fa-chart-bar mr-2"></i><span class="tab-text">Seller Stats</span>
+                    </button>
+                    <button class="nav-tab admin-only" data-tab="gate-management">
+                        <i class="fas fa-door-open mr-2"></i><span class="tab-text">Gates</span>
                     </button>
                     
                     <!-- Stats Tab (Admin & Super Admin) -->
@@ -1149,6 +1163,82 @@
                                 <tr><td colspan="11" class="text-center py-8 text-gray-500">Loading...</td></tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========== GATE MANAGEMENT (Admin & Super Admin) ========== -->
+            <section id="tab-gate-management" class="tab-content hidden">
+                <div class="rock4one-container p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold rock4one-header">
+                            <i class="fas fa-door-open mr-2"></i>Gate Management
+                        </h2>
+                        <button onclick="refreshGateManagement()" class="rock4one-button text-sm">
+                            <i class="fas fa-sync-alt mr-1"></i>Refresh
+                        </button>
+                    </div>
+                    
+                    <!-- Live Venue Status -->
+                    <div class="card mb-6">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="inline-block w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+                            <h3 class="font-semibold text-yellow-400">Live Venue Status</h3>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                            <div class="stat-card bg-green-900/30 border border-green-600/30">
+                                <h4>Inside Venue</h4>
+                                <p id="gateVenueInside" class="text-green-400">0</p>
+                            </div>
+                            <div class="stat-card bg-red-900/30 border border-red-600/30">
+                                <h4>Exited</h4>
+                                <p id="gateVenueExited" class="text-red-400">0</p>
+                            </div>
+                            <div class="stat-card bg-orange-900/30 border border-orange-600/30">
+                                <h4>Marshalls On Duty</h4>
+                                <p id="gateMarshallCount" class="text-orange-400">0</p>
+                            </div>
+                            <div class="stat-card bg-blue-900/30 border border-blue-600/30">
+                                <h4>Active Gates</h4>
+                                <p id="gateActiveCount" class="text-blue-400">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Entry Gates Status -->
+                    <div class="card mb-6">
+                        <h3 class="font-semibold mb-4 text-yellow-400">
+                            <i class="fas fa-broadcast-tower mr-2"></i>Entry Gates Status
+                        </h3>
+                        <div id="gateCardsContainer" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <p class="text-gray-500 text-sm col-span-full text-center py-4">Loading gates...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Marshalls On Duty -->
+                    <div class="card mb-6">
+                        <h3 class="font-semibold mb-4 text-yellow-400">
+                            <i class="fas fa-user-shield mr-2"></i>Entry Marshalls On Duty
+                        </h3>
+                        <div id="gateMarshallsList" class="space-y-2">
+                            <p class="text-gray-500 text-sm text-center py-4">No marshalls on duty</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Gate Configuration (Super Admin Only) -->
+                    <div class="card super-admin-only">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-semibold text-yellow-400">
+                                <i class="fas fa-cog mr-2"></i>Gate Configuration
+                            </h3>
+                            <button onclick="openGateModal()" class="rock4one-button text-sm">
+                                <i class="fas fa-plus mr-1"></i>Add Gate
+                            </button>
+                        </div>
+                        <div id="gateConfigList" class="space-y-2">
+                            <p class="text-gray-500 text-sm text-center py-4">Loading gates...</p>
+                        </div>
                     </div>
                 </div>
             </section>
