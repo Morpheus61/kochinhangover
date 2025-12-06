@@ -1,40 +1,106 @@
-# Kochin Hangover - Registration App
+# Rock 4 One - Event Registration App
 
-A modern web application for managing event registrations, guest passes, and beverage transactions.
+**Harmony for Humanity** 🎸
 
-## Setup
+A modern event registration and entry management system built with Supabase and vanilla JavaScript.
 
-1. Install dependencies:
-```bash
-npm install
+## 🚀 Quick Setup Guide
+
+### Step 1: Database Setup (Supabase)
+
+1. Go to your new Supabase project: https://supabase.com/dashboard/project/nybbovgdsvbwabuqthbd
+2. Navigate to **SQL Editor**
+3. Copy and paste the contents of `supabase/migrations/001_rock4one_setup.sql`
+4. Click **Run** to execute the SQL
+
+This will create:
+- `guests` table for storing registrations
+- `users` table for authentication
+- Default admin user: **Admin** / **Rock4One2025**
+
+### Step 2: Update Netlify Environment Variables
+
+1. Go to your Netlify dashboard
+2. Navigate to **Site Settings** → **Environment Variables**
+3. Update these variables:
+
+```
+VITE_SUPABASE_URL=https://nybbovgdsvbwabuqthbd.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55YmJvdmdkc3Zid2FidXF0aGJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3NTU5NTIsImV4cCI6MjA4MDMzMTk1Mn0.g-1eRhGpiiOICp0tTPjsvAcuIUYur1NIqw1AOt1tugw
 ```
 
-2. Configure environment variables:
-- Copy `.env.example` to `.env`
-- Add your Supabase project URL and anon key
+### Step 3: Deploy Updated Code
 
-3. Run development server:
-```bash
-npm run dev
-```
+Replace the files in your GitHub repository with the updated files:
 
-4. Build for production:
-```bash
-npm run build
-```
+- `src/index.html`
+- `src/main.js`
+- `src/styles.css`
+- `src/manifest.json`
+- `src/config/supabase.js`
+- `src/utils/supabase-client.js`
+- `src/utils/whatsapp-share.js`
+- `src/icons/*` (all icon files)
+- `.env`
 
-## Features
+Push to your GitHub repository, and Netlify will automatically deploy.
 
-- Guest registration and management
-- QR code-based guest passes
-- Transaction processing
-- Beverage counter
-- Role-based access control
-- Real-time data synchronization
+### Step 4: First Login
 
-## Tech Stack
+1. Open your app URL
+2. Login with:
+   - **Username:** Admin
+   - **Password:** Rock4One2025
+3. **Important:** Change the admin password immediately after first login!
 
-- Vite
-- Supabase
-- TailwindCSS
-- QR Code Generator
+## 📁 Files Updated
+
+| File | Description |
+|------|-------------|
+| `src/index.html` | Updated branding, colors, and styling |
+| `src/main.js` | New Supabase credentials, updated colors and messages |
+| `src/styles.css` | New gold/black color scheme |
+| `src/manifest.json` | Updated app name and colors |
+| `src/config/supabase.js` | New Supabase connection details |
+| `src/icons/*` | New Rock 4 One icons |
+| `.env` | Environment variables |
+| `supabase/migrations/001_rock4one_setup.sql` | Database schema |
+
+## 🎨 Color Scheme
+
+- **Primary (Gold):** #d4a853
+- **Secondary (Red):** #c9302c
+- **Accent (Bright Gold):** #f5d76e
+- **Dark (Black):** #0a0a0a
+- **Light (Warm White):** #fff8e7
+
+## 👤 User Roles
+
+- **Admin:** Full access to all features
+- **Staff:** Access to registration, guests, and stats
+- **Doorman:** Access to entry verification and guest list only
+
+## 📱 Features
+
+- ✅ Guest Registration
+- ✅ QR Code Generation & Scanning
+- ✅ WhatsApp Pass Sharing
+- ✅ Entry Verification
+- ✅ Statistics Dashboard
+- ✅ PDF/CSV Export
+- ✅ PWA Support (installable)
+- ✅ Offline Support
+
+## 🔒 Security Notes
+
+1. Change the default admin password after setup
+2. The app uses Row Level Security (RLS) in Supabase
+3. All API keys are safe for client-side use (anon key only)
+
+## 📞 Support
+
+For issues or customizations, contact your developer.
+
+---
+
+**Rock 4 One** - Harmony for Humanity 🎸

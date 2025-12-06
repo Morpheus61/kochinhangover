@@ -2,6 +2,7 @@
   "name": "kochin-hangover-registration",
   "version": "1.0.0",
   "description": "Registration and management system for Kochin Hangover event",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "dev": "vite",
@@ -9,10 +10,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
-    "qrcode": "^1.5.3"
+    "@supabase/supabase-js": "^2.49.4",
+    "html2canvas": "^1.4.1",
+    "html5-qrcode": "^2.3.8",
+    "papaparse": "^5.5.2",
+    "qrcode": "^1.5.4",
+    "qrcodejs2": "^0.0.2"
   },
   "devDependencies": {
+    "@vitejs/plugin-legacy": "^5.0.0",
+    "sharp": "^0.34.1",
     "vite": "^5.0.0"
   }
 }

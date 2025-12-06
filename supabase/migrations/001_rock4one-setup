@@ -1,0 +1,113 @@
+-- =====================================================
+-- ROCK 4 ONE - Database Setup Script
+-- Run this in your Supabase SQL Editor
+-- =====================================================
+
+-- Drop existing tables if they exist (fresh start)
+DROP TABLE IF EXISTS guests CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
+-- Create the guests table with the exact structure needed
+CREATE TABLE guests (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    guest_name TEXT NOT NULL,
+    club_name TEXT,
+    mobile_number TEXT NOT NULL,
+    entry_type TEXT NOT NULL,
+    payment_mode TEXT NOT NULL,
+    total_amount NUMERIC NOT NULL,
+    paid_amount NUMERIC NOT NULL,
+    has_room_booking BOOLEAN DEFAULT false,
+    room_booking_amount NUMERIC DEFAULT 0,
+    status TEXT DEFAULT 'pending',
+    registration_date TIMESTAMP WITH TIME ZONE,
+    verified_at TIMESTAMP WITH TIME ZONE,
+    denied_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- Create the users table with admin credentials
+CREATE TABLE users (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('admin', 'staff', 'doorman')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- Insert default admin user for Rock 4 One
+-- IMPORTANT: Change this password after first login!
+INSERT INTO users (username, password, role) 
+VALUES ('Admin', 'Rock4One2025', 'admin');
+
+-- Create RLS policies for guests table
+ALTER TABLE guests ENABLE ROW LEVEL SECURITY;
+
+-- Allow anyone to insert guests
+CREATE POLICY "Allow anyone to insert guests"
+ON guests FOR INSERT
+TO anon
+WITH CHECK (true);
+
+-- Allow anyone to view guests
+CREATE POLICY "Allow anyone to view guests"
+ON guests FOR SELECT
+TO anon
+USING (true);
+
+-- Allow anyone to update guests
+CREATE POLICY "Allow anyone to update guests"
+ON guests FOR UPDATE
+TO anon
+USING (true)
+WITH CHECK (true);
+
+-- Allow anyone to delete guests
+CREATE POLICY "Allow anyone to delete guests"
+ON guests FOR DELETE
+TO anon
+USING (true);
+
+-- Create RLS policies for users table
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+-- Allow anyone to select from users table (needed for login)
+CREATE POLICY "Allow anyone to select users"
+ON users FOR SELECT
+TO anon
+USING (true);
+
+-- Allow authenticated users to insert users (for admin to add staff)
+CREATE POLICY "Allow insert users"
+ON users FOR INSERT
+TO anon
+WITH CHECK (true);
+
+-- Allow authenticated users to update users
+CREATE POLICY "Allow update users"
+ON users FOR UPDATE
+TO anon
+USING (true)
+WITH CHECK (true);
+
+-- Allow authenticated users to delete users
+CREATE POLICY "Allow delete users"
+ON users FOR DELETE
+TO anon
+USING (true);
+
+-- Create indexes for better performance
+CREATE INDEX idx_guests_status ON guests(status);
+CREATE INDEX idx_guests_club_name ON guests(club_name);
+CREATE INDEX idx_guests_created_at ON guests(created_at DESC);
+CREATE INDEX idx_users_username ON users(username);
+
+-- =====================================================
+-- Setup Complete!
+-- Default Admin Login:
+--   Username: Admin
+--   Password: Rock4One2025
+-- 
+-- IMPORTANT: Change the admin password after first login!
+-- =====================================================
