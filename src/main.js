@@ -2828,3 +2828,4 @@ window.loadEntryStats = loadEntryStats;
 window.loadVenueStatus = loadVenueStatus;
 window.loadGates = loadGates;
 window.loadGateManagement = loadGateManagement;
+window.loadMarshallManagement = loadMarshallManagement;

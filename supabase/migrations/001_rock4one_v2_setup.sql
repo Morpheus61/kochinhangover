@@ -1,10 +1,13 @@
 -- =====================================================
--- ROCK 4 ONE - Database Setup Script v2.0
--- Multi-Seller Workflow with Payment Verification
+-- ROCK 4 ONE - Complete Database Setup Script v2.2
+-- Multi-Seller Workflow + Gate Management System
 -- Run this in your Supabase SQL Editor
 -- =====================================================
 
 -- Drop existing tables if they exist (fresh start)
+DROP TABLE IF EXISTS guest_movements CASCADE;
+DROP TABLE IF EXISTS marshall_duties CASCADE;
+DROP TABLE IF EXISTS entry_gates CASCADE;
 DROP TABLE IF EXISTS guests CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS settings CASCADE;
@@ -56,7 +59,26 @@ INSERT INTO users (username, password, full_name, mobile_number, role)
 VALUES ('SuperAdmin', 'Rock4One@2025', 'Super Administrator', '0000000000', 'super_admin');
 
 -- =====================================================
--- GUESTS TABLE - With seller tracking & payment verification
+-- ENTRY GATES TABLE - Physical entry points
+-- =====================================================
+CREATE TABLE entry_gates (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    gate_name TEXT NOT NULL,
+    gate_code TEXT UNIQUE NOT NULL,  -- e.g., 'MAIN', 'VIP', 'SIDE-A'
+    description TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    created_by UUID REFERENCES users(id)
+);
+
+-- Insert default gates
+INSERT INTO entry_gates (gate_name, gate_code, description) VALUES 
+    ('Main Entrance', 'MAIN', 'Primary entry point'),
+    ('VIP Entrance', 'VIP', 'VIP and special guests'),
+    ('Side Gate A', 'SIDE-A', 'Side entrance near parking');
+
+-- =====================================================
+-- GUESTS TABLE - With seller tracking & gate management
 -- =====================================================
 CREATE TABLE guests (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -96,9 +118,42 @@ CREATE TABLE guests (
     checked_in_at TIMESTAMP WITH TIME ZONE,
     checked_in_by UUID REFERENCES users(id),
     
+    -- Gate Management - Venue Tracking
+    is_inside_venue BOOLEAN DEFAULT false,
+    last_gate_id UUID REFERENCES entry_gates(id),
+    entry_count INTEGER DEFAULT 0,
+    last_movement_at TIMESTAMP WITH TIME ZONE,
+    
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- =====================================================
+-- MARSHALL DUTIES TABLE - Clock In/Out Records
+-- =====================================================
+CREATE TABLE marshall_duties (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    marshall_id UUID NOT NULL REFERENCES users(id),
+    gate_id UUID NOT NULL REFERENCES entry_gates(id),
+    clock_in_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    clock_out_at TIMESTAMP WITH TIME ZONE,
+    status TEXT NOT NULL DEFAULT 'on_duty' CHECK (status IN ('on_duty', 'off_duty')),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- =====================================================
+-- GUEST MOVEMENTS TABLE - Entry/Exit Log
+-- =====================================================
+CREATE TABLE guest_movements (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    guest_id UUID NOT NULL REFERENCES guests(id),
+    gate_id UUID NOT NULL REFERENCES entry_gates(id),
+    marshall_id UUID REFERENCES users(id),
+    movement_type TEXT NOT NULL CHECK (movement_type IN ('entry', 'exit')),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
 -- =====================================================
@@ -109,6 +164,9 @@ CREATE TABLE guests (
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE guests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE entry_gates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE marshall_duties ENABLE ROW LEVEL SECURITY;
+ALTER TABLE guest_movements ENABLE ROW LEVEL SECURITY;
 
 -- SETTINGS POLICIES
 CREATE POLICY "Anyone can view settings" ON settings FOR SELECT TO anon USING (true);
@@ -126,16 +184,48 @@ CREATE POLICY "Anyone can insert guests" ON guests FOR INSERT TO anon WITH CHECK
 CREATE POLICY "Anyone can update guests" ON guests FOR UPDATE TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "Anyone can delete guests" ON guests FOR DELETE TO anon USING (true);
 
+-- ENTRY GATES POLICIES
+CREATE POLICY "Anyone can view gates" ON entry_gates FOR SELECT TO anon USING (true);
+CREATE POLICY "Anyone can insert gates" ON entry_gates FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "Anyone can update gates" ON entry_gates FOR UPDATE TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "Anyone can delete gates" ON entry_gates FOR DELETE TO anon USING (true);
+
+-- MARSHALL DUTIES POLICIES
+CREATE POLICY "Anyone can view duties" ON marshall_duties FOR SELECT TO anon USING (true);
+CREATE POLICY "Anyone can insert duties" ON marshall_duties FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "Anyone can update duties" ON marshall_duties FOR UPDATE TO anon USING (true) WITH CHECK (true);
+
+-- GUEST MOVEMENTS POLICIES
+CREATE POLICY "Anyone can view movements" ON guest_movements FOR SELECT TO anon USING (true);
+CREATE POLICY "Anyone can insert movements" ON guest_movements FOR INSERT TO anon WITH CHECK (true);
+
 -- =====================================================
 -- INDEXES FOR PERFORMANCE
 -- =====================================================
+
+-- Guests indexes
 CREATE INDEX idx_guests_status ON guests(status);
 CREATE INDEX idx_guests_registered_by ON guests(registered_by);
 CREATE INDEX idx_guests_payment_mode ON guests(payment_mode);
 CREATE INDEX idx_guests_created_at ON guests(created_at DESC);
+CREATE INDEX idx_guests_inside_venue ON guests(is_inside_venue);
+CREATE INDEX idx_guests_checked_in_by ON guests(checked_in_by);
+
+-- Users indexes
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_role ON users(role);
+
+-- Settings indexes
 CREATE INDEX idx_settings_key ON settings(setting_key);
+
+-- Gate Management indexes
+CREATE INDEX idx_marshall_duties_status ON marshall_duties(status);
+CREATE INDEX idx_marshall_duties_marshall ON marshall_duties(marshall_id);
+CREATE INDEX idx_marshall_duties_gate ON marshall_duties(gate_id);
+CREATE INDEX idx_guest_movements_guest ON guest_movements(guest_id);
+CREATE INDEX idx_guest_movements_gate ON guest_movements(gate_id);
+CREATE INDEX idx_guest_movements_type ON guest_movements(movement_type);
+CREATE INDEX idx_guest_movements_time ON guest_movements(created_at);
 
 -- =====================================================
 -- VIEWS FOR EASY REPORTING
@@ -184,6 +274,49 @@ SELECT
     COALESCE(SUM(CASE WHEN payment_mode = 'bank_transfer' AND status NOT IN ('pending_verification', 'rejected') THEN ticket_price ELSE 0 END), 0) as bank_revenue
 FROM guests;
 
+-- View: Marshalls currently on duty
+CREATE OR REPLACE VIEW active_marshalls AS
+SELECT 
+    md.id as duty_id,
+    md.marshall_id,
+    u.full_name as marshall_name,
+    u.mobile_number as marshall_mobile,
+    md.gate_id,
+    eg.gate_name,
+    eg.gate_code,
+    md.clock_in_at,
+    EXTRACT(EPOCH FROM (NOW() - md.clock_in_at))/3600 as hours_on_duty
+FROM marshall_duties md
+JOIN users u ON md.marshall_id = u.id
+JOIN entry_gates eg ON md.gate_id = eg.id
+WHERE md.status = 'on_duty';
+
+-- View: Gate statistics
+CREATE OR REPLACE VIEW gate_statistics AS
+SELECT 
+    eg.id as gate_id,
+    eg.gate_name,
+    eg.gate_code,
+    COUNT(DISTINCT CASE WHEN md.status = 'on_duty' THEN md.marshall_id END) as marshalls_on_duty,
+    COUNT(DISTINCT CASE WHEN g.is_inside_venue = true AND g.last_gate_id = eg.id THEN g.id END) as guests_entered,
+    COUNT(DISTINCT CASE WHEN gm.movement_type = 'entry' AND gm.created_at > NOW() - INTERVAL '24 hours' THEN gm.id END) as entries_today,
+    COUNT(DISTINCT CASE WHEN gm.movement_type = 'exit' AND gm.created_at > NOW() - INTERVAL '24 hours' THEN gm.id END) as exits_today
+FROM entry_gates eg
+LEFT JOIN marshall_duties md ON eg.id = md.gate_id AND md.status = 'on_duty'
+LEFT JOIN guests g ON eg.id = g.last_gate_id
+LEFT JOIN guest_movements gm ON eg.id = gm.gate_id
+WHERE eg.is_active = true
+GROUP BY eg.id, eg.gate_name, eg.gate_code;
+
+-- View: Current venue status
+CREATE OR REPLACE VIEW venue_status AS
+SELECT 
+    (SELECT COUNT(*) FROM guests WHERE is_inside_venue = true) as guests_inside,
+    (SELECT COUNT(*) FROM guests WHERE status = 'checked_in') as total_checked_in,
+    (SELECT COUNT(*) FROM guests WHERE status IN ('pass_sent', 'checked_in')) as total_expected,
+    (SELECT COUNT(*) FROM marshall_duties WHERE status = 'on_duty') as marshalls_on_duty,
+    (SELECT COUNT(*) FROM entry_gates WHERE is_active = true) as active_gates;
+
 -- =====================================================
 -- SETUP COMPLETE!
 -- 
@@ -194,7 +327,17 @@ FROM guests;
 -- IMPORTANT: Change the password after first login!
 --
 -- Roles:
---   super_admin - Full access, verify payments, send passes
---   admin       - Read-only access to all data
---   seller      - Register guests, view own sales
+--   super_admin    - Full access, verify payments, manage gates
+--   admin          - Read-only access to all data + gate status
+--   seller         - Register guests, view own sales
+--   entry_marshall - Scan QR codes, manage entry/exit at gates
+--
+-- Gate Management Features:
+--   - entry_gates: Configure physical entry points
+--   - marshall_duties: Track clock in/out at gates
+--   - guest_movements: Log every entry/exit with timestamps
+--   - is_inside_venue: Track if guest is currently inside
+--   - entry_count: Track re-entries
 -- =====================================================
+
+SELECT 'Rock 4 One v2.2 Database Setup Complete!' as status;
