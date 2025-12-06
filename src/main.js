@@ -682,41 +682,173 @@ async function loadVerificationQueue(filter = 'all') {
         
         // Update pending badge
         const pendingBadge = document.getElementById('pendingBadge');
+        const mobilePendingBadge = document.getElementById('mobilePendingBadge');
         if (pendingBadge) {
             pendingBadge.textContent = guests.length;
             pendingBadge.style.display = guests.length > 0 ? 'inline' : 'none';
         }
+        if (mobilePendingBadge) {
+            mobilePendingBadge.textContent = guests.length;
+            mobilePendingBadge.style.display = guests.length > 0 ? 'inline' : 'none';
+        }
         
-        const tbody = document.getElementById('verificationQueueBody');
+        const container = document.getElementById('verificationQueueList');
         if (guests.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-gray-500">No pending verifications 🎉</td></tr>';
+            container.innerHTML = '<p class="text-center text-gray-500 py-8">No pending verifications 🎉</p>';
             return;
         }
         
-        tbody.innerHTML = guests.map(g => `
-            <tr data-payment="${g.payment_mode}">
-                <td class="font-semibold">${escapeHtml(g.guest_name)}</td>
-                <td>${g.mobile_number}</td>
-                <td class="capitalize">${g.entry_type}</td>
-                <td class="font-semibold text-yellow-400">₹${g.ticket_price?.toLocaleString()}</td>
-                <td>${formatPaymentMode(g.payment_mode)}</td>
-                <td class="text-sm">${g.payment_reference || '-'}</td>
-                <td class="text-sm">${g.seller?.full_name || g.seller?.username || 'Unknown'}</td>
-                <td>
-                    <button onclick="showVerifyModal('${g.id}')" class="rock4one-button success text-xs py-1 px-2 mr-1">
-                        <i class="fas fa-check"></i>
-                    </button>
-                    <button onclick="quickReject('${g.id}')" class="rock4one-button danger text-xs py-1 px-2">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </td>
-            </tr>
+        // Store guests data for modal access
+        window.verificationGuestsData = guests;
+        
+        container.innerHTML = guests.map(g => `
+            <div class="guest-card bg-gray-800/50 rounded-lg p-4 border border-gray-700 cursor-pointer hover:border-yellow-600/50 transition-all" 
+                 onclick="showGuestDetailModal('${g.id}', 'verification')" data-payment="${g.payment_mode}">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-semibold text-white truncate">${escapeHtml(g.guest_name)}</h4>
+                        <p class="text-sm text-gray-400">${g.mobile_number}</p>
+                    </div>
+                    <div class="flex items-center gap-2 ml-3">
+                        <span class="px-2 py-1 rounded text-xs ${g.payment_mode === 'cash' ? 'bg-green-900/50 text-green-400' : g.payment_mode === 'upi' ? 'bg-blue-900/50 text-blue-400' : 'bg-purple-900/50 text-purple-400'}">
+                            ${g.payment_mode === 'cash' ? '💵' : g.payment_mode === 'upi' ? '📱' : '🏦'} ${g.payment_mode.toUpperCase()}
+                        </span>
+                        <span class="text-yellow-400 font-bold">₹${g.ticket_price?.toLocaleString()}</span>
+                        <i class="fas fa-chevron-right text-gray-500"></i>
+                    </div>
+                </div>
+            </div>
         `).join('');
         
     } catch (error) {
         console.error('Error loading verification queue:', error);
     }
 }
+
+// Show Guest Detail Modal (mobile-optimized)
+window.showGuestDetailModal = async function(guestId, source = 'all') {
+    try {
+        const { data: guest, error } = await supabase
+            .from('guests')
+            .select(`*, seller:registered_by(username, full_name)`)
+            .eq('id', guestId)
+            .single();
+        
+        if (error) throw error;
+        
+        const isVerification = source === 'verification';
+        
+        let actionButtons = '';
+        if (isVerification) {
+            // Verification queue actions
+            actionButtons = `
+                <div class="flex gap-2 mt-4">
+                    <button onclick="closeModal('guestDetailModal'); showVerifyModal('${guest.id}')" class="rock4one-button success flex-1 py-3">
+                        <i class="fas fa-check mr-2"></i>Verify Payment
+                    </button>
+                    <button onclick="closeModal('guestDetailModal'); quickReject('${guest.id}')" class="rock4one-button danger flex-1 py-3">
+                        <i class="fas fa-times mr-2"></i>Reject
+                    </button>
+                </div>
+            `;
+        } else {
+            // All guests actions based on status
+            if (guest.status === 'pending_verification') {
+                actionButtons = `
+                    <div class="flex gap-2 mt-4">
+                        <button onclick="closeModal('guestDetailModal'); showVerifyModal('${guest.id}')" class="rock4one-button success flex-1 py-3">
+                            <i class="fas fa-check mr-2"></i>Verify
+                        </button>
+                        <button onclick="closeModal('guestDetailModal'); quickReject('${guest.id}')" class="rock4one-button danger flex-1 py-3">
+                            <i class="fas fa-times mr-2"></i>Reject
+                        </button>
+                    </div>
+                `;
+            } else if (['payment_verified', 'pass_generated'].includes(guest.status)) {
+                actionButtons = `
+                    <button onclick="closeModal('guestDetailModal'); generateAndShowPass('${guest.id}')" class="rock4one-button w-full py-3 mt-4">
+                        <i class="fas fa-qrcode mr-2"></i>Generate & Send Pass
+                    </button>
+                `;
+            } else if (guest.status === 'pass_sent') {
+                actionButtons = `
+                    <button onclick="closeModal('guestDetailModal'); resendPass('${guest.id}')" class="rock4one-button w-full py-3 mt-4">
+                        <i class="fab fa-whatsapp mr-2"></i>Resend Pass
+                    </button>
+                `;
+            }
+        }
+        
+        const content = `
+            <!-- Guest Info Header -->
+            <div class="text-center mb-4 pb-4 border-b border-gray-700">
+                <div class="w-16 h-16 mx-auto rounded-full bg-yellow-600/20 flex items-center justify-center mb-3">
+                    <i class="fas fa-user text-yellow-400 text-2xl"></i>
+                </div>
+                <h4 class="text-xl font-bold text-white">${escapeHtml(guest.guest_name)}</h4>
+                <p class="text-gray-400">${guest.mobile_number}</p>
+                <div class="mt-2">${getStatusBadge(guest.status)}</div>
+            </div>
+            
+            <!-- Guest Details -->
+            <div class="space-y-3">
+                <div class="flex justify-between items-center py-2 border-b border-gray-700/50">
+                    <span class="text-gray-400">Entry Type</span>
+                    <span class="font-semibold capitalize">${guest.entry_type}</span>
+                </div>
+                <div class="flex justify-between items-center py-2 border-b border-gray-700/50">
+                    <span class="text-gray-400">Amount</span>
+                    <span class="font-bold text-yellow-400">₹${guest.ticket_price?.toLocaleString()}</span>
+                </div>
+                <div class="flex justify-between items-center py-2 border-b border-gray-700/50">
+                    <span class="text-gray-400">Payment Mode</span>
+                    <span>${formatPaymentMode(guest.payment_mode)}</span>
+                </div>
+                ${guest.payment_reference ? `
+                <div class="flex justify-between items-center py-2 border-b border-gray-700/50">
+                    <span class="text-gray-400">Reference</span>
+                    <span class="font-mono text-sm text-blue-400">${guest.payment_reference}</span>
+                </div>
+                ` : ''}
+                <div class="flex justify-between items-center py-2 border-b border-gray-700/50">
+                    <span class="text-gray-400">Registered By</span>
+                    <span>${guest.seller?.full_name || guest.seller?.username || '-'}</span>
+                </div>
+                <div class="flex justify-between items-center py-2 border-b border-gray-700/50">
+                    <span class="text-gray-400">Registered On</span>
+                    <span class="text-sm">${formatDate(guest.created_at)}</span>
+                </div>
+                ${guest.is_inside_venue !== undefined ? `
+                <div class="flex justify-between items-center py-2 border-b border-gray-700/50">
+                    <span class="text-gray-400">Venue Status</span>
+                    <span class="${guest.is_inside_venue ? 'text-green-400' : 'text-gray-400'}">
+                        ${guest.is_inside_venue ? '🟢 Inside Venue' : '⚪ Outside'}
+                    </span>
+                </div>
+                ` : ''}
+                ${guest.entry_count > 0 ? `
+                <div class="flex justify-between items-center py-2 border-b border-gray-700/50">
+                    <span class="text-gray-400">Entry Count</span>
+                    <span>${guest.entry_count} time(s)</span>
+                </div>
+                ` : ''}
+            </div>
+            
+            ${actionButtons}
+            
+            <button onclick="closeModal('guestDetailModal')" class="rock4one-button secondary w-full py-3 mt-3">
+                Close
+            </button>
+        `;
+        
+        document.getElementById('guestDetailContent').innerHTML = content;
+        openModal('guestDetailModal');
+        
+    } catch (error) {
+        console.error('Error loading guest details:', error);
+        showToast('Failed to load guest details', 'error');
+    }
+};
 
 window.showVerifyModal = async function(guestId) {
     try {
@@ -900,27 +1032,48 @@ async function loadAllRegistrations(statusFilter = 'all') {
 }
 
 function renderAllRegistrations(guests) {
-    const tbody = document.getElementById('allRegistrationsBody');
+    const container = document.getElementById('allRegistrationsList');
+    const countDisplay = document.getElementById('guestCountDisplay');
+    
+    if (countDisplay) {
+        countDisplay.textContent = `Showing ${guests.length} guest${guests.length !== 1 ? 's' : ''}`;
+    }
     
     if (guests.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-gray-500">No registrations found</td></tr>';
+        container.innerHTML = '<p class="text-center text-gray-500 py-8">No registrations found</p>';
         return;
     }
     
-    tbody.innerHTML = guests.map(g => `
-        <tr>
-            <td class="font-semibold">${escapeHtml(g.guest_name)}</td>
-            <td>${g.mobile_number}</td>
-            <td class="capitalize">${g.entry_type}</td>
-            <td>₹${g.ticket_price?.toLocaleString()}</td>
-            <td>${formatPaymentMode(g.payment_mode)}</td>
-            <td class="text-sm">${g.seller?.full_name || g.seller?.username || '-'}</td>
-            <td>${getStatusBadge(g.status)}</td>
-            <td>
-                ${getActionButtons(g)}
-            </td>
-        </tr>
+    // Store guests data for modal access
+    window.allGuestsData = guests;
+    
+    container.innerHTML = guests.map(g => `
+        <div class="guest-card bg-gray-800/50 rounded-lg p-4 border border-gray-700 cursor-pointer hover:border-yellow-600/50 transition-all" 
+             onclick="showGuestDetailModal('${g.id}', 'all')">
+            <div class="flex items-center justify-between">
+                <div class="flex-1 min-w-0">
+                    <h4 class="font-semibold text-white truncate">${escapeHtml(g.guest_name)}</h4>
+                    <p class="text-sm text-gray-400">${g.mobile_number}</p>
+                </div>
+                <div class="flex items-center gap-2 ml-3">
+                    ${getStatusBadgeSmall(g.status)}
+                    <i class="fas fa-chevron-right text-gray-500"></i>
+                </div>
+            </div>
+        </div>
     `).join('');
+}
+
+function getStatusBadgeSmall(status) {
+    const badges = {
+        'pending_verification': '<span class="px-2 py-1 rounded text-xs bg-orange-900/50 text-orange-400">Pending</span>',
+        'payment_verified': '<span class="px-2 py-1 rounded text-xs bg-blue-900/50 text-blue-400">Verified</span>',
+        'pass_generated': '<span class="px-2 py-1 rounded text-xs bg-purple-900/50 text-purple-400">Pass Ready</span>',
+        'pass_sent': '<span class="px-2 py-1 rounded text-xs bg-green-900/50 text-green-400">Pass Sent</span>',
+        'checked_in': '<span class="px-2 py-1 rounded text-xs bg-emerald-900/50 text-emerald-400">Checked In</span>',
+        'rejected': '<span class="px-2 py-1 rounded text-xs bg-red-900/50 text-red-400">Rejected</span>'
+    };
+    return badges[status] || '<span class="px-2 py-1 rounded text-xs bg-gray-700 text-gray-400">Unknown</span>';
 }
 
 function getActionButtons(guest) {

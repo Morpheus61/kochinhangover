@@ -189,6 +189,16 @@
         .stat-card h4 { font-size: 0.75rem; opacity: 0.8; margin-bottom: 0.5rem; }
         .stat-card p { font-size: 1.5rem; font-weight: bold; }
         
+        /* Guest Card - Mobile Optimized */
+        .guest-card {
+            transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .guest-card:active {
+            transform: scale(0.98);
+            background: rgba(212, 168, 83, 0.1);
+        }
+        
         /* Navigation - Mobile Scrollable */
         .nav-container {
             overflow-x: auto;
@@ -871,88 +881,65 @@
 
             <!-- ========== SUPER ADMIN: Verification Queue ========== -->
             <section id="tab-verification-queue" class="tab-content hidden">
-                <div class="rock4one-container p-6">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xl font-bold rock4one-header">
+                <div class="rock4one-container p-4 md:p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg md:text-xl font-bold rock4one-header">
                             <i class="fas fa-clock mr-2"></i>Pending Verification
                         </h2>
-                        <button onclick="loadVerificationQueue()" class="rock4one-button secondary text-sm">
-                            <i class="fas fa-sync-alt mr-1"></i>Refresh
+                        <button onclick="loadVerificationQueue()" class="rock4one-button text-sm py-2 px-3">
+                            <i class="fas fa-sync-alt"></i><span class="hidden md:inline ml-1">Refresh</span>
                         </button>
                     </div>
                     
                     <!-- Filter Buttons -->
                     <div class="flex flex-wrap gap-2 mb-4">
-                        <button class="queue-filter active rock4one-button text-sm" data-filter="all">All</button>
-                        <button class="queue-filter rock4one-button secondary text-sm" data-filter="cash">💵 Cash</button>
-                        <button class="queue-filter rock4one-button secondary text-sm" data-filter="upi">📱 UPI</button>
-                        <button class="queue-filter rock4one-button secondary text-sm" data-filter="bank_transfer">🏦 Bank</button>
+                        <button class="queue-filter active rock4one-button text-sm py-2 px-3" data-filter="all">All</button>
+                        <button class="queue-filter rock4one-button secondary text-sm py-2 px-3" data-filter="cash">💵 Cash</button>
+                        <button class="queue-filter rock4one-button secondary text-sm py-2 px-3" data-filter="upi">📱 UPI</button>
+                        <button class="queue-filter rock4one-button secondary text-sm py-2 px-3" data-filter="bank_transfer">🏦 Bank</button>
                     </div>
                     
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Guest</th>
-                                    <th>Mobile</th>
-                                    <th>Type</th>
-                                    <th>Amount</th>
-                                    <th>Payment</th>
-                                    <th>Reference</th>
-                                    <th>Seller</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="verificationQueueBody">
-                                <tr><td colspan="8" class="text-center py-8 text-gray-500">Loading...</td></tr>
-                            </tbody>
-                        </table>
+                    <!-- Mobile Card List -->
+                    <div id="verificationQueueList" class="space-y-3">
+                        <p class="text-center text-gray-500 py-8">Loading...</p>
                     </div>
                 </div>
             </section>
 
             <!-- ========== SUPER ADMIN: All Registrations ========== -->
             <section id="tab-all-registrations" class="tab-content hidden">
-                <div class="rock4one-container p-6">
-                    <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
-                        <h2 class="text-xl font-bold rock4one-header">
-                            <i class="fas fa-users mr-2"></i>All Registrations
+                <div class="rock4one-container p-4 md:p-6">
+                    <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+                        <h2 class="text-lg md:text-xl font-bold rock4one-header">
+                            <i class="fas fa-users mr-2"></i>All Guests
                         </h2>
                         <div class="flex gap-2">
-                            <input type="search" id="searchRegistrations" class="rock4one-input w-48" placeholder="Search...">
-                            <button onclick="downloadRegistrationsCSV()" class="rock4one-button text-sm">
-                                <i class="fas fa-download mr-1"></i>CSV
+                            <button onclick="downloadRegistrationsCSV()" class="rock4one-button text-sm py-2 px-3">
+                                <i class="fas fa-download"></i><span class="hidden md:inline ml-1">CSV</span>
                             </button>
                         </div>
                     </div>
                     
-                    <!-- Status Filter -->
-                    <div class="flex flex-wrap gap-2 mb-4">
-                        <button class="reg-filter active rock4one-button text-sm" data-status="all">All</button>
-                        <button class="reg-filter rock4one-button secondary text-sm" data-status="pending_verification">Pending</button>
-                        <button class="reg-filter rock4one-button secondary text-sm" data-status="verified">Verified</button>
-                        <button class="reg-filter rock4one-button secondary text-sm" data-status="pass_sent">Pass Sent</button>
-                        <button class="reg-filter rock4one-button secondary text-sm" data-status="checked_in">Checked In</button>
+                    <!-- Search -->
+                    <div class="mb-4">
+                        <input type="search" id="searchRegistrations" class="rock4one-input w-full" placeholder="🔍 Search by name or mobile...">
                     </div>
                     
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Guest</th>
-                                    <th>Mobile</th>
-                                    <th>Type</th>
-                                    <th>Amount</th>
-                                    <th>Payment</th>
-                                    <th>Seller</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="allRegistrationsBody">
-                                <tr><td colspan="8" class="text-center py-8 text-gray-500">Loading...</td></tr>
-                            </tbody>
-                        </table>
+                    <!-- Status Filter -->
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <button class="reg-filter active rock4one-button text-sm py-2 px-3" data-status="all">All</button>
+                        <button class="reg-filter rock4one-button secondary text-sm py-2 px-3" data-status="pending_verification">Pending</button>
+                        <button class="reg-filter rock4one-button secondary text-sm py-2 px-3" data-status="verified">Verified</button>
+                        <button class="reg-filter rock4one-button secondary text-sm py-2 px-3" data-status="pass_sent">Pass Sent</button>
+                        <button class="reg-filter rock4one-button secondary text-sm py-2 px-3" data-status="checked_in">Checked In</button>
+                    </div>
+                    
+                    <!-- Guest Count -->
+                    <p id="guestCountDisplay" class="text-sm text-gray-400 mb-3">Showing 0 guests</p>
+                    
+                    <!-- Mobile Card List -->
+                    <div id="allRegistrationsList" class="space-y-3">
+                        <p class="text-center text-gray-500 py-8">Loading...</p>
                     </div>
                 </div>
             </section>
@@ -1706,6 +1693,23 @@
     </div>
 
     <!-- Guest Lookup Modal (for Entry/Exit) -->
+    <!-- Guest Detail Modal (for Verification Queue & All Guests) -->
+    <div id="guestDetailModal" class="modal">
+        <div class="modal-content max-w-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold rock4one-header">
+                    <i class="fas fa-user mr-2"></i>Guest Details
+                </h3>
+                <button onclick="closeModal('guestDetailModal')" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="guestDetailContent">
+                <!-- Guest details will be rendered here -->
+            </div>
+        </div>
+    </div>
+
     <div id="guestLookupModal" class="modal">
         <div class="modal-content max-w-md">
             <div class="flex justify-between items-center mb-4">
